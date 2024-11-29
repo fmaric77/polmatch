@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import HeaderFront from '../components/HeaderFront'; // Adjust the path as necessary
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -19,7 +18,7 @@ export default function Login() {
         <img src="/images/polstrat-dark.png" alt="Polstrat Dark" className="max-w-full h-auto mb-4" />
         <input
           type="text"
-          placeholder="Username"
+          placeholder="Email"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="p-2 bg-black text-white border border-white rounded focus:outline-none"
