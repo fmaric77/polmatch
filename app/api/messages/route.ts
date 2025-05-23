@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { MongoClient, ObjectId } from 'mongodb';
+import CryptoJS from 'crypto-js';
 
 const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
+const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
 // GET: Fetch all threads for the logged-in user
 export async function GET() {
@@ -19,7 +21,19 @@ export async function GET() {
     if (!user) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     // Find all PMs where user is sender or receiver
     const pms = await db.collection('pm').find({ $or: [ { sender_id: user.user_id }, { receiver_id: user.user_id } ] }).sort({ timestamp: -1 }).toArray();
-    return NextResponse.json({ success: true, pms });
+    // Decrypt message content before returning
+    const decryptedPms = pms.map(msg => ({
+      ...msg,
+      content: (() => {
+        try {
+          const bytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
+          return bytes.toString(CryptoJS.enc.Utf8) || '[Decryption failed]';
+        } catch {
+          return '[Decryption failed]';
+        }
+      })(),
+    }));
+    return NextResponse.json({ success: true, pms: decryptedPms });
   } catch (err) {
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) });
   } finally {
@@ -43,10 +57,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { receiver_id, content, attachments } = body;
     if (!receiver_id || !content) return NextResponse.json({ success: false, message: 'Missing fields' }, { status: 400 });
+    // Encrypt the message content before saving
+    const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
     const message = {
       sender_id: user.user_id,
       receiver_id,
-      content,
+      content: encryptedContent,
       timestamp: new Date().toISOString(),
       read: false,
       attachments: attachments || [],

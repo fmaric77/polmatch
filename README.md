@@ -2,6 +2,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+// Copilot instruction: Always use the --legacy-peer-deps flag when running npm install or installing packages via npm.
+// Example: npm install <package> --legacy-peer-deps
+// This avoids peer dependency conflicts in this project.
+
 First, run the development server:
 
 ```bash
