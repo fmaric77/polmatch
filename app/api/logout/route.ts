@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { MongoClient } from 'mongodb';
+import MONGODB_URI from '../mongo-uri';
 
-const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
-const client = new MongoClient(uri);
+const client = new MongoClient(MONGODB_URI);
 
-export async function POST(request: Request) {
+export async function POST() {
   // Auth check
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;

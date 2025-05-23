@@ -20,8 +20,6 @@ const Messages = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string } | null>(null);
   const [showNewUserModal, setShowNewUserModal] = useState(false);
@@ -51,7 +49,6 @@ const Messages = () => {
   // Fetch messages with selected user
   const fetchMessages = () => {
     if (!selectedUser || !currentUser) return;
-    setLoading(true);
     fetch(`/api/messages?user_id=${selectedUser}`)
       .then(res => res.json())
       .then(data => {
@@ -62,10 +59,7 @@ const Messages = () => {
             (msg.sender_id === selectedUser && msg.receiver_id === currentUser.user_id)
           );
           setMessages(filtered.sort((a: Message, b: Message) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
-        } else {
-          setError(data.message || 'Failed to load messages');
         }
-        setLoading(false);
       });
   };
 
@@ -99,8 +93,6 @@ const Messages = () => {
     if (data.success) {
       setNewMessage('');
       setRefresh(r => r + 1);
-    } else {
-      setError(data.message || 'Failed to send message');
     }
   };
 

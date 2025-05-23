@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Login() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function Login() {
         // Redirect to frontpage after successful login
         router.push('/frontpage');
       }
-    } catch (err) {
+    } catch {
       setLoginError('Server error');
     } finally {
       setLoading(false);
@@ -70,7 +71,7 @@ export default function Login() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
       <form onSubmit={handleLogin} className="flex flex-col gap-4 mt-4">
-        <img src="/images/polstrat-dark.png" alt="Polstrat Dark" className="max-w-full h-auto mb-4" />
+        <Image src="/images/polstrat-dark.png" alt="Polstrat Dark" className="max-w-full h-auto mb-4" width={240} height={90} />
         <input
           type="text"
           placeholder="Email"

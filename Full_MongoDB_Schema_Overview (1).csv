@@ -1,0 +1,333 @@
+Collection Name,Schema Example
+users,"{
+  ""user_id"": ""UUID"",
+  ""username"": ""string"",
+  ""email"": ""string"",
+  ""password_hash"": ""string"",
+  ""registration_date"": ""datetime"",
+  ""last_login"": ""datetime"",
+  ""account_status"": ""string"",
+  ""ip_address"": ""string"",
+  ""is_admin"": ""boolean"",
+  ""created_groups"": [
+    ""UUID""
+  ],
+  ""joined_groups"": [
+    ""UUID""
+  ],
+  ""profile_basic_id"": ""UUID"",
+  ""profile_business_id"": ""UUID"",
+  ""profile_love_id"": ""UUID"",
+  ""bookmarked_users"": [
+    ""UUID""
+  ],
+  ""bookmarked_groups"": [
+    ""UUID""
+  ],
+  ""bookmarked_jobs"": [
+    ""UUID""
+  ]
+}"
+profile_basic,"{
+  ""profile_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""display_name"": ""string"",
+  ""bio"": ""string"",
+  ""interests"": [
+    ""string""
+  ],
+  ""location"": ""string"",
+  ""birth_date"": ""date"",
+  ""profile_picture_url"": ""string"",
+  ""visibility"": ""string"",
+  ""last_updated"": ""datetime"",
+  ""completed_questionnaires"": {
+    ""UUID"": ""boolean""
+  }
+}"
+profile_business,"{
+  ""profile_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""display_name"": ""string"",
+  ""professional_title"": ""string"",
+  ""skills"": [
+    ""string""
+  ],
+  ""experience"": [
+    {
+      ""key"": ""value""
+    }
+  ],
+  ""education"": [
+    {
+      ""key"": ""value""
+    }
+  ],
+  ""certifications"": [
+    ""string""
+  ],
+  ""seeking_job"": ""boolean"",
+  ""offering_job"": ""boolean"",
+  ""industry"": ""string"",
+  ""visibility"": ""string"",
+  ""last_updated"": ""datetime"",
+  ""completed_questionnaires"": {
+    ""UUID"": ""boolean""
+  }
+}"
+profile_love,"{
+  ""profile_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""display_name"": ""string"",
+  ""bio"": ""string"",
+  ""looking_for"": ""string"",
+  ""relationship_status"": ""string"",
+  ""interests"": [
+    ""string""
+  ],
+  ""photos"": [
+    ""string""
+  ],
+  ""visibility"": ""string"",
+  ""last_updated"": ""datetime"",
+  ""completed_questionnaires"": {
+    ""UUID"": ""boolean""
+  }
+}"
+groups,"{
+  ""group_id"": ""UUID"",
+  ""name"": ""string"",
+  ""description"": ""string"",
+  ""creator_id"": ""UUID"",
+  ""creation_date"": ""datetime"",
+  ""is_private"": ""boolean"",
+  ""members_count"": ""int"",
+  ""topic"": ""string"",
+  ""status"": ""string"",
+  ""last_activity"": ""datetime""
+}"
+group_members,"{
+  ""group_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""join_date"": ""datetime"",
+  ""role"": ""string""
+}"
+group_invitations,"{
+  ""group_id"": ""UUID"",
+  ""invitee_id"": ""UUID"",
+  ""inviter_id"": ""UUID"",
+  ""invitation_date"": ""datetime"",
+  ""status"": ""string""
+}"
+private_messages,"{
+  ""message_id"": ""UUID"",
+  ""sender_id"": ""UUID"",
+  ""receiver_id"": ""UUID"",
+  ""content"": ""string"",
+  ""timestamp"": ""datetime"",
+  ""read"": ""boolean"",
+  ""attachments"": [
+    ""string""
+  ]
+}"
+group_messages,"{
+  ""message_id"": ""UUID"",
+  ""group_id"": ""UUID"",
+  ""sender_id"": ""UUID"",
+  ""content"": ""string"",
+  ""timestamp"": ""datetime"",
+  ""attachments"": [
+    ""string""
+  ]
+}"
+questionnaire_groups,"{
+  ""group_id"": ""UUID"",
+  ""title"": ""string"",
+  ""description"": ""string"",
+  ""profile_type"": ""string"",
+  ""is_hidden"": ""boolean"",
+  ""required_for"": [
+    ""UUID""
+  ],
+  ""created_by"": ""UUID"",
+  ""creation_date"": ""datetime""
+}"
+questionnaires,"{
+  ""questionnaire_id"": ""UUID"",
+  ""group_id"": ""UUID"",
+  ""title"": ""string"",
+  ""description"": ""string"",
+  ""created_by"": ""UUID"",
+  ""creation_date"": ""datetime"",
+  ""is_hidden"": ""boolean""
+}"
+questions,"{
+  ""question_id"": ""UUID"",
+  ""questionnaire_id"": ""UUID"",
+  ""question_text"": ""string"",
+  ""question_type"": ""string"",
+  ""options"": [
+    ""string""
+  ],
+  ""is_required"": ""boolean"",
+  ""display_order"": ""int""
+}"
+user_questionnaire_answers,"{
+  ""user_id"": ""UUID"",
+  ""questionnaire_id"": ""UUID"",
+  ""question_id"": ""UUID"",
+  ""answer"": ""string"",
+  ""completion_date"": ""datetime""
+}"
+required_questionnaires,"{
+  ""user_id"": ""UUID"",
+  ""questionnaire_id"": ""UUID"",
+  ""deadline"": ""datetime"",
+  ""completion_status"": ""boolean"",
+  ""admin_id"": ""UUID"",
+  ""requirement_date"": ""datetime""
+}"
+profile_questionnaire_visibility,"{
+  ""questionnaire_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""profile_type"": ""string"",
+  ""is_visible"": ""boolean"",
+  ""is_searchable"": ""boolean"",
+  ""display_order"": ""int""
+}"
+searchable_questionnaire_answers,"{
+  ""question_id"": ""UUID"",
+  ""answer_value"": ""string"",
+  ""user_id"": ""UUID"",
+  ""questionnaire_id"": ""UUID"",
+  ""profile_type"": ""string""
+}"
+jobs,"{
+  ""job_id"": ""UUID"",
+  ""poster_id"": ""UUID"",
+  ""title"": ""string"",
+  ""company"": ""string"",
+  ""location"": ""string"",
+  ""description"": ""string"",
+  ""requirements"": [
+    ""string""
+  ],
+  ""salary_range"": ""string"",
+  ""job_type"": ""string"",
+  ""status"": ""string"",
+  ""posting_date"": ""datetime"",
+  ""expiry_date"": ""datetime""
+}"
+job_applications,"{
+  ""job_id"": ""UUID"",
+  ""applicant_id"": ""UUID"",
+  ""application_date"": ""datetime"",
+  ""status"": ""string"",
+  ""cover_letter"": ""string""
+}"
+user_bookmarks,"{
+  ""user_id"": ""UUID"",
+  ""bookmark_type"": ""string"",
+  ""bookmark_id"": ""UUID"",
+  ""bookmark_date"": ""datetime"",
+  ""category"": ""string"",
+  ""notes"": ""string""
+}"
+admin_actions,"{
+  ""action_id"": ""UUID"",
+  ""admin_id"": ""UUID"",
+  ""action_type"": ""string"",
+  ""target_id"": ""UUID"",
+  ""timestamp"": ""datetime"",
+  ""reason"": ""string"",
+  ""details"": ""string""
+}"
+ip_bans,"{
+  ""ip_address"": ""string"",
+  ""admin_id"": ""UUID"",
+  ""ban_date"": ""datetime"",
+  ""reason"": ""string"",
+  ""expiry_date"": ""datetime""
+}"
+user_notifications,"{
+  ""user_id"": ""UUID"",
+  ""notification_id"": ""UUID"",
+  ""type"": ""string"",
+  ""content"": ""string"",
+  ""related_id"": ""UUID"",
+  ""created_at"": ""datetime"",
+  ""is_read"": ""boolean""
+}"
+user_activity_logs,"{
+  ""user_id"": ""UUID"",
+  ""activity_id"": ""UUID"",
+  ""action_type"": ""string"",
+  ""timestamp"": ""datetime"",
+  ""details"": ""string"",
+  ""ip_address"": ""string""
+}"
+user_reports,"{
+  ""report_id"": ""UUID"",
+  ""reporter_id"": ""UUID"",
+  ""reported_id"": ""UUID"",
+  ""reported_type"": ""string"",
+  ""reason"": ""string"",
+  ""details"": ""string"",
+  ""status"": ""string"",
+  ""created_at"": ""datetime"",
+  ""resolved_at"": ""datetime"",
+  ""resolver_id"": ""UUID""
+}"
+user_preferences,"{
+  ""user_id"": ""UUID"",
+  ""email_notifications"": {
+    ""string"": ""boolean""
+  },
+  ""theme"": ""string"",
+  ""language"": ""string"",
+  ""privacy_settings"": {
+    ""string"": ""string""
+  },
+  ""last_updated"": ""datetime""
+}"
+user_search_history,"{
+  ""user_id"": ""UUID"",
+  ""search_id"": ""UUID"",
+  ""search_type"": ""string"",
+  ""search_query"": ""string"",
+  ""search_date"": ""datetime""
+}"
+user_connections,"{
+  ""user_id"": ""UUID"",
+  ""connected_user_id"": ""UUID"",
+  ""status"": ""string"",
+  ""connection_date"": ""datetime""
+}"
+user_sessions,"{
+  ""session_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""device_info"": ""string"",
+  ""ip_address"": ""string"",
+  ""login_time"": ""datetime"",
+  ""last_active"": ""datetime"",
+  ""is_active"": ""boolean""
+}"
+support_tickets,"{
+  ""ticket_id"": ""UUID"",
+  ""user_id"": ""UUID"",
+  ""subject"": ""string"",
+  ""description"": ""string"",
+  ""status"": ""string"",
+  ""created_at"": ""datetime"",
+  ""resolved_at"": ""datetime"",
+  ""admin_id"": ""UUID""
+}"
+tags,"{
+  ""tag_id"": ""UUID"",
+  ""name"": ""string""
+}"
+tagged_items,"{
+  ""tag_id"": ""UUID"",
+  ""item_type"": ""string"",
+  ""item_id"": ""UUID""
+}"

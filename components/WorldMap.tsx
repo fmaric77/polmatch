@@ -1,12 +1,12 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Feature, FeatureCollection, Geometry } from 'geojson'; // Import GeoJSON types
+import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson'; // Import GeoJSON types
 
 // Dynamically import react-globe.gl to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
 
 export default function WorldMap() {
-  const [continents, setContinents] = useState<Feature<Geometry, { [name: string]: any }>[]>([]);
+  const [continents, setContinents] = useState<Feature<Geometry, GeoJsonProperties>[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function WorldMap() {
           console.log("WorldMap: Detected TopoJSON, attempting to convert.");
           import('topojson-client').then((topojson) => {
             // topojson.feature can return a single Feature or a FeatureCollection
-            const geo = topojson.feature(data, data.objects.continents) as FeatureCollection<Geometry, { [name: string]: any }> | Feature<Geometry, { [name: string]: any }>;
+            const geo = topojson.feature(data, data.objects.continents) as FeatureCollection<Geometry, GeoJsonProperties> | Feature<Geometry, GeoJsonProperties>;
             if (geo.type === 'FeatureCollection') {
               console.log("WorldMap: TopoJSON converted to GeoJSON FeatureCollection:", geo.features);
               setContinents(geo.features);
@@ -75,10 +75,11 @@ export default function WorldMap() {
         height={height}
         polygonsData={continents}
         polygonAltitude={0.01}
-        polygonCapColor={(polygon: any) => { // Changed to any to match react-globe.gl, will cast properties internally
+        polygonCapColor={(polygon) => {
+          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
           let currentPolygonName: string | null = null;
-          if (polygon && polygon.properties) {
-            const props = polygon.properties as { [name: string]: any }; // Cast properties
+          if (feature && feature.properties) {
+            const props = feature.properties;
             currentPolygonName = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
           }
 
@@ -108,29 +109,31 @@ export default function WorldMap() {
         }}
         polygonSideColor={() => '#222'}
         polygonStrokeColor={() => '#fff'}
-        onPolygonHover={(polygon: any | null) => { // Changed to any to match react-globe.gl
+        onPolygonHover={(polygon) => {
+          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
           let nameForHover: string | null = null;
-          if (polygon && polygon.properties) {
-            const props = polygon.properties as { [name: string]: any }; // Cast properties
+          if (feature && feature.properties) {
+            const props = feature.properties;
             const actualName = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
 
             if (actualName === 'Kosovo' || actualName === 'Serbia') {
-              nameForHover = 'Serbia'; // If hovering Kosovo or Serbia, set "Serbia" as the hover target
+              nameForHover = 'Serbia';
             } else {
               nameForHover = actualName;
             }
           }
           setHovered(nameForHover);
         }}
-        onPolygonClick={(polygon: any) => { // Changed to any to match react-globe.gl
+        onPolygonClick={(polygon) => {
+          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
           let name: string | null = null;
-          if (polygon && polygon.properties) {
-            const props = polygon.properties;
+          if (feature && feature.properties) {
+            const props = feature.properties;
             name = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
           }
           if (name) {
             alert(`Clicked: ${name}`);
-            console.log("WorldMap: Clicked on polygon:", polygon);
+            console.log("WorldMap: Clicked on polygon:", feature);
           }
         }}
         polygonsTransitionDuration={300}

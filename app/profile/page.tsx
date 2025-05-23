@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
+import Image from "next/image";
 import "./styles.css";
 
 interface Message {
@@ -39,9 +40,11 @@ const Chatbot: React.FC<ChatbotProps> = ({
 }) => (
   <div className="transition-all duration-1000 opacity-100 flex flex-col items-center justify-center flex-grow">
     <div className="flex items-start">
-      <img
+      <Image
         src="/images/polstrat-dark.png"
         alt="Chatbot"
+        width={96}
+        height={96}
         className="w-24 h-24 mb-4 transition-all duration-1000 transform slide-left"
       />
       <div className="ml-4 w-full max-w-2xl mt-4">
@@ -165,9 +168,11 @@ export default function Page() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
       {showIntro ? (
         <div className="flex flex-col items-center justify-center">
-          <img
+          <Image
             src="/images/polstrat-dark.png"
-            alt="Chatbot"
+            alt="Chatbot" 
+            width={96}
+            height={96}
             className="w-24 h-24 mb-4"
           />
           <div className="progressive-text">

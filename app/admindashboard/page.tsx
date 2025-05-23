@@ -3,13 +3,23 @@ import Header from '../../components/Header';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  _id?: string;
+  user_id: string;
+  username: string;
+  email: string;
+  is_admin: boolean;
+  is_banned?: boolean;
+}
+
 export default function AdminDashboard() {
   const [form, setForm] = useState({ username: '', email: '', password: '', is_admin: false });
   const [message, setMessage] = useState('');
   const [activeSection, setActiveSection] = useState<'create' | 'manage'>('create');
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
+  const [search, setSearch] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -61,10 +71,35 @@ export default function AdminDashboard() {
       } else {
         setUsersError(data.message || 'Failed to fetch users');
       }
-    } catch (err) {
+    } catch {
       setUsersError('Failed to fetch users');
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  // Filtered users for search
+  const filteredUsers = users.filter(
+    (user) =>
+      user.username.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Ban user handler
+  const handleBanUser = async (user_id: string) => {
+    const admin_id = users.find((u) => u.is_admin)?.user_id || '';
+    if (!window.confirm('Are you sure you want to ban and delete this user?')) return;
+    const res = await fetch('/api/admin/ban-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, admin_id }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setUsers((prev) => prev.filter((u) => u.user_id !== user_id));
+      alert('User banned and deleted.');
+    } else {
+      alert(data.message || 'Failed to ban user.');
     }
   };
 
@@ -150,6 +185,13 @@ export default function AdminDashboard() {
             {activeSection === 'manage' && (
               <div className="bg-black/80 text-white rounded-lg shadow p-6 mb-8">
                 <h2 className="text-xl font-bold mb-4">Manage Users</h2>
+                <input
+                  type="text"
+                  placeholder="Search by username or email"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="mb-4 p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                />
                 {loadingUsers ? (
                   <div>Loading users...</div>
                 ) : usersError ? (
@@ -161,14 +203,23 @@ export default function AdminDashboard() {
                         <th className="border-b border-white p-2">Username</th>
                         <th className="border-b border-white p-2">Email</th>
                         <th className="border-b border-white p-2">Admin</th>
+                        <th className="border-b border-white p-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((user) => (
+                      {filteredUsers.map((user) => (
                         <tr key={user._id} className="hover:bg-white/10">
                           <td className="p-2">{user.username}</td>
                           <td className="p-2">{user.email}</td>
                           <td className="p-2">{user.is_admin ? 'Yes' : 'No'}</td>
+                          <td className="p-2">
+                            <button
+                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                              onClick={() => handleBanUser(user.user_id)}
+                            >
+                              Ban
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

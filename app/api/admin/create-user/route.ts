@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
-
-const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
+import MONGODB_URI from '../../mongo-uri';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: Request) {
   // Auth check
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (!sessionToken) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
-  const client = new MongoClient(uri);
+  const client = new MongoClient(MONGODB_URI);
   try {
     await client.connect();
     const db = client.db('polmatch');
@@ -38,18 +38,26 @@ export async function POST(request: Request) {
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
     // Generate a user_id (UUID)
-    const user_id = crypto.randomUUID();
+    const user_id = uuidv4();
+    const now = new Date().toISOString();
     await db.collection('users').insertOne({
       user_id,
       username,
       email,
       password_hash,
-      is_admin: !!is_admin,
-      is_superadmin: false,
+      registration_date: now,
+      last_login: now,
       account_status: 'active',
-      created_at: new Date().toISOString(),
-      last_login: null,
-      ip_address: null
+      ip_address: '',
+      is_admin: !!is_admin,
+      created_groups: [],
+      joined_groups: [],
+      profile_basic_id: uuidv4(),
+      profile_business_id: uuidv4(),
+      profile_love_id: uuidv4(),
+      bookmarked_users: [],
+      bookmarked_groups: [],
+      bookmarked_jobs: []
     });
     await client.close();
     return NextResponse.json({ success: true });

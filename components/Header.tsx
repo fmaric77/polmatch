@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faHome, faUser, faSearch, faBook, faUsers, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faHome, faUser, faSearch, faBook, faSignOutAlt, faBars, faTimes, faCog } from '@fortawesome/free-solid-svg-icons';
+import Image from 'next/image';
+import Link from 'next/link';
 
 const Header = () => {
   const [open, setOpen] = useState(true);
@@ -40,7 +42,7 @@ const Header = () => {
         className={`h-screen w-64 bg-black/80 backdrop-blur-md text-white flex flex-col items-center py-8 border-r-2 border-white fixed top-0 left-0 z-40 transition-transform duration-500 ease-in-out shadow-2xl ${open ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ boxShadow: open ? '4px 0 32px 0 rgba(0,0,0,0.35)' : 'none' }}
       >
-        <img src="/images/polstrat-dark.png" alt="Polstrat Logo" className="h-16 mb-8 drop-shadow-lg" />
+        <Image src="/images/polstrat-dark.png" alt="Polstrat Logo" className="h-16 mb-8 drop-shadow-lg" width={128} height={48} />
         <nav className="w-full flex-1">
           <ul className="flex flex-col space-y-6 w-full px-4">
             {username && (
@@ -49,16 +51,16 @@ const Header = () => {
               </li>
             )}
             <li>
-              <a href="/messages" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
+              <a href="/chat" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faEnvelope} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-blue-400 group-hover:text-blue-200 transition-colors" />
-                <span className="font-medium">My Messages</span>
+                <span className="font-medium">Chat</span>
               </a>
             </li>
             <li>
-              <a href="/" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
+              <Link href="/" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faHome} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-green-400 group-hover:text-green-200 transition-colors" />
                 <span className="font-medium">Home Page</span>
-              </a>
+              </Link>
             </li>
             <li>
               <a href="/profile" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
@@ -79,9 +81,9 @@ const Header = () => {
               </a>
             </li>
             <li>
-              <a href="/groups" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faUsers} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-cyan-400 group-hover:text-cyan-200 transition-colors" />
-                <span className="font-medium">My Groups</span>
+              <a href="/profile/settings" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
+                <FontAwesomeIcon icon={faCog} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-gray-400 group-hover:text-gray-200 transition-colors" />
+                <span className="font-medium">Settings</span>
               </a>
             </li>
             {isAdmin && (

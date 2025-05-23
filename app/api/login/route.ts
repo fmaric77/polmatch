@@ -3,9 +3,9 @@ import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
+import MONGODB_URI from '../mongo-uri';
 
-const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
-const client = new MongoClient(uri);
+const client = new MongoClient(MONGODB_URI);
 
 export async function POST(request: Request) {
   console.log('API /api/login called');
@@ -41,6 +41,17 @@ export async function POST(request: Request) {
     // Set the session cookie
     const cookieStore = await cookies();
     cookieStore.set('session', sessionToken, { httpOnly: true, path: '/' });
+
+    // Get IP address from request headers
+    let ip_address = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || request.headers.get('remote-addr') || '';
+    if (ip_address && ip_address.includes(',')) {
+      ip_address = ip_address.split(',')[0].trim();
+    }
+    // Update last_login and ip_address
+    await db.collection('users').updateOne(
+      { email },
+      { $set: { last_login: new Date().toISOString(), ip_address } }
+    );
 
     return NextResponse.json({
       success: true,

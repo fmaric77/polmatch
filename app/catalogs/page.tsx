@@ -3,7 +3,7 @@ import { useState } from "react";
 import Header from '../../components/Header';
 
 export default function Forum() {
-  const [posts, setPosts] = useState([
+  const [posts] = useState([
     { id: 1, title: "Welcome to the forum!", content: "Feel free to share your thoughts." },
     { id: 2, title: "Forum Rules", content: "Please be respectful to others." },
     // Add more posts as needed
