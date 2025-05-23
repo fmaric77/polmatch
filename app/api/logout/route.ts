@@ -7,7 +7,7 @@ const client = new MongoClient(uri);
 
 export async function POST() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     if (sessionToken) {
       await client.connect();

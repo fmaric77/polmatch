@@ -7,7 +7,7 @@ const client = new MongoClient(uri);
 
 export async function GET() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     if (!sessionToken) {
       return NextResponse.json({ valid: false });
