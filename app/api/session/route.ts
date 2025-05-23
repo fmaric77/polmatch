@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { MongoClient } from 'mongodb';
 
-const uri = 'mongodb+srv://filip:UIOfFTSe4Z7zHbxQ@cluster0.9wkt8p3.mongodb.net/';
+const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
 const client = new MongoClient(uri);
 
 export async function GET() {
