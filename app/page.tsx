@@ -1,15 +1,57 @@
 "use client";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [userType, setUserType] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Check session on mount
+  useEffect(() => {
+    async function checkSession() {
+      const res = await fetch('/api/session');
+      const data = await res.json();
+      if (data.valid) {
+        setIsLoggedIn(true);
+        router.push('/frontpage');
+      } else {
+        setIsLoggedIn(false);
+      }
+    }
+    checkSession();
+  }, [router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Username:", username);
-    console.log("Password:", password);
+    setLoginError(null);
+    setUserType(null);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setLoginError(data.message || 'Login failed');
+      } else {
+        if (data.user.is_superadmin) setUserType('Superadmin');
+        else if (data.user.is_admin) setUserType('Admin');
+        else setUserType('User');
+        // Redirect to frontpage after successful login
+        router.push('/frontpage');
+      }
+    } catch (err) {
+      setLoginError('Server error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -19,8 +61,8 @@ export default function Login() {
         <input
           type="text"
           placeholder="Email"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="p-2 bg-black text-white border border-white rounded focus:outline-none"
         />
         <input
@@ -33,10 +75,25 @@ export default function Login() {
         <button
           type="submit"
           className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
+          disabled={loading}
         >
-          Login
+          {loading ? 'Logging in...' : 'Login'}
         </button>
+        {loginError && <div className="text-red-400 text-center mt-2">{loginError}</div>}
+        {userType && <div className="text-green-400 text-center mt-2">Logged in as: {userType}</div>}
       </form>
+      {isLoggedIn && (
+        <button
+          className="mt-8 p-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          onClick={async () => {
+            await fetch('/api/logout', { method: 'POST' });
+            setIsLoggedIn(false);
+            window.location.href = '/';
+          }}
+        >
+          Logout
+        </button>
+      )}
     </div>
   );
 }
