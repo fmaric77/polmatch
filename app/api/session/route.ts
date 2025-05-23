@@ -6,22 +6,30 @@ const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/'
 const client = new MongoClient(uri);
 
 export async function GET() {
-  try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    if (!sessionToken) {
-      return NextResponse.json({ valid: false });
-    }
-    await client.connect();
-    const db = client.db('polmatch');
-    const session = await db.collection('sessions').findOne({ sessionToken });
-    if (!session) {
-      return NextResponse.json({ valid: false });
-    }
-    return NextResponse.json({ valid: true });
-  } catch (err) {
-    return NextResponse.json({ valid: false, error: String(err) });
-  } finally {
-    await client.close();
+  // Auth check
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('session')?.value;
+  if (!sessionToken) {
+    return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
   }
+  await client.connect();
+  const db = client.db('polmatch');
+  const session = await db.collection('sessions').findOne({ sessionToken });
+  if (!session) {
+    await client.close();
+    return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+  }
+  // Fetch user info for admin check
+  const user = await db.collection('users').findOne({ user_id: session.user_id });
+  if (!user) {
+    return NextResponse.json({ valid: false });
+  }
+  return NextResponse.json({ valid: true, user: {
+    user_id: user.user_id,
+    username: user.username,
+    email: user.email,
+    is_admin: user.is_admin,
+    is_superadmin: user.is_superadmin,
+    account_status: user.account_status,
+  }});
 }

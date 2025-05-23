@@ -10,53 +10,38 @@ const client = new MongoClient(uri);
 export async function POST(request: Request) {
   console.log('API /api/login called');
   try {
-    const { email, password } = await request.json();
-    console.log('Received login request for email:', email);
+    const body = await request.json();
+    const { email, password } = body;
+
+    // Input validation
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: 'Email and password are required' }, { status: 400 });
+    }
+
     await client.connect();
-    // List all databases for debugging
-    const admin = client.db().admin();
-    const dbs = await admin.listDatabases();
-    console.log('Databases:', dbs.databases.map(db => db.name));
-    // Try to use the correct DB name
     const db = client.db('polmatch');
-    const collections = await db.listCollections().toArray();
-    console.log('Collections in polmatch DB:', collections.map(c => c.name));
-    // Only check the 'users' collection now
-    let user = await db.collection('users').findOne({ email });
-    console.log('User found in DB:', user ? JSON.stringify(user) : 'No user');
+
+    // Check if the user exists
+    const user = await db.collection('users').findOne({ email });
     if (!user) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Invalid email or password' }, { status: 401 });
     }
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return NextResponse.json({ success: false, message: 'Invalid password' }, { status: 401 });
+
+    // Check if the password matches
+    // Use user.password_hash instead of user.password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return NextResponse.json({ success: false, message: 'Invalid email or password' }, { status: 401 });
     }
-    // Generate a session token
+
+    // Create a session
     const sessionToken = uuidv4();
-    // Store session in DB (simple sessions collection)
-    await db.collection('sessions').insertOne({
-      sessionToken,
-      user_id: user.user_id,
-      createdAt: new Date(),
-    });
-    // Set session cookie (await cookies() for correct type)
+    await db.collection('sessions').insertOne({ sessionToken, user_id: user.user_id });
+
+    // Set the session cookie
     const cookieStore = await cookies();
-    cookieStore.set('session', sessionToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    });
-    // Get IP address from request headers
-    let ip_address = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || request.headers.get('remote-addr') || '';
-    if (ip_address && ip_address.includes(',')) {
-      ip_address = ip_address.split(',')[0].trim();
-    }
-    // Update last_login and ip_address
-    await db.collection('users').updateOne(
-      { email },
-      { $set: { last_login: new Date().toISOString(), ip_address } }
-    );
+    cookieStore.set('session', sessionToken, { httpOnly: true, path: '/' });
+
     return NextResponse.json({
       success: true,
       user: {

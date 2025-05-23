@@ -1,9 +1,28 @@
-import React, { useState } from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faHome, faUser, faSearch, faBook, faUsers, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 const Header = () => {
   const [open, setOpen] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const res = await fetch('/api/session');
+        const data = await res.json();
+        setIsAdmin(!!(data.valid && data.user && data.user.is_admin));
+        setUsername(data.user?.username || null);
+      } catch {
+        setIsAdmin(false);
+        setUsername(null);
+      }
+    }
+    checkAdmin();
+  }, []);
 
   return (
     <>
@@ -24,42 +43,59 @@ const Header = () => {
         <img src="/images/polstrat-dark.png" alt="Polstrat Logo" className="h-16 mb-8 drop-shadow-lg" />
         <nav className="w-full flex-1">
           <ul className="flex flex-col space-y-6 w-full px-4">
+            {username && (
+              <li className="text-white text-center mb-2">
+                <span className="font-semibold">Logged in as:</span> {username}
+              </li>
+            )}
             <li>
               <a href="/messages" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faEnvelope} className="mr-3 text-blue-400 group-hover:text-blue-200 transition-colors" />
+                <FontAwesomeIcon icon={faEnvelope} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-blue-400 group-hover:text-blue-200 transition-colors" />
                 <span className="font-medium">My Messages</span>
               </a>
             </li>
             <li>
               <a href="/" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faHome} className="mr-3 text-green-400 group-hover:text-green-200 transition-colors" />
+                <FontAwesomeIcon icon={faHome} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-green-400 group-hover:text-green-200 transition-colors" />
                 <span className="font-medium">Home Page</span>
               </a>
             </li>
             <li>
               <a href="/profile" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faUser} className="mr-3 text-yellow-400 group-hover:text-yellow-200 transition-colors" />
+                <FontAwesomeIcon icon={faUser} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-yellow-400 group-hover:text-yellow-200 transition-colors" />
                 <span className="font-medium">My Profile</span>
               </a>
             </li>
             <li>
               <a href="/search" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faSearch} className="mr-3 text-pink-400 group-hover:text-pink-200 transition-colors" />
+                <FontAwesomeIcon icon={faSearch} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-pink-400 group-hover:text-pink-200 transition-colors" />
                 <span className="font-medium">Search Users</span>
               </a>
             </li>
             <li>
               <a href="/catalogs" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faBook} className="mr-3 text-purple-400 group-hover:text-purple-200 transition-colors" />
+                <FontAwesomeIcon icon={faBook} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-purple-400 group-hover:text-purple-200 transition-colors" />
                 <span className="font-medium">My Catalogs</span>
               </a>
             </li>
             <li>
               <a href="/groups" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faUsers} className="mr-3 text-cyan-400 group-hover:text-cyan-200 transition-colors" />
+                <FontAwesomeIcon icon={faUsers} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-cyan-400 group-hover:text-cyan-200 transition-colors" />
                 <span className="font-medium">My Groups</span>
               </a>
             </li>
+            {isAdmin && (
+              <li>
+                <a href="/admindashboard" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
+                  <span className="mr-3 text-red-400 group-hover:text-red-200 transition-colors" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118A7.5 7.5 0 0112 15.75a7.5 7.5 0 017.5 4.368M18 21v-2.25A2.25 2.25 0 0015.75 16.5h-7.5A2.25 2.25 0 006 18.75V21" />
+                    </svg>
+                  </span>
+                  <span className="font-medium">Admin Dashboard</span>
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
         {/* Logout button in sidebar */}
@@ -71,7 +107,7 @@ const Header = () => {
             window.location.href = '/';
           }}
         >
-          <FontAwesomeIcon icon={faSignOutAlt} className="mr-3 text-red-400 group-hover:text-red-200 transition-colors" />
+          <FontAwesomeIcon icon={faSignOutAlt} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-red-400 group-hover:text-red-200 transition-colors" />
           <span className="font-medium">Logout</span>
         </button>
       </aside>

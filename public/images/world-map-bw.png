@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="800" height="400">
+  <rect width="1200" height="600" fill="#000"/>
+  <g stroke="#fff" stroke-width="2" fill="none">
+    <path d="M100,300 Q200,100 400,200 Q600,300 800,200 Q1000,100 1100,300 Q1000,500 800,400 Q600,300 400,400 Q200,500 100,300 Z"/>
+    <ellipse cx="600" cy="300" rx="500" ry="200"/>
+    <ellipse cx="600" cy="300" rx="400" ry="150"/>
+    <ellipse cx="600" cy="300" rx="300" ry="100"/>
+    <ellipse cx="600" cy="300" rx="200" ry="50"/>
+  </g>
+  <!-- Simple continents shapes for demo -->
+  <g fill="#fff" opacity="0.15">
+    <ellipse cx="350" cy="300" rx="120" ry="60"/>
+    <ellipse cx="850" cy="320" rx="140" ry="80"/>
+    <ellipse cx="600" cy="200" rx="80" ry="40"/>
+    <ellipse cx="600" cy="400" rx="100" ry="50"/>
+  </g>
+</svg>

@@ -9,7 +9,7 @@ export default function Login() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   // Check session on mount
   useEffect(() => {
@@ -25,6 +25,19 @@ export default function Login() {
     }
     checkSession();
   }, [router]);
+
+  // Only show login form after session check
+  if (isLoggedIn === null) {
+    return (
+      <div className="fixed inset-0 min-h-screen min-w-full bg-black text-white flex items-center justify-center z-50">
+        Checking session...
+      </div>
+    );
+  }
+  if (isLoggedIn) {
+    // Prevent rendering anything if already logged in (router.push will handle redirect)
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
