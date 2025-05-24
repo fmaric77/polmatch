@@ -57,7 +57,7 @@ export default function CreateQuestionnaireGroup() {
       } else {
         setMessage(data.message || 'Failed to create questionnaire group');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to create questionnaire group');
     } finally {
       setLoading(false);

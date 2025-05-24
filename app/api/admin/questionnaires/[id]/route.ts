@@ -10,6 +10,15 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+type QuestionInput = {
+  question_id?: string;
+  question_text: string;
+  question_type: string;
+  options?: string[];
+  is_required?: boolean;
+  display_order?: number;
+};
+
 // GET: Get specific questionnaire group with questions (admin only)
 export async function GET(req: NextRequest, context: RouteContext) {
   const cookieStore = await cookies();
@@ -165,7 +174,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     await db.collection('questionnaires').insertOne(questionnaire);
 
     // Create questions
-    const questionsToInsert = questions.map((question: any, index: number) => ({
+    const questionsToInsert = questions.map((question: QuestionInput, index: number) => ({
       question_id: uuidv4(),
       questionnaire_id: questionnaireId,
       question_text: question.question_text,

@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     // Mark completed questionnaires
     questionnaireGroups.forEach(group => {
-      group.questionnaires.forEach((questionnaire: any) => {
+      group.questionnaires.forEach((questionnaire: { questionnaire_id: string; completed?: boolean }) => {
         questionnaire.completed = completedIds.has(questionnaire.questionnaire_id);
       });
     });

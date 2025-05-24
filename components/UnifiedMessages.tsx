@@ -16,6 +16,7 @@ import {
   faCheckDouble
 } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams } from 'next/navigation';
+import ProfileAvatar from './ProfileAvatar';
 
 // Interfaces
 interface PrivateMessage {
@@ -45,6 +46,19 @@ interface GroupMessage {
 interface User {
   user_id: string;
   username: string;
+  // Add other user properties if needed
+}
+
+interface PrivateConversationFromAPI {
+  id: string; // This is the conversation ID
+  created_at: string;
+  updated_at: string;
+  latest_message?: {
+    content: string;
+    timestamp: string;
+  };
+  other_user: User; // This is the other participant
+  current_user_id: string; // ID of the user making the request
 }
 
 interface Group {
@@ -89,6 +103,7 @@ interface Conversation {
   last_activity?: string;
   unread_count?: number;
   members_count?: number;
+  user_id?: string; // For direct messages, this is the other user's ID
 }
 
 type ContextMenuExtra = Conversation | PrivateMessage | GroupMessage | undefined;
@@ -187,17 +202,18 @@ const UnifiedMessages = () => {
       const dmConversations: Conversation[] = [];
       const groupConversations: Conversation[] = [];
 
-      if (dmsData.success && dmsData.conversations) {
+      if (dmsData.success && Array.isArray(dmsData.conversations)) {
         console.log('Processing', dmsData.conversations.length, 'private conversations');
-        dmsData.conversations.forEach((conv: any) => {
+        dmsData.conversations.forEach((conv: PrivateConversationFromAPI) => { // Use the new interface here
           if (conv.other_user) {
-            const dmConvo = {
-              id: conv.other_user.user_id,
+            const dmConvo: Conversation = { // Ensure this matches the Conversation interface
+              id: conv.other_user.user_id, // Use other_user.user_id as the ID for the conversation entry
               name: conv.other_user.username,
               type: 'direct' as const,
-              last_message: conv.latest_message ? conv.latest_message.content : undefined,
-              last_activity: conv.latest_message ? conv.latest_message.timestamp : conv.created_at,
-              unread_count: 0 // TODO: Implement unread count
+              user_id: conv.other_user.user_id, // Store other_user.user_id for avatar
+              last_message: conv.latest_message?.content,
+              last_activity: conv.latest_message?.timestamp || conv.created_at,
+              unread_count: 0 // Placeholder for unread count
             };
             console.log('Adding DM conversation:', dmConvo);
             dmConversations.push(dmConvo);
@@ -222,7 +238,7 @@ const UnifiedMessages = () => {
       }
 
       // Sort by last activity
-      let allConversations = [...dmConversations, ...groupConversations].sort((a, b) => 
+      const allConversations = [...dmConversations, ...groupConversations].sort((a, b) => 
         new Date(b.last_activity || 0).getTime() - new Date(a.last_activity || 0).getTime()
       );
       
@@ -237,7 +253,7 @@ const UnifiedMessages = () => {
       setError('Failed to load conversations');
       setLoading(false);
     }
-  }, [currentUser, users]);
+  }, [currentUser]);
 
   // Fetch invitations
   const fetchInvitations = useCallback(async () => {
@@ -346,14 +362,14 @@ const UnifiedMessages = () => {
   };
 
   // Handle conversation selection
-  const selectConversation = (conversation: Conversation) => {
+  const selectConversation = useCallback((conversation: Conversation) => {
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
     fetchMessages(conversation.id, conversation.type);
     if (conversation.type === 'group') {
       fetchGroupMembers(conversation.id);
     }
-  };
+  }, [fetchMessages, fetchGroupMembers]); // Added fetchMessages and fetchGroupMembers as dependencies
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param
@@ -363,14 +379,11 @@ const UnifiedMessages = () => {
       console.log('Trying to auto-select conversation for user:', dmUserId);
       console.log('Available conversations:', conversations.map(c => ({ id: c.id, name: c.name, type: c.type })));
       
-      // Only try to select existing conversations - no ephemeral creation for URL params
       const convo = conversations.find(c => c.id === dmUserId && c.type === 'direct');
       if (convo) {
         console.log('Found conversation, selecting:', convo);
         selectConversation(convo);
       } else {
-        // If conversation doesn't exist, wait for fetchConversations to complete
-        // This ensures we only open conversations that actually exist in the database
         console.log(`Conversation with user ${dmUserId} not found in database`);
         console.log('Available direct conversations:', conversations.filter(c => c.type === 'direct'));
       }
@@ -384,7 +397,7 @@ const UnifiedMessages = () => {
         });
       }
     }
-  }, [searchParams, conversations, users]);
+  }, [searchParams, conversations, users, selectConversation]); // Added 'selectConversation'
 
   // Create new group
   const createGroup = async () => {
@@ -844,12 +857,16 @@ const UnifiedMessages = () => {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-                    <FontAwesomeIcon 
-                      icon={conversation.type === 'group' ? faUsers : faUser} 
-                      className="text-white"
-                    />
-                  </div>
+                  {conversation.type === 'direct' && conversation.user_id ? (
+                    <ProfileAvatar userId={conversation.user_id} size={40} />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon 
+                        icon={conversation.type === 'group' ? faUsers : faUser} 
+                        className="text-white"
+                      />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <span className="font-medium truncate">{conversation.name}</span>
@@ -887,12 +904,16 @@ const UnifiedMessages = () => {
             <div className="p-4 border-b border-white bg-black">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-black border border-white rounded-full flex items-center justify-center">
-                    <FontAwesomeIcon 
-                      icon={selectedConversationType === 'group' ? faHashtag : faAt} 
-                      className="text-white text-sm"
-                    />
-                  </div>
+                  {selectedConversationType === 'direct' && selectedConversationData?.user_id ? (
+                    <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
+                  ) : (
+                    <div className="w-8 h-8 bg-black border border-white rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon 
+                        icon={selectedConversationType === 'group' ? faHashtag : faAt} 
+                        className="text-white text-sm"
+                      />
+                    </div>
+                  )}
                   <div>
                     <h2 className="font-bold">{selectedConversationData?.name}</h2>
                     {selectedConversationType === 'group' && selectedConversationData?.members_count && (
@@ -945,6 +966,11 @@ const UnifiedMessages = () => {
                   <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                     onContextMenu={e => handleMessageContextMenu(e, message)}
                   >
+                    {!isOwn && (
+                      <div className="mr-2 mt-1">
+                        <ProfileAvatar userId={message.sender_id} size={32} />
+                      </div>
+                    )}
                     <div className={`max-w-xs lg:max-w-md ${isOwn ? 'bg-white text-black' : 'bg-black text-white border border-white'} rounded-lg p-3`}>
                       {selectedConversationType === 'group' && !isOwn && (
                         <p className="text-xs text-white opacity-60 mb-1">{senderName}</p>
@@ -1113,7 +1139,10 @@ const UnifiedMessages = () => {
                     className={`flex items-center justify-between p-2 bg-black border border-white rounded ${canManage ? 'cursor-pointer hover:bg-gray-800' : ''}`}
                     onContextMenu={e => handleMemberContextMenu(e, member)}
                   >
-                    <span className="text-white">{member.username}</span>
+                    <div className="flex items-center space-x-3">
+                      <ProfileAvatar userId={member.user_id} size={32} />
+                      <span className="text-white">{member.username}</span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-400">{member.role}</span>
                       {member.role === 'owner' && <span className="text-xs text-yellow-400">👑</span>}

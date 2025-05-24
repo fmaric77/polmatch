@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import ProfileAvatar from './ProfileAvatar';
 //d
 interface Message {
   _id?: string;
@@ -231,10 +232,11 @@ const Messages = () => {
           {conversations.map(u => (
             <li key={u.user_id}>
               <button
-                className={`w-full text-left p-2 rounded mb-2 transition-colors ${selectedUser === u.user_id ? 'bg-white text-black' : 'bg-black/60 text-white hover:bg-white/10'}`}
+                className={`w-full text-left p-2 rounded mb-2 transition-colors flex items-center space-x-3 ${selectedUser === u.user_id ? 'bg-white text-black' : 'bg-black/60 text-white hover:bg-white/10'}`}
                 onClick={() => setSelectedUser(u.user_id)}
               >
-                {u.username}
+                <ProfileAvatar userId={u.user_id} size={32} />
+                <span>{u.username}</span>
               </button>
             </li>
           ))}
@@ -248,10 +250,11 @@ const Messages = () => {
                 {users.filter(u => u.user_id !== currentUser?.user_id && !conversations.some(c => c.user_id === u.user_id)).map(u => (
                   <li key={u.user_id}>
                     <button
-                      className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200"
+                      className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200 flex items-center space-x-3"
                       onClick={() => handleSelectNewUser(u.user_id)}
                     >
-                      {u.username}
+                      <ProfileAvatar userId={u.user_id} size={32} />
+                      <span>{u.username}</span>
                     </button>
                   </li>
                 ))}
@@ -265,10 +268,15 @@ const Messages = () => {
       <div className="flex-1 flex flex-col h-full min-w-[0]">
         {/* Chat header with settings button */}
         <div className="flex items-center justify-between border-b border-white px-4 py-2 bg-black/70">
-          <div className="font-bold text-lg text-white">
+          <div className="font-bold text-lg text-white flex items-center space-x-3">
             {selectedUser ? (
-              users.find(u => u.user_id === selectedUser)?.username || `User ID: ${selectedUser}`
-            ) : 'Select a chat'}
+              <>
+                <ProfileAvatar userId={selectedUser} size={32} />
+                <span>{users.find(u => u.user_id === selectedUser)?.username || `User ID: ${selectedUser}`}</span>
+              </>
+            ) : (
+              'Select a chat'
+            )}
           </div>
           {selectedUser && (
             <button
@@ -349,6 +357,11 @@ const Messages = () => {
                     key={msg._id}
                     className={`flex ${msg.sender_id === currentUser?.user_id ? 'justify-end' : 'justify-start'}`}
                   >
+                    {msg.sender_id !== currentUser?.user_id && (
+                      <div className="mr-2 mt-1">
+                        <ProfileAvatar userId={msg.sender_id} size={28} />
+                      </div>
+                    )}
                     <div
                       className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 relative ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                     >

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ProfileAvatar from './ProfileAvatar';
 
 interface User {
   user_id: string;
@@ -44,9 +45,10 @@ export default function Friends() {
       setFriends(data.friends);
       setIncoming(data.incoming);
       setOutgoing(data.outgoing);
-    } catch (err: any) {
-      console.error('fetchFriends error:', err);
-      setError(err.message || 'Failed to fetch friends');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error('fetchFriends error:', error);
+      setError(error.message || 'Failed to fetch friends');
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,10 @@ export default function Friends() {
                   const friendUser = users.find(u => u.user_id === friendId);
                   return (
                     <li key={f.user_id + f.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
-                      <span>{friendUser?.display_name || friendUser?.username || friendUser?.user_id}</span>
+                      <div className="flex items-center space-x-3">
+                        <ProfileAvatar userId={friendId} size={32} />
+                        <span>{friendUser?.display_name || friendUser?.username || friendUser?.user_id}</span>
+                      </div>
                       <button onClick={() => removeFriend(friendId)} className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Remove</button>
                     </li>
                   );
@@ -161,7 +166,10 @@ export default function Friends() {
                   const fromUser = users.find(u => u.user_id === req.user_id);
                   return (
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
-                      <span>{fromUser?.display_name || fromUser?.username || fromUser?.user_id}</span>
+                      <div className="flex items-center space-x-3">
+                        <ProfileAvatar userId={req.user_id} size={32} />
+                        <span>{fromUser?.display_name || fromUser?.username || fromUser?.user_id}</span>
+                      </div>
                       <span>
                         <button onClick={() => respondRequest(req.user_id, 'accept')} className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 mr-2">Accept</button>
                         <button onClick={() => respondRequest(req.user_id, 'reject')} className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">Reject</button>
@@ -182,7 +190,10 @@ export default function Friends() {
                   const toUser = users.find(u => u.user_id === req.friend_id);
                   return (
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
-                      <span>{toUser?.display_name || toUser?.username || toUser?.user_id}</span>
+                      <div className="flex items-center space-x-3">
+                        <ProfileAvatar userId={req.friend_id} size={32} />
+                        <span>{toUser?.display_name || toUser?.username || toUser?.user_id}</span>
+                      </div>
                       <span className="text-yellow-400 text-xs">Pending</span>
                     </li>
                   );
@@ -198,7 +209,10 @@ export default function Friends() {
               <ul className="space-y-2">
                 {availableUsers.map(u => (
                   <li key={u.user_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
-                    <span>{u.display_name || u.username || u.user_id}</span>
+                    <div className="flex items-center space-x-3">
+                      <ProfileAvatar userId={u.user_id} size={32} />
+                      <span>{u.display_name || u.username || u.user_id}</span>
+                    </div>
                     <button onClick={() => sendRequest(u.user_id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Send Request</button>
                   </li>
                 ))}

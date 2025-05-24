@@ -5,6 +5,14 @@ import { cookies } from 'next/headers';
 
 const client = new MongoClient(MONGODB_URI);
 
+type QuestionInput = {
+  question_id?: string;
+  question_text: string;
+  question_type: string;
+  options?: string[];
+  is_required?: boolean;
+};
+
 interface RouteContext {
   params: Promise<{ id: string; questionnaireId: string }>;
 }
@@ -110,7 +118,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     await db.collection('questions').deleteMany({ questionnaire_id: questionnaireId });
     // Insert new/updated questions
     if (Array.isArray(body.questions)) {
-      const questionsToInsert = body.questions.map((q: any, idx: number) => ({
+      const questionsToInsert = body.questions.map((q: QuestionInput, idx: number) => ({
         questionnaire_id: questionnaireId,
         question_id: q.question_id || `${questionnaireId}_${idx}_${Date.now()}`,
         question_text: q.question_text,

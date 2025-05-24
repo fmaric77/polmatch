@@ -45,7 +45,12 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   });
   const [submitMessage, setSubmitMessage] = useState('');
   const [showEditQuestionnaire, setShowEditQuestionnaire] = useState(false);
-  const [editQuestionnaireForm, setEditQuestionnaireForm] = useState<any>(null);
+  const [editQuestionnaireForm, setEditQuestionnaireForm] = useState<{
+    title: string;
+    description: string;
+    is_hidden: boolean;
+    questions: Question[];
+  } | null>(null);
   const [editSubmitMessage, setEditSubmitMessage] = useState('');
   const [editingQuestionnaireId, setEditingQuestionnaireId] = useState<string | null>(null);
   const router = useRouter();
@@ -75,7 +80,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
         } else {
           setError(data.message || 'Failed to fetch questionnaire group');
         }
-      } catch (err) {
+      } catch {
         setError('Failed to fetch questionnaire group');
       } finally {
         setLoading(false);
@@ -112,7 +117,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
       } else {
         setSubmitMessage(data.message || 'Failed to create questionnaire');
       }
-    } catch (err) {
+    } catch {
       setSubmitMessage('Failed to create questionnaire');
     }
   };
@@ -131,10 +136,10 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     }));
   };
 
-  const updateQuestion = (index: number, field: string, value: any) => {
+  const updateQuestion = (index: number, field: string, value: string | boolean | string[]) => {
     setQuestionnaireForm(prev => ({
       ...prev,
-      questions: prev.questions.map((q, i) => 
+      questions: prev.questions.map((q, i) =>
         i === index ? { ...q, [field]: value } : q
       )
     }));
@@ -156,7 +161,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
       } else {
         alert(data.message || 'Failed to delete questionnaire');
       }
-    } catch (err) {
+    } catch {
       alert('Failed to delete questionnaire');
     }
   };
@@ -184,24 +189,24 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   };
 
   const addEditQuestion = () => {
-    setEditQuestionnaireForm((prev: any) => ({
+    setEditQuestionnaireForm((prev) => prev ? {
       ...prev,
-      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false }]
-    }));
+      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false, question_id: '', display_order: 0 }]
+    } : null);
   };
 
   const removeEditQuestion = (index: number) => {
-    setEditQuestionnaireForm((prev: any) => ({
+    setEditQuestionnaireForm((prev) => prev ? {
       ...prev,
-      questions: prev.questions.filter((_: any, i: number) => i !== index)
-    }));
+      questions: prev.questions.filter((_, i) => i !== index)
+    } : null);
   };
 
-  const updateEditQuestion = (index: number, field: string, value: any) => {
-    setEditQuestionnaireForm((prev: any) => ({
+  const updateEditQuestion = (index: number, field: string, value: string | boolean | string[]) => {
+    setEditQuestionnaireForm((prev) => prev ? {
       ...prev,
-      questions: prev.questions.map((q: any, i: number) => i === index ? { ...q, [field]: value } : q)
-    }));
+      questions: prev.questions.map((q, i) => i === index ? { ...q, [field]: value } : q)
+    } : null);
   };
 
   const handleEditQuestionnaire = async (e: React.FormEvent) => {
@@ -224,7 +229,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
       } else {
         setEditSubmitMessage(data.message || 'Failed to update questionnaire');
       }
-    } catch (err) {
+    } catch {
       setEditSubmitMessage('Failed to update questionnaire');
     }
   };
@@ -533,7 +538,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                       <input
                         type="text"
                         value={editQuestionnaireForm.title}
-                        onChange={(e) => setEditQuestionnaireForm((prev: any) => ({ ...prev, title: e.target.value }))}
+                        onChange={(e) => setEditQuestionnaireForm(prev => prev ? { ...prev, title: e.target.value } : null)}
                         className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
                         required
                       />
@@ -542,7 +547,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                       <label className="block text-sm font-medium mb-2">Description *</label>
                       <textarea
                         value={editQuestionnaireForm.description}
-                        onChange={(e) => setEditQuestionnaireForm((prev: any) => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) => setEditQuestionnaireForm(prev => prev ? { ...prev, description: e.target.value } : null)}
                         rows={3}
                         className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
                         required
@@ -553,7 +558,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                         <input
                           type="checkbox"
                           checked={editQuestionnaireForm.is_hidden}
-                          onChange={(e) => setEditQuestionnaireForm((prev: any) => ({ ...prev, is_hidden: e.target.checked }))}
+                          onChange={(e) => setEditQuestionnaireForm(prev => prev ? { ...prev, is_hidden: e.target.checked } : null)}
                           className="mr-2"
                         />
                         Hidden (not visible to users)
@@ -570,7 +575,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                           Add Question
                         </button>
                       </div>
-                      {editQuestionnaireForm.questions.map((question: any, index: number) => (
+                      {editQuestionnaireForm.questions.map((question: Question, index: number) => (
                         <div key={index} className="border border-gray-600 rounded-lg p-4 mb-4">
                           <div className="flex justify-between items-center mb-3">
                             <h4 className="font-medium">Question {index + 1}</h4>

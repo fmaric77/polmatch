@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import ProfileAvatar from './ProfileAvatar';
 
 interface Group {
   _id?: string;
@@ -423,6 +424,11 @@ const Groups = () => {
                       key={msg.message_id}
                       className={`flex ${msg.sender_id === currentUser?.user_id ? 'justify-end' : 'justify-start'}`}
                     >
+                      {msg.sender_id !== currentUser?.user_id && (
+                        <div className="mr-2 mt-1">
+                          <ProfileAvatar userId={msg.sender_id} size={28} />
+                        </div>
+                      )}
                       <div
                         className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                       >
@@ -524,9 +530,12 @@ const Groups = () => {
             <div className="max-h-60 overflow-y-auto">
               {members.map(member => (
                 <div key={member.user_id} className="flex items-center justify-between p-2 border-b border-gray-600">
-                  <div>
-                    <div className="font-semibold text-white">{member.username}</div>
-                    <div className="text-sm text-gray-400">Role: {member.role}</div>
+                  <div className="flex items-center space-x-3">
+                    <ProfileAvatar userId={member.user_id} size={32} />
+                    <div>
+                      <div className="font-semibold text-white">{member.username}</div>
+                      <div className="text-sm text-gray-400">Role: {member.role}</div>
+                    </div>
                   </div>
                   <div className="text-xs text-gray-400">
                     Joined: {new Date(member.join_date).toLocaleDateString()}

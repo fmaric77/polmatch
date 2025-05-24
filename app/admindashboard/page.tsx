@@ -12,6 +12,17 @@ interface User {
   is_banned?: boolean;
 }
 
+interface QuestionnaireGroup {
+  group_id: string;
+  title: string;
+  description: string;
+  profile_type: string;
+  is_hidden: boolean;
+  creation_date: string;
+  creator_username: string;
+  questionnaire_count: number;
+}
+
 export default function AdminDashboard() {
   const [form, setForm] = useState({ username: '', email: '', password: '', is_admin: false });
   const [message, setMessage] = useState('');
@@ -20,7 +31,7 @@ export default function AdminDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
   const [search, setSearch] = useState('');
-  const [questionnaireGroups, setQuestionnaireGroups] = useState<any[]>([]);
+  const [questionnaireGroups, setQuestionnaireGroups] = useState<QuestionnaireGroup[]>([]);
   const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(false);
   const [questionnairesError, setQuestionnairesError] = useState('');
   const router = useRouter();
