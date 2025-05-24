@@ -56,12 +56,12 @@ export async function POST(req: NextRequest) {
 
     await db.collection('groups').insertOne(group);
 
-    // Add creator as admin member
+    // Add creator as owner member
     const membership = {
       group_id: groupId,
       user_id: session.user_id,
       join_date: now,
-      role: 'admin'
+      role: 'owner'
     };
 
     await db.collection('group_members').insertOne(membership);

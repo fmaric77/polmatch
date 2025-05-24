@@ -33,7 +33,19 @@ export async function GET(request: Request) {
     
     if (otherUserId) {
       // Fetch messages for a specific conversation
-      // Get the private conversation directly
+      // First check if this conversation is visible to the current user
+      const conversationState = await db.collection('conversation_states').findOne({
+        user_id: user.user_id,
+        other_user_id: otherUserId,
+        conversation_type: 'direct',
+        state: 'visible'
+      });
+      
+      if (!conversationState) {
+        return NextResponse.json({ success: true, pms: [] }); // No visible conversation
+      }
+      
+      // Get the private conversation
       const sortedParticipants = getSortedParticipants(user.user_id, otherUserId);
       const privateConversation = await db.collection('private_conversations').findOne({
         participant_ids: sortedParticipants
@@ -49,17 +61,35 @@ export async function GET(request: Request) {
       }).sort({ timestamp: 1 }).toArray();
       
     } else {
-      // Fetch all messages for conversations where the user is a participant
-      // Get all private conversations for this user
-      const privateConversations = await db.collection('private_conversations').find({
-        participant_ids: user.user_id
+      // Fetch all messages for conversations visible to the user
+      // Get visible conversation states
+      const visibleStates = await db.collection('conversation_states').find({ 
+        user_id: user.user_id, 
+        conversation_type: 'direct',
+        state: 'visible' 
       }).toArray();
       
-      if (privateConversations.length === 0) {
+      if (visibleStates.length === 0) {
         return NextResponse.json({ success: true, pms: [] });
       }
       
-      const conversationIds = privateConversations.map(conv => conv._id);
+      // Get all private conversations for these states
+      const otherUserIds = visibleStates.map(state => state.other_user_id);
+      const conversationIds = [];
+      
+      for (const otherUserId of otherUserIds) {
+        const sortedParticipants = getSortedParticipants(user.user_id, otherUserId);
+        const privateConversation = await db.collection('private_conversations').findOne({
+          participant_ids: sortedParticipants
+        });
+        if (privateConversation) {
+          conversationIds.push(privateConversation._id);
+        }
+      }
+      
+      if (conversationIds.length === 0) {
+        return NextResponse.json({ success: true, pms: [] });
+      }
       
       // Fetch all messages for these conversations
       pms = await db.collection('pm').find({
@@ -150,6 +180,33 @@ export async function POST(request: Request) {
     
     await db.collection('pm').insertOne(message);
     
+    // Update conversation states for both users to ensure conversation is visible
+    const participants = [user.user_id, receiver_id];
+    
+    for (const participant of participants) {
+      const otherParticipant = participant === user.user_id ? receiver_id : user.user_id;
+      
+      await db.collection('conversation_states').updateOne(
+        { 
+          user_id: participant, 
+          other_user_id: otherParticipant,
+          conversation_type: 'direct'
+        },
+        {
+          $set: {
+            state: 'visible',
+            last_message_at: now,
+            updated_at: now
+          },
+          $setOnInsert: {
+            conversation_id: `${participant}_${otherParticipant}_direct`,
+            created_at: now
+          }
+        },
+        { upsert: true }
+      );
+    }
+    
     return NextResponse.json({ success: true, message: { ...message, content } }); // Return decrypted content
   } catch (err) {
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) });
@@ -206,7 +263,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE: Actually delete the private conversation and all associated messages
+// DELETE: Hide conversation for the logged-in user (don't actually delete messages)
 export async function DELETE(request: Request) {
   const client = new MongoClient(uri);
   try {
@@ -225,45 +282,33 @@ export async function DELETE(request: Request) {
     const { other_user_id } = body;
     if (!other_user_id) return NextResponse.json({ success: false, message: 'Missing other_user_id' }, { status: 400 });
     
+    // Debug logging
     console.log('DELETE request - Current user:', user.user_id, 'Other user:', other_user_id);
     
-    // Get the private conversation to delete
-    const sortedParticipants = getSortedParticipants(user.user_id, other_user_id);
-    const privateConversation = await db.collection('private_conversations').findOne({
-      participant_ids: sortedParticipants
-    });
+    // Instead of deleting messages, hide the conversation for this user
+    await db.collection('conversation_states').updateOne(
+      { 
+        user_id: user.user_id, 
+        other_user_id,
+        conversation_type: 'direct'
+      },
+      {
+        $set: {
+          state: 'hidden',
+          updated_at: new Date()
+        },
+        $setOnInsert: {
+          conversation_id: `${user.user_id}_${other_user_id}_direct`,
+          created_at: new Date(),
+          last_message_at: new Date()
+        }
+      },
+      { upsert: true }
+    );
     
-    if (!privateConversation) {
-      return NextResponse.json({ success: false, message: 'Conversation not found' }, { status: 404 });
-    }
+    console.log('Conversation hidden for user:', user.user_id);
     
-    // Delete all messages in this conversation
-    const deleteMessagesResult = await db.collection('pm').deleteMany({
-      conversation_id: privateConversation._id
-    });
-    
-    // Delete the private conversation document
-    const deleteConversationResult = await db.collection('private_conversations').deleteOne({
-      _id: privateConversation._id
-    });
-    
-    // Clean up conversation states for both users
-    await db.collection('conversation_states').deleteMany({
-      $or: [
-        { user_id: user.user_id, other_user_id },
-        { user_id: other_user_id, other_user_id: user.user_id }
-      ],
-      conversation_type: 'direct'
-    });
-    
-    console.log(`Deleted conversation with ${deleteMessagesResult.deletedCount} messages and ${deleteConversationResult.deletedCount} conversation document`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      action: 'deleted',
-      deletedMessages: deleteMessagesResult.deletedCount,
-      deletedConversation: deleteConversationResult.deletedCount
-    });
+    return NextResponse.json({ success: true, action: 'hidden' });
   } catch (err) {
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) });
   } finally {

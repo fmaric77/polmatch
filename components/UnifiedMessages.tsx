@@ -15,6 +15,8 @@ import {
   faCheck,
   faCheckDouble
 } from '@fortawesome/free-solid-svg-icons';
+import { useSearchParams } from 'next/navigation';
+import ProfileAvatar from './ProfileAvatar';
 
 // Interfaces
 interface PrivateMessage {
@@ -35,11 +37,28 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  current_user_read: boolean;
+  total_members: number;
+  read_count: number;
+  read_by_others: boolean;
 }
 
 interface User {
   user_id: string;
   username: string;
+  // Add other user properties if needed
+}
+
+interface PrivateConversationFromAPI {
+  id: string; // This is the conversation ID
+  created_at: string;
+  updated_at: string;
+  latest_message?: {
+    content: string;
+    timestamp: string;
+  };
+  other_user: User; // This is the other participant
+  current_user_id: string; // ID of the user making the request
 }
 
 interface Group {
@@ -84,6 +103,7 @@ interface Conversation {
   last_activity?: string;
   unread_count?: number;
   members_count?: number;
+  user_id?: string; // For direct messages, this is the other user's ID
 }
 
 type ContextMenuExtra = Conversation | PrivateMessage | GroupMessage | undefined;
@@ -121,15 +141,16 @@ const UnifiedMessages = () => {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [inviteLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Remove localStorage-based deleted conversations - now handled by database
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    type: 'conversation' | 'message';
+    type: 'conversation' | 'message' | 'member';
     id: string;
-    extra?: ContextMenuExtra;
+    extra?: ContextMenuExtra | GroupMember;
   } | null>(null);
 
   // Auto-scroll to bottom
@@ -167,9 +188,12 @@ const UnifiedMessages = () => {
     if (!currentUser) return;
 
     try {
-      // Fetch DMs
-      const dmsRes = await fetch('/api/messages');
+      console.log('Fetching conversations for user:', currentUser.user_id);
+      
+      // Fetch DMs using the private conversations API
+      const dmsRes = await fetch('/api/private-conversations');
       const dmsData = await dmsRes.json();
+      console.log('Private conversations API response:', dmsData);
       
       // Fetch groups
       const groupsRes = await fetch('/api/groups/list');
@@ -178,29 +202,25 @@ const UnifiedMessages = () => {
       const dmConversations: Conversation[] = [];
       const groupConversations: Conversation[] = [];
 
-      if (dmsData.success && dmsData.pms) {
-        const uniqueUsers = new Map<string, PrivateMessage>();
-        
-        dmsData.pms.forEach((msg: PrivateMessage) => {
-          const otherUserId = msg.sender_id === currentUser.user_id ? msg.receiver_id : msg.sender_id;
-          if (!uniqueUsers.has(otherUserId) || new Date(msg.timestamp) > new Date(uniqueUsers.get(otherUserId)!.timestamp)) {
-            uniqueUsers.set(otherUserId, msg);
+      if (dmsData.success && Array.isArray(dmsData.conversations)) {
+        console.log('Processing', dmsData.conversations.length, 'private conversations');
+        dmsData.conversations.forEach((conv: PrivateConversationFromAPI) => { // Use the new interface here
+          if (conv.other_user) {
+            const dmConvo: Conversation = { // Ensure this matches the Conversation interface
+              id: conv.other_user.user_id, // Use other_user.user_id as the ID for the conversation entry
+              name: conv.other_user.username,
+              type: 'direct' as const,
+              user_id: conv.other_user.user_id, // Store other_user.user_id for avatar
+              last_message: conv.latest_message?.content,
+              last_activity: conv.latest_message?.timestamp || conv.created_at,
+              unread_count: 0 // Placeholder for unread count
+            };
+            console.log('Adding DM conversation:', dmConvo);
+            dmConversations.push(dmConvo);
           }
         });
-
-        for (const [userId, lastMsg] of uniqueUsers) {
-          const user = users.find(u => u.user_id === userId);
-          if (user) {
-            dmConversations.push({
-              id: userId,
-              name: user.username,
-              type: 'direct',
-              last_message: lastMsg.content,
-              last_activity: lastMsg.timestamp,
-              unread_count: 0 // TODO: Implement unread count
-            });
-          }
-        }
+      } else {
+        console.log('No private conversations found or API error:', dmsData);
       }
 
       if (groupsData.success && groupsData.groups) {
@@ -221,14 +241,19 @@ const UnifiedMessages = () => {
       const allConversations = [...dmConversations, ...groupConversations].sort((a, b) => 
         new Date(b.last_activity || 0).getTime() - new Date(a.last_activity || 0).getTime()
       );
-
+      
+      console.log('Final conversation list:', allConversations);
+      console.log('Setting conversations in state...');
+      
+      // No need to filter out deleted DMs - the API now only returns visible conversations
       setConversations(allConversations);
       setLoading(false);
-    } catch {
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
       setError('Failed to load conversations');
       setLoading(false);
     }
-  }, [currentUser, users]);
+  }, [currentUser]);
 
   // Fetch invitations
   const fetchInvitations = useCallback(async () => {
@@ -337,15 +362,42 @@ const UnifiedMessages = () => {
   };
 
   // Handle conversation selection
-  const selectConversation = (conversation: Conversation) => {
+  const selectConversation = useCallback((conversation: Conversation) => {
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
     fetchMessages(conversation.id, conversation.type);
-    
     if (conversation.type === 'group') {
       fetchGroupMembers(conversation.id);
     }
-  };
+  }, [fetchMessages, fetchGroupMembers]); // Added fetchMessages and fetchGroupMembers as dependencies
+
+  const searchParams = useSearchParams();
+  // Auto-select direct message based on query param
+  useEffect(() => {
+    const dmUserId = searchParams.get('user');
+    if (dmUserId && users.length > 0 && conversations.length > 0) {
+      console.log('Trying to auto-select conversation for user:', dmUserId);
+      console.log('Available conversations:', conversations.map(c => ({ id: c.id, name: c.name, type: c.type })));
+      
+      const convo = conversations.find(c => c.id === dmUserId && c.type === 'direct');
+      if (convo) {
+        console.log('Found conversation, selecting:', convo);
+        selectConversation(convo);
+      } else {
+        console.log(`Conversation with user ${dmUserId} not found in database`);
+        console.log('Available direct conversations:', conversations.filter(c => c.type === 'direct'));
+      }
+    } else {
+      if (dmUserId) {
+        console.log('Auto-select conditions not met:', {
+          dmUserId,
+          usersLoaded: users.length > 0,
+          conversationsLoaded: conversations.length > 0,
+          conversationsCount: conversations.length
+        });
+      }
+    }
+  }, [searchParams, conversations, users, selectConversation]); // Added 'selectConversation'
 
   // Create new group
   const createGroup = async () => {
@@ -368,18 +420,44 @@ const UnifiedMessages = () => {
   };
 
   // Start new DM
-  const startNewDM = () => {
+  const startNewDM = async () => {
     if (!selectedUserForDM) return;
     
-    const conversation: Conversation = {
-      id: selectedUserForDM,
-      name: users.find(u => u.user_id === selectedUserForDM)?.username || 'Unknown',
-      type: 'direct'
-    };
-    
-    selectConversation(conversation);
-    setShowNewDMModal(false);
-    setSelectedUserForDM('');
+    try {
+      // Create conversation in database first, like other components do
+      const res = await fetch('/api/private-conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          other_user_id: selectedUserForDM
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        // Refresh conversations to include the new one
+        await fetchConversations();
+        
+        // Now select the conversation by user ID
+        const targetUser = users.find(u => u.user_id === selectedUserForDM);
+        if (targetUser) {
+          const conversation: Conversation = {
+            id: selectedUserForDM,
+            name: targetUser.username,
+            type: 'direct'
+          };
+          selectConversation(conversation);
+        }
+        
+        setShowNewDMModal(false);
+        setSelectedUserForDM('');
+      } else {
+        setError('Failed to create conversation: ' + (data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      setError('Failed to create conversation. Please try again.');
+    }
   };
 
   // Auto-refresh
@@ -399,26 +477,43 @@ const UnifiedMessages = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Mark messages as read when viewing a private conversation
+  // Mark messages as read when viewing a conversation
   useEffect(() => {
-    if (!selectedConversation || !currentUser || selectedConversationType !== 'direct') return;
+    if (!selectedConversation || !currentUser) return;
     
-    // Find if there are any unread messages from selectedConversation (sender) to currentUser (receiver)
-    const hasUnread = messages
-      .filter((msg): msg is PrivateMessage => (msg as PrivateMessage).receiver_id !== undefined && (msg as PrivateMessage).read !== undefined)
-      .some(
-        msg => msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id && !msg.read
-      );
-    
-    if (hasUnread) {
-      fetch('/api/messages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: selectedConversation }),
-      }).then(() => {
-        // Refresh messages to show updated read status
-        fetchMessages(selectedConversation, selectedConversationType);
-      });
+    if (selectedConversationType === 'direct') {
+      // Find if there are any unread messages from selectedConversation (sender) to currentUser (receiver)
+      const hasUnread = messages
+        .filter((msg): msg is PrivateMessage => (msg as PrivateMessage).receiver_id !== undefined && (msg as PrivateMessage).read !== undefined)
+        .some(
+          msg => msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id && !msg.read
+        );
+      
+      if (hasUnread) {
+        fetch('/api/messages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender_id: selectedConversation }),
+        }).then(() => {
+          // Refresh messages to show updated read status
+          fetchMessages(selectedConversation, selectedConversationType);
+        });
+      }
+    } else if (selectedConversationType === 'group') {
+      // Find if there are any unread group messages for the current user
+      const hasUnread = messages
+        .filter((msg): msg is GroupMessage => (msg as GroupMessage).group_id !== undefined)
+        .some(msg => !msg.current_user_read && msg.sender_id !== currentUser.user_id);
+      
+      if (hasUnread) {
+        fetch(`/api/groups/${selectedConversation}/messages/read`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        }).then(() => {
+          // Refresh messages to show updated read status
+          fetchMessages(selectedConversation, selectedConversationType);
+        });
+      }
     }
   }, [selectedConversation, selectedConversationType, currentUser, messages, fetchMessages]);
 
@@ -438,24 +533,27 @@ const UnifiedMessages = () => {
   };
 
   // Respond to invitation
-  const respondToInvitation = async (invitationId: string, response: 'accept' | 'decline') => {
+  const respondToInvitation = async (invitationId: string, action: 'accept' | 'decline') => {
     try {
       const res = await fetch(`/api/invitations/${invitationId}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ response })
+        body: JSON.stringify({ action })
       });
 
       const data = await res.json();
       if (data.success) {
         fetchInvitations();
         fetchConversations();
-        if (response === 'accept') {
+        if (action === 'accept') {
           alert('Invitation accepted! You have joined the group.');
         }
+      } else {
+        alert(data.message || 'Failed to respond to invitation');
       }
     } catch (err) {
       console.error('Failed to respond to invitation:', err);
+      alert('Failed to respond to invitation');
     }
   };
 
@@ -489,15 +587,27 @@ const UnifiedMessages = () => {
 
   // Delete conversation (DM or group)
   const deleteConversation = async (conv: Conversation) => {
+    // Clear the selected conversation first if it matches the deleted one
+    if (selectedConversation === conv.id) {
+      setSelectedConversation('');
+      setSelectedConversationType('direct');
+      setMessages([]);
+    }
+    
     if (conv.type === 'direct') {
       await fetch('/api/messages', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ other_user_id: conv.id })
       });
+      
+      // Immediately remove the conversation from local state for better UX
+      setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'direct')));
+      
+      // No need to manage deletedDMConversations set - database handles this now
     } else if (conv.type === 'group') {
       // If user is group creator, delete group; otherwise, leave group
-      if (groupMembers.find(m => m.user_id === currentUser?.user_id && m.role === 'owner')) {
+      if (groupMembers.find(m => m.user_id === currentUser?.user_id && (m.role === 'owner' || m.role === 'admin'))) {
         await fetch(`/api/groups/${conv.id}`, { method: 'DELETE' });
       } else {
         await fetch(`/api/groups/leave`, {
@@ -506,10 +616,11 @@ const UnifiedMessages = () => {
           body: JSON.stringify({ group_id: conv.id })
         });
       }
+      // Immediately remove the group conversation from local state
+      setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'group')));
     }
+    
     setContextMenu(null);
-    setSelectedConversation('');
-    fetchConversations();
   };
 
   // Delete message
@@ -547,7 +658,7 @@ const UnifiedMessages = () => {
       const res = await fetch(`/api/groups/${selectedConversation}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: selectedUserToInvite })
+        body: JSON.stringify({ invited_user_id: selectedUserToInvite })
       });
       const data = await res.json();
       if (data.success) {
@@ -559,6 +670,70 @@ const UnifiedMessages = () => {
     } catch {
       setError('Failed to send invitation');
     }
+  };
+
+  // Remove member from group
+  const removeMember = async (memberId: string) => {
+    if (!selectedConversation) return;
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member removed successfully');
+      } else {
+        alert(data.error || 'Failed to remove member');
+      }
+    } catch {
+      alert('Failed to remove member');
+    }
+  };
+
+  // Ban member from group
+  const banMember = async (memberId: string) => {
+    if (!selectedConversation) return;
+    const reason = prompt('Enter reason for ban (optional):');
+    if (reason === null) return; // User cancelled
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId, reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member banned successfully');
+      } else {
+        alert(data.error || 'Failed to ban member');
+      }
+    } catch {
+      alert('Failed to ban member');
+    }
+  };
+
+  // Handle right-click on member
+  const handleMemberContextMenu = (e: React.MouseEvent, member: GroupMember) => {
+    e.preventDefault();
+    // Only allow admin actions if current user is admin and target is not creator
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
+    const isCurrentUserAdmin = currentUserMember && (currentUserMember.role === 'owner' || currentUserMember.role === 'admin');
+    const isTargetCreator = member.role === 'owner' || member.role === 'admin';
+    
+    if (!isCurrentUserAdmin || isTargetCreator || member.user_id === currentUser?.user_id) return;
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      type: 'member',
+      id: member.user_id,
+      extra: member
+    });
   };
 
   if (loading) {
@@ -591,9 +766,9 @@ const UnifiedMessages = () => {
   }
 
   return (
-    <div className="flex-1 flex bg-black text-white">
+    <div className="flex-1 flex bg-black text-white h-full overflow-hidden">
       {/* Sidebar - Conversations List */}
-      <div className="w-80 bg-black flex flex-col border-r border-white">
+      <div className="w-80 bg-black flex flex-col border-r border-white h-full">
         {/* Header */}
         <div className="p-4 border-b border-white">
           <div className="flex items-center justify-between mb-4">
@@ -682,12 +857,16 @@ const UnifiedMessages = () => {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-                    <FontAwesomeIcon 
-                      icon={conversation.type === 'group' ? faUsers : faUser} 
-                      className="text-white"
-                    />
-                  </div>
+                  {conversation.type === 'direct' && conversation.user_id ? (
+                    <ProfileAvatar userId={conversation.user_id} size={40} />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon 
+                        icon={conversation.type === 'group' ? faUsers : faUser} 
+                        className="text-white"
+                      />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <span className="font-medium truncate">{conversation.name}</span>
@@ -718,19 +897,23 @@ const UnifiedMessages = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full">
         {selectedConversation ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-white bg-black">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-black border border-white rounded-full flex items-center justify-center">
-                    <FontAwesomeIcon 
-                      icon={selectedConversationType === 'group' ? faHashtag : faAt} 
-                      className="text-white text-sm"
-                    />
-                  </div>
+                  {selectedConversationType === 'direct' && selectedConversationData?.user_id ? (
+                    <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
+                  ) : (
+                    <div className="w-8 h-8 bg-black border border-white rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon 
+                        icon={selectedConversationType === 'group' ? faHashtag : faAt} 
+                        className="text-white text-sm"
+                      />
+                    </div>
+                  )}
                   <div>
                     <h2 className="font-bold">{selectedConversationData?.name}</h2>
                     {selectedConversationType === 'group' && selectedConversationData?.members_count && (
@@ -770,7 +953,7 @@ const UnifiedMessages = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black min-h-0">
               {messages.map((message, index) => {
                 const isOwn = message.sender_id === currentUser?.user_id;
                 const senderName = selectedConversationType === 'group' 
@@ -783,6 +966,11 @@ const UnifiedMessages = () => {
                   <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                     onContextMenu={e => handleMessageContextMenu(e, message)}
                   >
+                    {!isOwn && (
+                      <div className="mr-2 mt-1">
+                        <ProfileAvatar userId={message.sender_id} size={32} />
+                      </div>
+                    )}
                     <div className={`max-w-xs lg:max-w-md ${isOwn ? 'bg-white text-black' : 'bg-black text-white border border-white'} rounded-lg p-3`}>
                       {selectedConversationType === 'group' && !isOwn && (
                         <p className="text-xs text-white opacity-60 mb-1">{senderName}</p>
@@ -795,13 +983,13 @@ const UnifiedMessages = () => {
                             icon={
                               selectedConversationType === 'direct'
                                 ? ((message as PrivateMessage).read ? faCheckDouble : faCheck)
-                                : faCheckDouble
+                                : ((message as GroupMessage).read_by_others ? faCheckDouble : faCheck)
                             }
                             className="text-xs"
                             style={{
                               color: selectedConversationType === 'direct'
                                 ? ((message as PrivateMessage).read ? '#4ade80' : '#9ca3af')
-                                : '#4ade80'
+                                : ((message as GroupMessage).read_by_others ? '#4ade80' : '#9ca3af')
                             }}
                           />
                         )}
@@ -939,12 +1127,30 @@ const UnifiedMessages = () => {
               </button>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {groupMembers.map(member => (
-                <div key={member.user_id} className="flex items-center justify-between p-2 bg-black border border-white rounded">
-                  <span className="text-white">{member.username}</span>
-                  <span className="text-sm text-gray-400">{member.role}</span>
-                </div>
-              ))}
+              {groupMembers.map(member => {
+                const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
+                const isCurrentUserAdmin = currentUserMember && (currentUserMember.role === 'owner' || currentUserMember.role === 'admin');
+                const isTargetAdmin = member.role === 'owner' || member.role === 'admin';
+                const canManage = isCurrentUserAdmin && !isTargetAdmin && member.user_id !== currentUser?.user_id;
+                
+                return (
+                  <div 
+                    key={member.user_id} 
+                    className={`flex items-center justify-between p-2 bg-black border border-white rounded ${canManage ? 'cursor-pointer hover:bg-gray-800' : ''}`}
+                    onContextMenu={e => handleMemberContextMenu(e, member)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <ProfileAvatar userId={member.user_id} size={32} />
+                      <span className="text-white">{member.username}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-400">{member.role}</span>
+                      {member.role === 'owner' && <span className="text-xs text-yellow-400">👑</span>}
+                      {member.role === 'admin' && <span className="text-xs text-blue-400">⚡</span>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1029,15 +1235,53 @@ const UnifiedMessages = () => {
           className="fixed z-50 bg-black border border-white rounded shadow-lg text-white"
           style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
         >
-          <button
-            className="block w-full text-left px-4 py-2 hover:bg-white hover:text-black rounded"
-            onClick={() => {
-              if (contextMenu.type === 'conversation' && contextMenu.extra && (contextMenu.extra as Conversation).id) deleteConversation(contextMenu.extra as Conversation);
-              if (contextMenu.type === 'message' && contextMenu.extra && ((contextMenu.extra as PrivateMessage).content || (contextMenu.extra as GroupMessage).content)) deleteMessage(contextMenu.extra as PrivateMessage | GroupMessage);
-            }}
-          >
-            Delete
-          </button>
+          {contextMenu.type === 'member' ? (
+            // Member management options for admins
+            <>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-white hover:text-black border-b border-white"
+                onClick={() => {
+                  removeMember(contextMenu.id);
+                  setContextMenu(null);
+                }}
+              >
+                Remove Member
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white"
+                onClick={() => {
+                  banMember(contextMenu.id);
+                  setContextMenu(null);
+                }}
+              >
+                Ban Member
+              </button>
+            </>
+          ) : (
+            // Existing conversation/message options
+            <button
+              className="block w-full text-left px-4 py-2 hover:bg-white hover:text-black rounded"
+              onClick={() => {
+                if (contextMenu.type === 'conversation' && contextMenu.extra && (contextMenu.extra as Conversation).id) deleteConversation(contextMenu.extra as Conversation);
+                if (contextMenu.type === 'message' && contextMenu.extra && ((contextMenu.extra as PrivateMessage).content || (contextMenu.extra as GroupMessage).content)) deleteMessage(contextMenu.extra as PrivateMessage | GroupMessage);
+                setContextMenu(null);
+              }}
+            >
+              {(() => {
+                if (contextMenu.type === 'conversation' && contextMenu.extra) {
+                  const conv = contextMenu.extra as Conversation;
+                  if (conv.type === 'group') {
+                    // Check if user is owner/admin (creator) of the group
+                    const isCreator = groupMembers.find(m => 
+                      m.user_id === currentUser?.user_id && (m.role === 'owner' || m.role === 'admin')
+                    );
+                    return isCreator ? 'Delete' : 'Leave';
+                  }
+                }
+                return 'Delete';
+              })()}
+            </button>
+          )}
         </div>
       )}
     </div>

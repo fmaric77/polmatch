@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faHome, faUser, faSearch, faBook, faSignOutAlt, faBars, faTimes, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faHome, faUser, faSearch, faBook, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const Header = () => {
   const [open, setOpen] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     async function checkAdmin() {
@@ -25,6 +27,13 @@ const Header = () => {
     }
     checkAdmin();
   }, []);
+
+  // Auto-close sidebar when navigating to chat page
+  useEffect(() => {
+    if (pathname === '/chat') {
+      setOpen(false);
+    }
+  }, [pathname]);
 
   return (
     <>
@@ -78,12 +87,6 @@ const Header = () => {
               <a href="/catalogs" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faBook} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-purple-400 group-hover:text-purple-200 transition-colors" />
                 <span className="font-medium">My Catalogs</span>
-              </a>
-            </li>
-            <li>
-              <a href="/profile/settings" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faCog} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-gray-400 group-hover:text-gray-200 transition-colors" />
-                <span className="font-medium">Settings</span>
               </a>
             </li>
             {isAdmin && (

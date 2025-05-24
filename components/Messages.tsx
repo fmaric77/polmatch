@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
+import ProfileAvatar from './ProfileAvatar';
 //d
 interface Message {
   _id?: string;
+  conversation_id?: string;
   sender_id: string;
   receiver_id: string;
   content: string;
@@ -15,6 +17,17 @@ interface User {
   username: string;
 }
 
+interface Conversation {
+  conversation_id: string;
+  other_user: {
+    user_id: string;
+    username: string;
+  };
+  last_message_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const Messages = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -25,7 +38,9 @@ const Messages = () => {
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [autoDeleteDays, setAutoDeleteDays] = useState('');
+  const [conversations, setConversations] = useState<User[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch current user info
@@ -45,6 +60,40 @@ const Messages = () => {
         if (data.success) setUsers(data.users);
       });
   }, []);
+
+  // Fetch all conversations (users with whom there is at least one message)
+  useEffect(() => {
+    if (!currentUser) {
+      setConversations([]);
+      return;
+    }
+
+    // Use the new private conversations API to get actual conversations
+    fetch('/api/private-conversations')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API request failed with status ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data.success && data.conversations) {
+          // Map the conversation data to the format expected by the UI
+          const conversationUsers: User[] = data.conversations.map((conv: Conversation) => ({
+            user_id: conv.other_user.user_id,
+            username: conv.other_user.username
+          }));
+          setConversations(conversationUsers);
+        } else {
+          console.error("API error fetching conversations:", data.message || 'Unknown error');
+          setConversations([]);
+        }
+      })
+      .catch(error => {
+        console.error("Failed to fetch conversations:", error);
+        setConversations([]);
+      });
+  }, [currentUser, refresh]);
 
   // Fetch messages with selected user
   const fetchMessages = () => {
@@ -76,11 +125,6 @@ const Messages = () => {
     // eslint-disable-next-line
   }, [selectedUser, refresh]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser || !newMessage) return;
@@ -92,7 +136,10 @@ const Messages = () => {
     const data = await res.json();
     if (data.success) {
       setNewMessage('');
-      setRefresh(r => r + 1);
+      setRefresh(r => r + 1); // This will trigger a re-fetch of conversations
+      // The optimistic update below was removed as it could lead to displaying
+      // conversations not yet confirmed or visible in the database.
+      // The refresh mechanism above is now the sole way conversations list is updated after sending a message.
     }
   };
 
@@ -101,9 +148,34 @@ const Messages = () => {
     setShowNewUserModal(true);
   };
 
-  const handleSelectNewUser = (userId: string) => {
+  const handleSelectNewUser = async (userId: string) => {
+    console.log('Selecting user:', userId);
+    console.log('Available users:', users);
     setSelectedUser(userId);
     setShowNewUserModal(false);
+    
+    try {
+      // Create the conversation in the private conversations system
+      const res = await fetch('/api/private-conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          other_user_id: userId
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        // Refresh conversations list to include the new conversation
+        setRefresh(r => r + 1);
+      } else {
+        console.error('Failed to create conversation:', data.message);
+        // Still allow user to see the selected user, conversation will be created when first message is sent
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      // Still allow user to see the selected user, conversation will be created when first message is sent
+    }
   };
 
   // Mark messages as read when viewing a conversation
@@ -128,6 +200,25 @@ const Messages = () => {
     setMessages([]);
   }, [selectedUser]);
 
+  // Smooth scroll to bottom function
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages]);
+
   // Add settings button and modal in main chat area header
   return (
     <div className="flex flex-col md:flex-row h-[80vh] max-w-4xl w-full mx-auto bg-black/80 border border-white rounded-lg shadow-lg mt-8 min-h-[500px] min-w-[350px]">
@@ -138,13 +229,14 @@ const Messages = () => {
           <button onClick={handleNewUserMessage} className="p-2 bg-white text-black rounded hover:bg-gray-200 text-sm">New Message</button>
         </div>
         <ul>
-          {users.filter(u => u.user_id !== currentUser?.user_id).map(u => (
+          {conversations.map(u => (
             <li key={u.user_id}>
               <button
-                className={`w-full text-left p-2 rounded mb-2 transition-colors ${selectedUser === u.user_id ? 'bg-white text-black' : 'bg-black/60 text-white hover:bg-white/10'}`}
+                className={`w-full text-left p-2 rounded mb-2 transition-colors flex items-center space-x-3 ${selectedUser === u.user_id ? 'bg-white text-black' : 'bg-black/60 text-white hover:bg-white/10'}`}
                 onClick={() => setSelectedUser(u.user_id)}
               >
-                {u.username}
+                <ProfileAvatar userId={u.user_id} size={32} />
+                <span>{u.username}</span>
               </button>
             </li>
           ))}
@@ -155,13 +247,14 @@ const Messages = () => {
             <div className="bg-black border border-white p-6 rounded max-w-md w-full">
               <h2 className="text-2xl font-bold mb-4 text-white">Start New Conversation</h2>
               <ul>
-                {users.filter(u => u.user_id !== currentUser?.user_id && u.user_id !== selectedUser).map(u => (
+                {users.filter(u => u.user_id !== currentUser?.user_id && !conversations.some(c => c.user_id === u.user_id)).map(u => (
                   <li key={u.user_id}>
                     <button
-                      className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200"
+                      className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200 flex items-center space-x-3"
                       onClick={() => handleSelectNewUser(u.user_id)}
                     >
-                      {u.username}
+                      <ProfileAvatar userId={u.user_id} size={32} />
+                      <span>{u.username}</span>
                     </button>
                   </li>
                 ))}
@@ -175,8 +268,15 @@ const Messages = () => {
       <div className="flex-1 flex flex-col h-full min-w-[0]">
         {/* Chat header with settings button */}
         <div className="flex items-center justify-between border-b border-white px-4 py-2 bg-black/70">
-          <div className="font-bold text-lg text-white">
-            {selectedUser ? users.find(u => u.user_id === selectedUser)?.username : 'Select a chat'}
+          <div className="font-bold text-lg text-white flex items-center space-x-3">
+            {selectedUser ? (
+              <>
+                <ProfileAvatar userId={selectedUser} size={32} />
+                <span>{users.find(u => u.user_id === selectedUser)?.username || `User ID: ${selectedUser}`}</span>
+              </>
+            ) : (
+              'Select a chat'
+            )}
           </div>
           {selectedUser && (
             <button
@@ -197,14 +297,22 @@ const Messages = () => {
                 className="mb-4 p-2 bg-red-600 text-white rounded hover:bg-red-700 w-full"
                 onClick={async () => {
                   if (window.confirm('Are you sure you want to delete all messages in this chat? This cannot be undone.')) {
-                    await fetch('/api/messages', {
+                    console.log('Sending DELETE request with selectedUser:', selectedUser);
+                    console.log('Current user:', currentUser);
+                    const res = await fetch('/api/messages', {
                       method: 'DELETE',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ other_user_id: selectedUser }),
                     });
-                    setMessages([]);
-                    setRefresh(r => r + 1);
-                    setShowSettings(false);
+                    const data = await res.json();
+                    console.log('DELETE response:', data);
+                    if (data.success) {
+                      setMessages([]);
+                      setRefresh(r => r + 1);
+                      setShowSettings(false);
+                    } else {
+                      alert('Failed to delete messages: ' + (data.message || 'Unknown error'));
+                    }
                   }
                 }}
               >
@@ -234,7 +342,11 @@ const Messages = () => {
             </div>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 min-h-[300px] max-h-[calc(80vh-120px)] scroll-smooth"
+          style={{ scrollBehavior: 'smooth' }}
+        >
           {selectedUser ? (
             <div className="flex flex-col gap-2">
               {messages.length === 0 ? (
@@ -245,6 +357,11 @@ const Messages = () => {
                     key={msg._id}
                     className={`flex ${msg.sender_id === currentUser?.user_id ? 'justify-end' : 'justify-start'}`}
                   >
+                    {msg.sender_id !== currentUser?.user_id && (
+                      <div className="mr-2 mt-1">
+                        <ProfileAvatar userId={msg.sender_id} size={28} />
+                      </div>
+                    )}
                     <div
                       className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 relative ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                     >
