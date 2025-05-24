@@ -51,7 +51,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       }, { status: 403 });
     }
 
-    // Get group messages
+    // Get group messages with comprehensive read status information
     const messages = await db.collection('group_messages').aggregate([
       { $match: { group_id: groupId } },
       {
@@ -64,6 +64,22 @@ export async function GET(req: NextRequest, context: RouteContext) {
       },
       { $unwind: '$sender' },
       {
+        $lookup: {
+          from: 'group_message_reads',
+          localField: 'message_id',
+          foreignField: 'message_id',
+          as: 'all_reads'
+        }
+      },
+      {
+        $lookup: {
+          from: 'group_members',
+          localField: 'group_id',
+          foreignField: 'group_id',
+          as: 'group_members'
+        }
+      },
+      {
         $project: {
           message_id: 1,
           group_id: 1,
@@ -71,7 +87,35 @@ export async function GET(req: NextRequest, context: RouteContext) {
           content: 1,
           timestamp: 1,
           attachments: 1,
-          sender_username: '$sender.username'
+          sender_username: '$sender.username',
+          current_user_read: {
+            $gt: [
+              {
+                $size: {
+                  $filter: {
+                    input: '$all_reads',
+                    cond: { $eq: ['$$this.user_id', session.user_id] }
+                  }
+                }
+              },
+              0
+            ]
+          },
+          total_members: { $size: '$group_members' },
+          read_count: { $size: '$all_reads' },
+          read_by_others: {
+            $gt: [
+              {
+                $size: {
+                  $filter: {
+                    input: '$all_reads',
+                    cond: { $ne: ['$$this.user_id', session.user_id] }
+                  }
+                }
+              },
+              0
+            ]
+          }
         }
       },
       { $sort: { timestamp: 1 } }
@@ -167,6 +211,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     };
 
     await db.collection('group_messages').insertOne(message);
+
+    // Mark the message as read by the sender
+    await db.collection('group_message_reads').insertOne({
+      message_id: message.message_id,
+      group_id: groupId,
+      user_id: session.user_id,
+      read_at: new Date()
+    });
 
     // Update group last activity
     await db.collection('groups').updateOne(

@@ -23,6 +23,10 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  current_user_read: boolean;
+  total_members: number;
+  read_count: number;
+  read_by_others: boolean;
 }
 
 interface GroupMember {

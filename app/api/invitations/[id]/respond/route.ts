@@ -68,6 +68,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         user_id: session.user_id 
       });
 
+      // Check if user is banned from this group
+      const banRecord = await db.collection('group_bans').findOne({
+        group_id: invitation.group_id,
+        user_id: session.user_id
+      });
+
+      if (banRecord) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'You are banned from this group and cannot accept invitations' 
+        }, { status: 403 });
+      }
+
       if (!existingMembership) {
         // Add user to group
         await db.collection('group_members').insertOne({

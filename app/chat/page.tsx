@@ -4,7 +4,7 @@ import UnifiedMessages from '@/components/UnifiedMessages';
 
 export default function UnifiedMessagesPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-black text-white">
+    <div className="flex flex-col h-screen bg-black text-white">
       <Header />
       <UnifiedMessages />
     </div>

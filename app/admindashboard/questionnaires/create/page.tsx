@@ -1,0 +1,172 @@
+"use client";
+import Header from '../../../../components/Header';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function CreateQuestionnaireGroup() {
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    profile_type: 'basic',
+    is_hidden: false,
+    required_for: []
+  });
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is admin
+    async function checkAdmin() {
+      const res = await fetch('/api/session');
+      const data = await res.json();
+      if (!data.valid || !data.user?.is_admin) {
+        router.replace('/');
+      }
+    }
+    checkAdmin();
+  }, [router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = 'checked' in e.target ? e.target.checked : false;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/questionnaires', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setMessage('Questionnaire group created successfully!');
+        setTimeout(() => {
+          router.push(`/admindashboard/questionnaires/${data.group_id}`);
+        }, 1500);
+      } else {
+        setMessage(data.message || 'Failed to create questionnaire group');
+      }
+    } catch (error) {
+      setMessage('Failed to create questionnaire group');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Header />
+      <main className="flex flex-col min-h-screen bg-black text-white">
+        <div className="w-full max-w-4xl mx-auto mt-12 p-6">
+          <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
+            <div className="flex items-center mb-6">
+              <button
+                onClick={() => router.back()}
+                className="mr-4 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+              >
+                ← Back
+              </button>
+              <h1 className="text-3xl font-bold">Create Questionnaire Group</h1>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+                  required
+                  placeholder="Enter questionnaire group title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Description *</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+                  required
+                  placeholder="Enter description for this questionnaire group"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Profile Type *</label>
+                <select
+                  name="profile_type"
+                  value={form.profile_type}
+                  onChange={handleChange}
+                  className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+                  required
+                >
+                  <option value="basic">Basic Profile</option>
+                  <option value="business">Business Profile</option>
+                  <option value="love">Love Profile</option>
+                </select>
+                <p className="text-sm text-gray-400 mt-1">
+                  Choose which type of profile this questionnaire group will be available for
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="is_hidden"
+                    checked={form.is_hidden}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  <span>Hidden (not visible to users)</span>
+                </label>
+                <p className="text-sm text-gray-400 mt-1">
+                  Hidden groups are not shown to users but can be used for admin purposes
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Creating...' : 'Create Group'}
+                </button>
+              </div>
+
+              {message && (
+                <div className={`text-center mt-4 ${message.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
+                  {message}
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}

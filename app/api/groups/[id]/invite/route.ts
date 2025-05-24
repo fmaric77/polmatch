@@ -53,6 +53,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'You must be a member to invite others' }, { status: 403 });
     }
 
+    // Get inviter's username
+    const inviterUser = await db.collection('users').findOne({ user_id: inviter_id });
+    if (!inviterUser) {
+      return NextResponse.json({ success: false, message: 'Inviter not found' }, { status: 404 });
+    }
+
     // Check if invited user exists
     const invitedUser = await db.collection('users').findOne({ user_id: invited_user_id });
     if (!invitedUser) {
@@ -84,7 +90,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       group_id,
       group_name: group.name,
       inviter_id,
-      inviter_username: session.username || 'Unknown',
+      inviter_username: inviterUser.username,
       invited_user_id,
       invited_username: invitedUser.username,
       created_at: new Date().toISOString(),

@@ -3,15 +3,7 @@ import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
 
-export async function DELETE(req: NextRequest) {
-  return await leaveGroup(req);
-}
-
-export async function POST(req: NextRequest) {
-  return await leaveGroup(req);
-}
-
-async function leaveGroup(req: NextRequest) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Validate session
     const cookieStore = await cookies();
@@ -35,29 +27,10 @@ async function leaveGroup(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const { group_id } = await req.json();
+    const { id } = await params;
+    const group_id = id;
 
-    if (!group_id) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'Group ID is required' 
-      }, { status: 400 });
-    }
-
-    // Check if user is a member
-    const membership = await db.collection('group_members').findOne({
-      group_id,
-      user_id: session.user_id
-    });
-
-    if (!membership) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'Not a member of this group' 
-      }, { status: 400 });
-    }
-
-    // Check if user is the creator/admin
+    // Check if group exists and user is the creator
     const group = await db.collection('groups').findOne({ group_id });
     
     if (!group) {
@@ -67,41 +40,43 @@ async function leaveGroup(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Prevent creator from leaving (they should delete the group instead)
-    const isCreator = group.creator_id === session.user_id || 
-                     (membership && (membership.role === 'owner' || membership.role === 'admin'));
-
-    if (isCreator) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'Group creator cannot leave the group. Delete the group instead.' 
-      }, { status: 400 });
-    }
-
-    // Remove user from group
-    await db.collection('group_members').deleteOne({
+    // Check if user is creator (either by creator_id or by having owner/admin role)
+    const membership = await db.collection('group_members').findOne({
       group_id,
       user_id: session.user_id
     });
 
-    // Update group member count
-    await db.collection('groups').updateOne(
-      { group_id },
-      { 
-        $inc: { members_count: -1 },
-        $set: { last_activity: new Date() }
-      }
-    );
+    const isCreator = group.creator_id === session.user_id || 
+                     (membership && (membership.role === 'owner' || membership.role === 'admin'));
+
+    if (!isCreator) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Only the group creator can delete the group' 
+      }, { status: 403 });
+    }
+
+    // Delete group and all related data
+    await Promise.all([
+      // Delete the group
+      db.collection('groups').deleteOne({ group_id }),
+      // Delete all group members
+      db.collection('group_members').deleteMany({ group_id }),
+      // Delete all group messages
+      db.collection('group_messages').deleteMany({ group_id }),
+      // Delete all group invitations
+      db.collection('group_invitations').deleteMany({ group_id })
+    ]);
 
     await client.close();
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Successfully left group' 
+      message: 'Group successfully deleted' 
     });
 
   } catch (error) {
-    console.error('Error leaving group:', error);
+    console.error('Error deleting group:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
