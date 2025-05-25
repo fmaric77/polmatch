@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../../mongo-uri';
+import MONGODB_URI from '../../../../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
@@ -8,10 +8,11 @@ import CryptoJS from 'crypto-js';
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
 interface RouteContext {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; channelId: string }>;
 }
 
-export async function GET(req: NextRequest, context: RouteContext) {
+// GET: Fetch messages for a specific channel
+export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
     // Validate session
     const cookieStore = await cookies();
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
+    const channelId = params.channelId;
 
     // Check if user is a member of the group
     const membership = await db.collection('group_members').findOne({
@@ -51,22 +53,22 @@ export async function GET(req: NextRequest, context: RouteContext) {
       }, { status: 403 });
     }
 
-    // Get the default channel for this group (for backward compatibility)
-    const defaultChannel = await db.collection('group_channels').findOne({
-      group_id: groupId,
-      is_default: true
+    // Verify channel exists and belongs to the group
+    const channel = await db.collection('group_channels').findOne({
+      channel_id: channelId,
+      group_id: groupId
     });
 
-    if (!defaultChannel) {
+    if (!channel) {
       await client.close();
       return NextResponse.json({ 
-        error: 'No default channel found for this group' 
+        error: 'Channel not found' 
       }, { status: 404 });
     }
 
-    // Get group messages from the default channel with comprehensive read status information
+    // Get channel messages with comprehensive read status information
     const messages = await db.collection('group_messages').aggregate([
-      { $match: { group_id: groupId, channel_id: defaultChannel.channel_id } },
+      { $match: { group_id: groupId, channel_id: channelId } },
       {
         $lookup: {
           from: 'users',
@@ -96,6 +98,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         $project: {
           message_id: 1,
           group_id: 1,
+          channel_id: 1,
           sender_id: 1,
           content: 1,
           timestamp: 1,
@@ -131,38 +134,43 @@ export async function GET(req: NextRequest, context: RouteContext) {
           }
         }
       },
-      { $sort: { timestamp: 1 } }
+      { $sort: { timestamp: 1 } },
+      { $limit: 50 } // Limit to last 50 messages
     ]).toArray();
 
     // Decrypt message content
-    const decryptedMessages = messages.map(msg => ({
-      ...msg,
-      content: (() => {
-        try {
-          const bytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
-          return bytes.toString(CryptoJS.enc.Utf8) || '[Decryption failed]';
-        } catch {
-          return '[Decryption failed]';
-        }
-      })(),
-    }));
+    const decryptedMessages = messages.map(message => {
+      try {
+        const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+        return { ...message, content: decryptedContent };
+      } catch (error) {
+        console.error('Failed to decrypt message:', error);
+        return { ...message, content: '[Unable to decrypt message]' };
+      }
+    });
 
     await client.close();
 
     return NextResponse.json({ 
       success: true, 
-      messages: decryptedMessages 
+      messages: decryptedMessages,
+      channel: {
+        channel_id: channel.channel_id,
+        name: channel.name,
+        description: channel.description
+      }
     });
 
   } catch (error) {
-    console.error('Error fetching group messages:', error);
+    console.error('Error fetching channel messages:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest, context: RouteContext) {
+// POST: Send a message to a specific channel
+export async function POST(req: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
     // Validate session
     const cookieStore = await cookies();
@@ -188,9 +196,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
+    const channelId = params.channelId;
     const { content, attachments } = await req.json();
 
-    if (!content) {
+    if (!content || content.trim() === '') {
       await client.close();
       return NextResponse.json({ 
         error: 'Message content is required' 
@@ -210,27 +219,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }, { status: 403 });
     }
 
-    // Get the default channel for this group (for backward compatibility)
-    const defaultChannel = await db.collection('group_channels').findOne({
-      group_id: groupId,
-      is_default: true
+    // Verify channel exists and belongs to the group
+    const channel = await db.collection('group_channels').findOne({
+      channel_id: channelId,
+      group_id: groupId
     });
 
-    if (!defaultChannel) {
+    if (!channel) {
       await client.close();
       return NextResponse.json({ 
-        error: 'No default channel found for this group' 
+        error: 'Channel not found' 
       }, { status: 404 });
     }
 
     // Encrypt the message content
     const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
 
-    // Create message in the default channel
+    // Create message
+    const messageId = uuidv4();
     const message = {
-      message_id: uuidv4(),
+      message_id: messageId,
       group_id: groupId,
-      channel_id: defaultChannel.channel_id,
+      channel_id: channelId,
       sender_id: session.user_id,
       content: encryptedContent,
       timestamp: new Date(),
@@ -241,12 +251,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     // Mark the message as read by the sender
     await db.collection('group_message_reads').insertOne({
-      message_id: message.message_id,
+      message_id: messageId,
       user_id: session.user_id,
       read_at: new Date()
     });
 
-    // Update group last activity
+    // Update group's last activity
     await db.collection('groups').updateOne(
       { group_id: groupId },
       { $set: { last_activity: new Date() } }
@@ -256,59 +266,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ 
       success: true, 
-      message_id: message.message_id,
+      message_id: messageId,
       message: 'Message sent successfully' 
     });
 
   } catch (error) {
-    console.error('Error sending group message:', error);
+    console.error('Error sending channel message:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest, context: RouteContext) {
-  try {
-    // Validate session
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    if (!sessionToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    const db = client.db('polmatch');
-    // Verify session
-    const session = await db.collection('sessions').findOne({ sessionToken });
-    if (!session) {
-      await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-    // Get group ID
-    const params = await context.params;
-    const groupId = params.id;
-    // Check membership
-    const membership = await db.collection('group_members').findOne({ group_id: groupId, user_id: session.user_id });
-    if (!membership) {
-      await client.close();
-      return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
-    }
-    // Parse message_id
-    const { message_id } = await req.json();
-    if (!message_id) {
-      await client.close();
-      return NextResponse.json({ error: 'Message ID required' }, { status: 400 });
-    }
-    // Delete only if sender matches
-    const result = await db.collection('group_messages').deleteOne({ message_id, group_id: groupId, sender_id: session.user_id });
-    await client.close();
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: 'Message not found or not authorized' }, { status: 404 });
-    }
-    return NextResponse.json({ success: true, deletedCount: result.deletedCount });
-  } catch (error) {
-    console.error('Error deleting group message:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

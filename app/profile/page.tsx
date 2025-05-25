@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
-import Header from '../../components/Header';
+import Navigation from '../../components/Navigation';
 import Friends from '../../components/Friends';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import "./styles.css";
@@ -147,13 +147,7 @@ export default function ProfilePage() {
   };
 
   // Questionnaire logic
-  useEffect(() => {
-    if (activeTab === 'questionnaires') {
-      fetchQuestionnaires();
-    }
-  }, [activeTab, selectedProfileType]);
-
-  const fetchQuestionnaires = async () => {
+  const fetchQuestionnaires = useCallback(async () => {
     setQuestionnaireLoading(true);
     setQuestionnaireError('');
     try {
@@ -170,7 +164,13 @@ export default function ProfilePage() {
     } finally {
       setQuestionnaireLoading(false);
     }
-  };
+  }, [selectedProfileType]);
+
+  useEffect(() => {
+    if (activeTab === 'questionnaires') {
+      fetchQuestionnaires();
+    }
+  }, [activeTab, selectedProfileType, fetchQuestionnaires]);
 
   const startQuestionnaire = async (questionnaireId: string) => {
     try {
@@ -354,9 +354,9 @@ export default function ProfilePage() {
   // Show active questionnaire form if one is selected
   if (activeTab === 'questionnaires' && activeQuestionnaire) {
     return (
-      <>
-        <Header />
-        <main className="flex flex-col min-h-screen bg-black text-white">
+      <div className="flex h-screen bg-black text-white">
+        <Navigation currentPage="profile" />
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="w-full max-w-4xl mx-auto mt-12 p-6">
             <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
               <div className="flex justify-between items-center mb-6">
@@ -409,14 +409,14 @@ export default function ProfilePage() {
             </div>
           </div>
         </main>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main className="flex flex-col min-h-screen bg-black text-white">
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="profile" />
+      <main className="flex-1 flex flex-col overflow-hidden">
         <div className="w-full max-w-6xl mx-auto mt-12 p-6">
           <div className="bg-black/80 border border-white rounded-lg shadow-lg">
             {/* Tab Navigation */}
@@ -736,6 +736,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-    </>
+    </div>
   );
 }

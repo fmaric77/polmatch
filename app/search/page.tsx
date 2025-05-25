@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '../../components/Header';
+import Navigation from '../../components/Navigation';
+import ProfileAvatar from '../../components/ProfileAvatar';
+import ProfileModal from '../../components/ProfileModal';
 
 interface User {
   user_id: string;
@@ -16,6 +18,8 @@ export default function SearchUsersPage() {
   const [filtered, setFiltered] = useState<User[]>([]);
   const [actionMessage, setActionMessage] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Fetch current user ID and validate session
   useEffect(() => {
@@ -100,37 +104,63 @@ export default function SearchUsersPage() {
     alert(`Invite to group: ${user.display_name || user.username}`);
   }
 
+  function handleViewProfile(user: User) {
+    setSelectedUser(user);
+    setIsProfileModalOpen(true);
+  }
+
+  function closeProfileModal() {
+    setIsProfileModalOpen(false);
+    setSelectedUser(null);
+  }
+
   // Exclude current user from results
   const availableUsers = filtered.filter(u => u.user_id !== currentUserId);
 
   return (
-    <>
-      <Header />
-      <main className="flex flex-col items-center min-h-screen bg-black text-white pt-16">
-        <div className="w-full max-w-3xl p-8 bg-black text-white rounded-lg border border-white mt-8">
-          <h2 className="text-2xl font-bold mb-6">Search Users</h2>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by username or display name..."
-            className="w-full p-3 mb-6 bg-black text-white border border-white rounded focus:outline-none"
-          />
-          {actionMessage && <div className="mb-4 text-center text-green-400">{actionMessage}</div>}
-          <ul className="space-y-4">
-            {availableUsers.map(user => (
-              <li key={user.user_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
-                <span>{user.display_name || user.username || user.user_id}</span>
-                <span className="flex gap-2">
-                  <button onClick={() => sendFriendRequest(user.user_id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Add Friend</button>
-                  <button onClick={() => handleDirectMessage(user)} className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Message</button>
-                  <button onClick={() => handleInviteToGroup(user)} className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">Invite to Group</button>
-                </span>
-              </li>
-            ))}
-          </ul>
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="search" />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="w-full max-w-3xl mx-auto mt-12 p-8">
+          <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
+            <h2 className="text-2xl font-bold mb-6">Search Users</h2>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by username or display name..."
+              className="w-full p-3 mb-6 bg-black text-white border border-white rounded focus:outline-none"
+            />
+            {actionMessage && <div className="mb-4 text-center text-green-400">{actionMessage}</div>}
+            <ul className="space-y-4">
+              {availableUsers.map(user => (
+                <li key={user.user_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
+                  <div className="flex items-center space-x-3">
+                    <ProfileAvatar userId={user.user_id} size={40} />
+                    <span>{user.display_name || user.username || user.user_id}</span>
+                  </div>
+                  <span className="flex gap-2">
+                    <button onClick={() => handleViewProfile(user)} className="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">Profiles</button>
+                    <button onClick={() => sendFriendRequest(user.user_id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Add Friend</button>
+                    <button onClick={() => handleDirectMessage(user)} className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Message</button>
+                    <button onClick={() => handleInviteToGroup(user)} className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">Invite to Group</button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
+
+        {/* Profile Modal */}
+        {selectedUser && (
+          <ProfileModal
+            userId={selectedUser.user_id}
+            username={selectedUser.display_name || selectedUser.username}
+            isOpen={isProfileModalOpen}
+            onClose={closeProfileModal}
+          />
+        )}
       </main>
-    </>
+    </div>
   );
 }
