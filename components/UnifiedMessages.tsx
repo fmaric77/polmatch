@@ -16,7 +16,9 @@ import {
   faHome,
   faEnvelope,
   faBook,
-  faSignOutAlt
+  faSignOutAlt,
+  faBars,
+  faKey
 } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -202,12 +204,17 @@ const UnifiedMessages = () => {
   const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups'>('direct');
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  
+  // Sidebar state for mobile responsiveness
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isConversationsSidebarHidden, setIsConversationsSidebarHidden] = useState(false);
   
   // Channel-related state
   const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
@@ -260,7 +267,7 @@ const UnifiedMessages = () => {
       .then(res => res.json())
       .then(data => {
         if (data.valid && data.user) {
-          setCurrentUser({ user_id: data.user.user_id, username: data.user.username });
+          setCurrentUser({ user_id: data.user.user_id, username: data.user.username, is_admin: data.user.is_admin });
         }
       });
   }, []);
@@ -379,27 +386,18 @@ const UnifiedMessages = () => {
         console.log('Channels fetched:', data.channels);
         setGroupChannels(data.channels);
         
-        // If no channel is selected, select the default one
-        if (!selectedChannel && data.channels.length > 0) {
+        // Always select the default channel when fetching channels for a new group
+        if (data.channels.length > 0) {
           const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
           console.log('Auto-selecting default channel:', defaultChannel.channel_id);
           setSelectedChannel(defaultChannel.channel_id);
           // The useEffect for channel changes will handle fetching messages
-        } else if (selectedChannel) {
-          // Verify the selected channel still exists
-          const channelExists = data.channels.some((ch: Channel) => ch.channel_id === selectedChannel);
-          if (!channelExists && data.channels.length > 0) {
-            // If selected channel doesn't exist, select default
-            const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
-            console.log('Selected channel no longer exists, switching to default:', defaultChannel.channel_id);
-            setSelectedChannel(defaultChannel.channel_id);
-          }
         }
       }
     } catch (err) {
       console.error('Failed to fetch channels:', err);
     }
-  }, [selectedChannel]);
+  }, []); // Remove selectedChannel dependency to prevent race conditions
 
   // Create a new channel
   const createChannel = async (): Promise<void> => {
@@ -502,7 +500,7 @@ const UnifiedMessages = () => {
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
-  }, [currentUser, selectedChannel, groupChannels]);
+  }, [currentUser?.user_id, selectedChannel, groupChannels.length]);
 
   // Fetch messages for selected channel
   const fetchChannelMessages = useCallback(async (groupId: string, channelId: string) => {
@@ -619,14 +617,23 @@ const UnifiedMessages = () => {
     setMessages([]);
     
     if (conversation.type === 'group') {
-      // For groups, first fetch channels, then the fetchChannels effect will handle channel selection
+      // Reset channel state first to prevent race conditions
+      setSelectedChannel('');
+      setGroupChannels([]);
+      
+      // Fetch group members and channels
       fetchGroupMembers(conversation.id);
-      // Don't fetch messages here - let the channel selection effect handle it
+      // fetchChannels will be called by the useEffect that watches selectedConversation
     } else {
+      // Clear group-related state when switching to direct messages
+      setSelectedChannel('');
+      setGroupChannels([]);
+      setGroupMembers([]);
+      
       // For direct messages, fetch immediately
       fetchMessages(conversation.id, conversation.type);
     }
-  }, [fetchMessages, fetchGroupMembers]);
+  }, [fetchGroupMembers, fetchMessages]);
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param
@@ -654,7 +661,7 @@ const UnifiedMessages = () => {
         });
       }
     }
-  }, [searchParams, conversations, users, selectConversation]); // Added 'selectConversation'
+  }, [searchParams, conversations, users, selectConversation]);
 
   // Create new group
   const createGroup = async () => {
@@ -725,22 +732,60 @@ const UnifiedMessages = () => {
 
   // Auto-refresh
   useEffect(() => {
-    if (selectedConversation) {
-      intervalRef.current = setInterval(() => {
-        if (selectedConversationType === 'group' && selectedChannel) {
-          console.log('Auto-refreshing channel messages');
-          fetchChannelMessages(selectedConversation, selectedChannel);
-        } else {
-          console.log('Auto-refreshing default messages');
-          fetchMessages(selectedConversation, selectedConversationType);
+    // Clear any existing interval first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (selectedConversation && currentUser) {
+      // Set up new interval
+      intervalRef.current = setInterval(async () => {
+        try {
+          // Directly call the API without using the callback functions to avoid dependency issues
+          if (selectedConversationType === 'group' && selectedChannel) {
+            console.log('Auto-refreshing channel messages');
+            const url = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.success && data.messages) {
+              // Sort ascending by timestamp
+              (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+              setMessages(data.messages);
+            }
+          } else if (selectedConversationType === 'direct') {
+            console.log('Auto-refreshing direct messages');
+            const res = await fetch('/api/messages');
+            const data = await res.json();
+            
+            if (data.success && data.pms) {
+              const filteredMessages = data.pms.filter((msg: PrivateMessage) => 
+                (msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id) ||
+                (msg.sender_id === currentUser.user_id && msg.receiver_id === selectedConversation)
+              );
+              // Sort ascending by timestamp
+              filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+              setMessages(filteredMessages);
+            }
+          }
+        } catch (err) {
+          console.error('Auto-refresh failed:', err);
         }
-      }, 3000);
+      }, 5000); // 5 second interval
 
       return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       };
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser]); // Only depend on primitive values
 
   useEffect(() => {
     scrollToBottom();
@@ -1066,6 +1111,20 @@ const UnifiedMessages = () => {
     }
   };
 
+  // Handle window resize for mobile responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call once on mount
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-black text-white">
@@ -1096,9 +1155,19 @@ const UnifiedMessages = () => {
   }
 
   return (
-    <div className="flex-1 flex bg-black text-white h-full overflow-hidden">
-      {/* Left Sidebar - Enhanced Discord-style with Navigation */}
-      <div className="w-16 bg-black flex flex-col border-r border-white h-full">
+    <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
+      {/* Mobile Overlay */}
+      {isMobile && isSidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsSidebarVisible(false)}
+        />
+      )}
+
+      {/* Left Sidebar - Enhanced Discord-style with Navigation - ALWAYS VISIBLE */}
+      <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} w-16 bg-black flex flex-col border-r border-white h-full transition-transform duration-300 ${
+        isMobile ? (isSidebarVisible ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
+      }`}>
         <div className="p-2 space-y-2">
           {/* Home Navigation */}
           <div 
@@ -1189,6 +1258,31 @@ const UnifiedMessages = () => {
               </span>
             )}
           </div>
+
+          {/* Admin Dashboard - New Button */}
+          {currentUser?.is_admin && (
+            <div 
+              className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+              onClick={() => window.location.href = '/admindashboard'}
+              title="Admin Dashboard"
+            >
+              <FontAwesomeIcon icon={faKey} />
+            </div>
+          )}
+          
+          {/* Mobile Chat Sidebar Toggle */}
+          {isMobile && (
+            <div 
+              className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+              onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
+              title={isConversationsSidebarHidden ? "Show Chat Sidebar" : "Hide Chat Sidebar"}
+            >
+              <FontAwesomeIcon 
+                icon={isConversationsSidebarHidden ? faEnvelope : faTimes} 
+                className={isConversationsSidebarHidden ? "text-white" : "text-red-400"}
+              />
+            </div>
+          )}
         </div>
         
         {/* Bottom Navigation - Logout */}
@@ -1206,150 +1300,202 @@ const UnifiedMessages = () => {
         </div>
       </div>
 
-      {/* Middle Sidebar - Conversations List (Discord-style) */}
-      <div className="w-60 bg-black flex flex-col border-r border-white h-full">
-        {/* Category Header */}
-        <div className="p-4 border-b border-white">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-lg font-bold flex items-center">
-              <FontAwesomeIcon 
-                icon={selectedCategory === 'direct' ? faUser : faUsers} 
-                className="mr-2"
-              />
-              {selectedCategory === 'direct' ? 'Direct Messages' : 'Groups'}
-            </h1>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={`Search ${selectedCategory === 'direct' ? 'conversations' : 'groups'}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black text-white border border-white rounded px-3 py-2 pl-8 text-sm focus:outline-none focus:ring-1 focus:ring-white"
-            />
-            <FontAwesomeIcon 
-              icon={faSearch} 
-              className="absolute left-2 top-2.5 text-white opacity-60 text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {(() => {
-            console.log('Filtering conversations - selectedCategory:', selectedCategory);
-            console.log('Total conversations:', conversations.length);
-            console.log('Conversations by type:', {
-              direct: conversations.filter(c => c.type === 'direct').length,
-              group: conversations.filter(c => c.type === 'group').length
-            });
+      {/* Middle Sidebar - Conversations List (Discord-style) - CAN BE HIDDEN */}
+      {!isConversationsSidebarHidden && (
+        <div className={`${isMobile ? 'fixed left-16 top-0 z-40 h-full' : ''} w-60 bg-black flex flex-col border-r border-white h-full transition-transform duration-300 ${
+          isMobile ? (isSidebarVisible || !isConversationsSidebarHidden ? 'translate-x-0' : '-translate-x-full') : (isConversationsSidebarHidden ? '-translate-x-full' : 'translate-x-0')
+        }`}>
+          {/* Category Header */}
+          <div className="p-4 border-b border-white">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-lg font-bold flex items-center">
+                <FontAwesomeIcon 
+                  icon={selectedCategory === 'direct' ? faUser : faUsers} 
+                  className="mr-2"
+                />
+                {selectedCategory === 'direct' ? 'Direct Messages' : 'Groups'}
+              </h1>
+              <div className="flex items-center space-x-2">
+                {/* Conversations Sidebar Toggle Button */}
+                <button
+                  onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
+                  className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  title={isConversationsSidebarHidden ? "Show Conversations" : "Hide Conversations"}
+                >
+                  <FontAwesomeIcon icon={faBars} className="text-sm" />
+                </button>
+                {/* Mobile Close Button */}
+                {isMobile && (
+                  <button
+                    onClick={() => setIsConversationsSidebarHidden(true)}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                    title="Hide Conversations"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="text-sm" />
+                  </button>
+                )}
+              </div>
+            </div>
             
-            const filteredConversations = conversations
-              .filter(conversation => {
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={`Search ${selectedCategory === 'direct' ? 'conversations' : 'groups'}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 pl-8 text-sm focus:outline-none focus:ring-1 focus:ring-white"
+              />
+              <FontAwesomeIcon 
+                icon={faSearch} 
+                className="absolute left-2 top-2.5 text-white opacity-60 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {(() => {
+              console.log('Filtering conversations - selectedCategory:', selectedCategory);
+              console.log('Total conversations:', conversations.length);
+              console.log('Conversations by type:', {
+                direct: conversations.filter(c => c.type === 'direct').length,
+                group: conversations.filter(c => c.type === 'group').length
+              });
+              
+              const filteredConversations = conversations
+                .filter(conversation => {
+                  if (selectedCategory === 'direct') {
+                    return conversation.type === 'direct';
+                  } else if (selectedCategory === 'groups') {
+                    return conversation.type === 'group';
+                  }
+                  return false;
+                })
+                .filter(conversation => 
+                  conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+              
+              console.log('Filtered conversations:', filteredConversations.length);
+              console.log('Filtered conversations list:', filteredConversations);
+              
+              if (filteredConversations.length === 0 && conversations.filter(c => {
                 if (selectedCategory === 'direct') {
-                  return conversation.type === 'direct';
+                  return c.type === 'direct';
                 } else if (selectedCategory === 'groups') {
-                  return conversation.type === 'group';
+                  return c.type === 'group';
                 }
                 return false;
-              })
-              .filter(conversation => 
-                conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
-              );
-            
-            console.log('Filtered conversations:', filteredConversations.length);
-            console.log('Filtered conversations list:', filteredConversations);
-            
-            if (filteredConversations.length === 0 && conversations.filter(c => {
-              if (selectedCategory === 'direct') {
-                return c.type === 'direct';
-              } else if (selectedCategory === 'groups') {
-                return c.type === 'group';
-              }
-              return false;
-            }).length > 0) {
-              return (
-                <div className="p-4 text-center text-gray-400 text-sm">
-                  No {selectedCategory === 'direct' ? 'conversations' : 'groups'} match &quot;{searchQuery}&quot;
-                </div>
-              );
-            }
-            
-            if (conversations.filter(c => {
-              if (selectedCategory === 'direct') {
-                return c.type === 'direct';
-              } else if (selectedCategory === 'groups') {
-                return c.type === 'group';
-              }
-              return false;
-            }).length === 0) {
-              return (
-                <div className="p-4 text-center text-gray-400">
-                  <div className="mb-2 text-sm">No {selectedCategory === 'direct' ? 'conversations' : 'groups'} yet</div>
-                  <div className="text-xs">
-                    {selectedCategory === 'direct' 
-                      ? 'Start a new conversation!' 
-                      : 'Create or join a group!'
-                    }
-                  </div>
-                </div>
-              );
-            }
-            
-            return filteredConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                onClick={() => selectConversation(conversation)}
-                onContextMenu={e => handleConversationContextMenu(e, conversation)}
-                className={`px-3 py-2 mx-2 my-1 rounded cursor-pointer hover:bg-gray-800 transition-colors ${
-                  selectedConversation === conversation.id ? 'bg-gray-700' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  {conversation.type === 'direct' && conversation.user_id ? (
-                    <ProfileAvatar userId={conversation.user_id} size={28} />
-                  ) : (
-                    <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon 
-                        icon={conversation.type === 'group' ? faHashtag : faAt} 
-                        className="text-white text-xs"
-                      />
+              }).length > 0) {
+                return (
+                  <div className="p-4 text-center text-gray-400">
+                    <div className="mb-2 text-sm">No {selectedCategory === 'direct' ? 'conversations' : 'groups'} match &quot;{searchQuery}&quot;</div>
+                    <div className="text-xs">
+                      {selectedCategory === 'direct' 
+                        ? 'Start a new conversation!' 
+                        : 'Create or join a group!'
+                      }
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm font-medium truncate text-white">
-                        {conversation.name}
-                      </span>
-                      {conversation.type === 'group' && conversation.is_private && (
-                        <FontAwesomeIcon icon={faLock} className="text-gray-400 text-xs" />
+                  </div>
+                );
+              }
+              
+              if (conversations.filter(c => {
+                if (selectedCategory === 'direct') {
+                  return c.type === 'direct';
+                } else if (selectedCategory === 'groups') {
+                  return c.type === 'group';
+                }
+                return false;
+              }).length === 0) {
+                return (
+                  <div className="p-4 text-center text-gray-400">
+                    <div className="mb-2 text-sm">No {selectedCategory === 'direct' ? 'conversations' : 'groups'} yet</div>
+                    <div className="text-xs">
+                      {selectedCategory === 'direct' 
+                        ? 'Start a new conversation!' 
+                        : 'Create or join a group!'
+                      }
+                    </div>
+                  </div>
+                );
+              }
+              
+              return filteredConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    selectConversation(conversation);
+                    if (isMobile) setIsSidebarVisible(false);
+                  }}
+                  onContextMenu={e => handleConversationContextMenu(e, conversation)}
+                  className={`px-3 py-2 mx-2 my-1 rounded cursor-pointer hover:bg-gray-800 transition-colors ${
+                    selectedConversation === conversation.id ? 'bg-gray-700' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    {conversation.type === 'direct' && conversation.user_id ? (
+                      <ProfileAvatar userId={conversation.user_id} size={28} />
+                    ) : (
+                      <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center">
+                        <FontAwesomeIcon 
+                          icon={conversation.type === 'group' ? faHashtag : faAt} 
+                          className="text-white text-xs"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm font-medium truncate text-white">
+                          {conversation.name}
+                        </span>
+                        {conversation.type === 'group' && conversation.is_private && (
+                          <FontAwesomeIcon icon={faLock} className="text-gray-400 text-xs" />
+                        )}
+                      </div>
+                      {conversation.last_message && (
+                        <p className="text-xs text-gray-400 truncate">{conversation.last_message}</p>
                       )}
                     </div>
-                    {conversation.last_message && (
-                      <p className="text-xs text-gray-400 truncate">{conversation.last_message}</p>
+                    {conversation.unread_count && conversation.unread_count > 0 && (
+                      <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                        {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                      </span>
                     )}
                   </div>
-                  {conversation.unread_count && conversation.unread_count > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                    </span>
-                  )}
                 </div>
-              </div>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full">
+      {/* Main Chat Area - Adjusts based on conversations sidebar visibility */}
+      <div className={`flex-1 flex flex-col h-full ${isMobile ? 'ml-0' : (isConversationsSidebarHidden ? 'ml-0' : 'ml-0')}`}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
             <div className="h-12 px-4 border-b border-white bg-black flex items-center justify-between shadow-sm">
               <div className="flex items-center space-x-3">
+                {/* Mobile Hamburger Menu Button */}
+                {isMobile && (
+                  <>
+                    <button
+                      onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                      title="Toggle Navigation"
+                    >
+                      <FontAwesomeIcon icon={faBars} className="text-sm" />
+                    </button>
+                    <button
+                      onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors mr-2"
+                      title={isConversationsSidebarHidden ? "Show Conversations" : "Hide Conversations"}
+                    >
+                      <FontAwesomeIcon icon={faEnvelope} className="text-sm" />
+                    </button>
+                  </>
+                )}
                 <div className="flex items-center space-x-2">
                   <FontAwesomeIcon 
                     icon={selectedConversationType === 'group' ? faHashtag : faAt} 
@@ -1370,6 +1516,16 @@ const UnifiedMessages = () => {
                 )}
               </div>
               <div className="flex items-center space-x-2">
+                {/* Full Screen Chat Toggle for Desktop */}
+                {!isMobile && (
+                  <button
+                    onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                    title={isConversationsSidebarHidden ? "Show Sidebars" : "Hide Sidebars"}
+                  >
+                    <FontAwesomeIcon icon={faBars} className="text-sm" />
+                  </button>
+                )}
                 {selectedConversationType === 'group' && (
                   <>
                     {groupMembers.some(member => 
@@ -1432,19 +1588,6 @@ const UnifiedMessages = () => {
                     )}
                   </button>
                 ))}
-                <div className="flex-1 min-w-0"></div>
-                {groupMembers.some(member => 
-                  member.user_id === currentUser?.user_id && 
-                  (member.role === 'owner' || member.role === 'admin')
-                ) && (
-                  <button
-                    onClick={() => setShowCreateChannelModal(true)}
-                    className="p-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-                    title="Create New Channel"
-                  >
-                    <FontAwesomeIcon icon={faUserPlus} className="text-xs" />
-                  </button>
-                )}
               </div>
             )}
 
@@ -1556,6 +1699,26 @@ const UnifiedMessages = () => {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-black text-center px-8">
+            {/* Show Conversations Sidebar Toggle Button when hidden */}
+            {isConversationsSidebarHidden && !isMobile && (
+              <button
+                onClick={() => setIsConversationsSidebarHidden(false)}
+                className="fixed top-4 left-20 z-30 p-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                title="Show Conversations"
+              >
+                <FontAwesomeIcon icon={faBars} className="text-lg" />
+              </button>
+            )}
+            {/* Mobile Hamburger Menu Button for Empty State */}
+            {isMobile && (
+              <button
+                onClick={() => setIsSidebarVisible(true)}
+                className="fixed top-4 left-4 z-30 p-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                title="Open Sidebar"
+              >
+                <FontAwesomeIcon icon={faBars} className="text-lg" />
+              </button>
+            )}
             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4">
               <FontAwesomeIcon 
                 icon={selectedCategory === 'direct' ? faUser : faUsers} 
@@ -1581,96 +1744,105 @@ const UnifiedMessages = () => {
         )}
       </div>
 
-      {/* Modals */}
-      {/* Create Channel Modal */}
-      {showCreateChannelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Create Channel</h3>
-              <button onClick={() => setShowCreateChannelModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Channel Name (e.g., general, random)"
-                value={createChannelForm.name}
-                onChange={(e) => setCreateChannelForm({...createChannelForm, name: e.target.value})}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
-              />
-              <textarea
-                placeholder="Channel Description (optional)"
-                value={createChannelForm.description}
-                onChange={(e) => setCreateChannelForm({...createChannelForm, description: e.target.value})}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 h-20 focus:outline-none"
-              />
-            </div>
-            <div className="flex space-x-2 mt-6">
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-lg py-1 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {contextMenu.type === 'conversation' && (
+            <button
+              onClick={() => deleteConversation(contextMenu.extra as Conversation)}
+              className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition-colors"
+            >
+              Delete Conversation
+            </button>
+          )}
+          {contextMenu.type === 'message' && (
+            <button
+              onClick={() => deleteMessage(contextMenu.extra as PrivateMessage | GroupMessage)}
+              className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition-colors"
+            >
+              Delete Message
+            </button>
+          )}
+          {contextMenu.type === 'member' && (
+            <>
               <button
-                onClick={() => setShowCreateChannelModal(false)}
-                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700"
+                onClick={() => removeMember(contextMenu.id)}
+                className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition-colors"
               >
-                Cancel
+                Remove Member
               </button>
               <button
-                onClick={createChannel}
-                disabled={!createChannelForm.name.trim()}
-                className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => banMember(contextMenu.id)}
+                className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition-colors"
               >
-                Create Channel
+                Ban Member
               </button>
-            </div>
-          </div>
+            </>
+          )}
+          {contextMenu.type === 'channel' && (
+            <button
+              onClick={() => deleteChannel(contextMenu.id)}
+              className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 transition-colors"
+            >
+              Delete Channel
+            </button>
+          )}
         </div>
       )}
 
       {/* Create Group Modal */}
       {showCreateGroupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Create Group</h3>
-              <button onClick={() => setShowCreateGroupModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-bold mb-4 text-white">Create New Group</h2>
             <div className="space-y-4">
               <input
                 type="text"
                 placeholder="Group Name"
                 value={createGroupForm.name}
-                onChange={(e) => setCreateGroupForm({...createGroupForm, name: e.target.value})}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
+                onChange={(e) => setCreateGroupForm(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
               />
-              <textarea
+              <input
+                type="text"
                 placeholder="Description"
                 value={createGroupForm.description}
-                onChange={(e) => setCreateGroupForm({...createGroupForm, description: e.target.value})}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 h-20 focus:outline-none"
+                onChange={(e) => setCreateGroupForm(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
               />
               <input
                 type="text"
                 placeholder="Topic"
                 value={createGroupForm.topic}
-                onChange={(e) => setCreateGroupForm({...createGroupForm, topic: e.target.value})}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
+                onChange={(e) => setCreateGroupForm(prev => ({ ...prev, topic: e.target.value }))}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
               />
-              <label className="flex items-center space-x-2 text-white">
+              <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   checked={createGroupForm.is_private}
-                  onChange={(e) => setCreateGroupForm({...createGroupForm, is_private: e.target.checked})}
-                  className="mr-2"
+                  onChange={(e) => setCreateGroupForm(prev => ({ ...prev, is_private: e.target.checked }))}
+                  className="rounded"
                 />
-                <span>Private Group</span>
+                <span className="text-white">Private Group</span>
               </label>
+            </div>
+            <div className="flex space-x-2 mt-6">
               <button
                 onClick={createGroup}
-                className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 border border-white font-semibold"
+                disabled={!createGroupForm.name.trim()}
+                className="flex-1 bg-white text-black py-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Create Group
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreateGroupModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -1679,129 +1851,142 @@ const UnifiedMessages = () => {
 
       {/* New DM Modal */}
       {showNewDMModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">New Direct Message</h3>
-              <button onClick={() => setShowNewDMModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <select
-                value={selectedUserForDM}
-                onChange={(e) => setSelectedUserForDM(e.target.value)}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
-              >
-                <option value="">Select a user</option>
-                {users.map(user => (
-                  <option key={user.user_id} value={user.user_id}>{user.username}</option>
-                ))}
-              </select>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-bold mb-4 text-white">Start New Conversation</h2>
+            <select
+              value={selectedUserForDM}
+              onChange={(e) => setSelectedUserForDM(e.target.value)}
+              className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
+            >
+              <option value="">Select a user...</option>
+              {users.map(user => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.username}
+                </option>
+              ))}
+            </select>
+            <div className="flex space-x-2 mt-6">
               <button
                 onClick={startNewDM}
                 disabled={!selectedUserForDM}
-                className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 border border-white font-semibold disabled:opacity-50"
+                className="flex-1 bg-white text-black py-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Start Conversation
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Group Members Modal */}
-      {showMembersModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Group Members</h3>
-              <button onClick={() => setShowMembersModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
-              {groupMembers.map(member => {
-                const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
-                const isCurrentUserAdmin = currentUserMember && (currentUserMember.role === 'owner' || currentUserMember.role === 'admin');
-                const isTargetAdmin = member.role === 'owner' || member.role === 'admin';
-                const canManage = isCurrentUserAdmin && !isTargetAdmin && member.user_id !== currentUser?.user_id;
-                
-                return (
-                  <div 
-                    key={member.user_id} 
-                    className={`flex items-center justify-between p-2 bg-black border border-white rounded ${canManage ? 'cursor-pointer hover:bg-gray-800' : ''}`}
-                    onContextMenu={e => handleMemberContextMenu(e, member)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <ProfileAvatar userId={member.user_id} size={32} />
-                      <span className="text-white">{member.username}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-400">{member.role}</span>
-                      {member.role === 'owner' && <span className="text-xs text-yellow-400">👑</span>}
-                      {member.role === 'admin' && <span className="text-xs text-blue-400">⚡</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex space-x-2">
-              {/* Show invite button for private groups if user has admin privileges */}
-              {selectedConversationData?.is_private && groupMembers.some(member => 
-                member.user_id === currentUser?.user_id && 
-                (member.role === 'owner' || member.role === 'admin')
-              ) && (
-                <button
-                  onClick={() => {
-                    setShowMembersModal(false);
-                    setShowInviteModal(true);
-                    fetchAvailableUsers();
-                  }}
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors"
-                >
-                  <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                  Invite User
-                </button>
-              )}
               <button
-                onClick={() => setShowMembersModal(false)}
-                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+                onClick={() => setShowNewDMModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
               >
-                Close
+                Cancel
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Invite User Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Invite User</h3>
-              <button onClick={() => setShowInviteModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
+      {/* Create Channel Modal */}
+      {showCreateChannelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-bold mb-4 text-white">Create New Channel</h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Channel Name"
+                value={createChannelForm.name}
+                onChange={(e) => setCreateChannelForm(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={createChannelForm.description}
+                onChange={(e) => setCreateChannelForm(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
+              />
+            </div>
+            <div className="flex space-x-2 mt-6">
+              <button
+                onClick={createChannel}
+                disabled={!createChannelForm.name.trim()}
+                className="flex-1 bg-white text-black py-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreateChannelModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+              >
+                Cancel
               </button>
             </div>
-            <div className="space-y-4">
-              <select
-                value={selectedUserToInvite}
-                onChange={(e) => setSelectedUserToInvite(e.target.value)}
-                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
-              >
-                <option value="">Select a user to invite</option>
-                {availableUsers.map(user => (
-                  <option key={user.user_id} value={user.user_id}>{user.username}</option>
-                ))}
-              </select>
+          </div>
+        </div>
+      )}
+
+      {/* Members Modal */}
+      {showMembersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96 max-h-96 overflow-hidden flex flex-col">
+            <h2 className="text-xl font-bold mb-4 text-white">Group Members</h2>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {groupMembers.map(member => (
+                <div
+                  key={member.user_id}
+                  className="flex items-center justify-between p-2 bg-gray-800 rounded"
+                  onContextMenu={(e) => handleMemberContextMenu(e, member)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <ProfileAvatar userId={member.user_id} size={24} />
+                    <span className="text-white">{member.username}</span>
+                    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                      {member.role}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowMembersModal(false)}
+              className="mt-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Modal */}
+           {showInviteModal && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-bold mb-4 text-white">Invite User to Group</h2>
+            <select
+              value={selectedUserToInvite}
+              onChange={(e) => setSelectedUserToInvite(e.target.value)}
+              className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
+            >
+              <option value="">Select a user...</option>
+                           {availableUsers.map(user => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.username}
+                </option>
+              ))}
+            </select>
+            <div className="flex space-x-2 mt-6">
               <button
                 onClick={inviteUserToGroup}
                 disabled={!selectedUserToInvite || inviteLoading}
-                className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 border border-white font-semibold disabled:opacity-50"
+                className="flex-1 bg-white text-black py-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {inviteLoading ? 'Sending...' : 'Send Invitation'}
+              </button>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -1810,32 +1995,32 @@ const UnifiedMessages = () => {
 
       {/* Invitations Modal */}
       {showInvitationsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Group Invitations</h3>
-              <button onClick={() => setShowInvitationsModal(false)} className="text-white hover:text-gray-300">
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96 max-h-96 overflow-hidden flex flex-col">
+            <h2 className="text-xl font-bold mb-4 text-white">Group Invitations</h2>
+            <div className="flex-1 overflow-y-auto space-y-3">
               {invitations.length === 0 ? (
                 <p className="text-gray-400">No pending invitations</p>
               ) : (
                 invitations.map(invitation => (
-                  <div key={invitation.invitation_id} className="p-3 bg-black border border-white rounded">
-                    <p className="font-medium text-white">{invitation.group_name}</p>
-                    <p className="text-sm text-gray-400">From: {invitation.inviter_username}</p>
-                    <div className="flex space-x-2 mt-2">
+                  <div key={invitation.invitation_id} className="p-3 bg-gray-800 rounded">
+                    <div className="mb-2">
+                      <span className="font-semibold text-white">{invitation.group_name}</span>
+                      <p className="text-sm text-gray-400">
+                        Invited by {invitation.inviter_username}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
                       <button
                         onClick={() => respondToInvitation(invitation.invitation_id, 'accept')}
-                        className="flex-1 bg-white text-black py-1 rounded hover:bg-gray-200 border border-white font-semibold"
+                        className="flex-1 bg-green-600 text-white py-1 rounded hover:bg-green-700 transition-colors text-sm"
                       >
                         Accept
+                     
                       </button>
                       <button
                         onClick={() => respondToInvitation(invitation.invitation_id, 'decline')}
-                        className="flex-1 bg-black text-white py-1 rounded border border-white hover:bg-gray-900 font-semibold"
+                        className="flex-1 bg-red-600 text-white py-1 rounded hover:bg-red-700 transition-colors text-sm"
                       >
                         Decline
                       </button>
@@ -1844,74 +2029,13 @@ const UnifiedMessages = () => {
                 ))
               )}
             </div>
+            <button
+              onClick={() => setShowInvitationsModal(false)}
+              className="mt-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
           </div>
-        </div>
-      )}
-
-      {/* Context Menu Dropdown */}
-      {contextMenu && (
-        <div
-          className="fixed z-50 bg-black border border-white rounded shadow-lg text-white"
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
-        >
-          {contextMenu.type === 'member' ? (
-            // Member management options for admins
-            <>
-              <button
-                className="block w-full text-left px-4 py-2 hover:bg-white hover:text-black border-b border-white"
-                onClick={() => {
-                  removeMember(contextMenu.id);
-                  setContextMenu(null);
-                }}
-              >
-                Remove Member
-              </button>
-              <button
-                className="block w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white"
-                onClick={() => {
-                  banMember(contextMenu.id);
-                  setContextMenu(null);
-                }}
-              >
-                Ban Member
-              </button>
-            </>
-          ) : contextMenu.type === 'channel' ? (
-            // Channel management options for owners
-            <button
-              className="block w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white rounded"
-              onClick={() => {
-                deleteChannel(contextMenu.id);
-                setContextMenu(null);
-              }}
-            >
-              Delete Channel
-            </button>
-          ) : (
-            // Existing conversation/message options
-            <button
-              className="block w-full text-left px-4 py-2 hover:bg-white hover:text-black rounded"
-              onClick={() => {
-                if (contextMenu.type === 'conversation' && contextMenu.extra && (contextMenu.extra as Conversation).id) deleteConversation(contextMenu.extra as Conversation);
-                if (contextMenu.type === 'message' && contextMenu.extra && ((contextMenu.extra as PrivateMessage).content || (contextMenu.extra as GroupMessage).content)) deleteMessage(contextMenu.extra as PrivateMessage | GroupMessage);
-                setContextMenu(null);
-              }}
-            >
-              {(() => {
-                if (contextMenu.type === 'conversation' && contextMenu.extra) {
-                  const conv = contextMenu.extra as Conversation;
-                  if (conv.type === 'group') {
-                    // Check if user is owner/admin (creator) of the group
-                    const isCreator = groupMembers.find(m => 
-                      m.user_id === currentUser?.user_id && (m.role === 'owner' || m.role === 'admin')
-                    );
-                    return isCreator ? 'Delete' : 'Leave';
-                  }
-                }
-                return 'Delete';
-              })()}
-            </button>
-          )}
         </div>
       )}
     </div>

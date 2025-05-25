@@ -9,7 +9,7 @@ import {
   faBook, 
   faEnvelope, 
   faSignOutAlt,
-  faUsers
+  faKey
 } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
 
@@ -109,7 +109,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
             onClick={() => window.location.href = '/admindashboard'}
             title="Admin Dashboard"
           >
-            <FontAwesomeIcon icon={faUsers} />
+            <FontAwesomeIcon icon={faKey} />
           </div>
         )}
       </div>
