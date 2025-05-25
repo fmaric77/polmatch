@@ -1,5 +1,5 @@
 "use client";
-import Header from '../../components/Header';
+import Navigation from '../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -152,10 +152,10 @@ export default function AdminDashboard() {
   };
 
   return (
-    <>
-      <Header />
-      <main className="flex flex-col min-h-screen bg-black text-white">
-        <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl mx-auto mt-12">
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="admin" />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl mx-auto mt-12 p-6">
           {/* Sidebar for admin navigation (future features) */}
           <aside className="w-full md:w-1/4 bg-black/80 border border-white rounded-lg shadow-lg p-6 flex flex-col gap-4 mb-8 md:mb-0">
             <h2 className="text-xl font-bold mb-4 text-white">Admin Menu</h2>
@@ -348,6 +348,6 @@ export default function AdminDashboard() {
           </section>
         </div>
       </main>
-    </>
+    </div>
   );
 }

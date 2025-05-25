@@ -8,15 +8,89 @@ import {
   faUserPlus,
   faTimes,
   faLock,
-  faGlobe,
   faBell,
   faHashtag,
   faAt,
   faCheck,
-  faCheckDouble
+  faCheckDouble,
+  faHome,
+  faEnvelope,
+  faBook,
+  faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import ProfileAvatar from './ProfileAvatar';
+
+// Utility function to detect YouTube URLs
+const detectYouTubeURL = (text: string): string | null => {
+  const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = text.match(youtubeRegex);
+  return match ? match[1] : null;
+};
+
+// YouTube embed component
+const YouTubeEmbed: React.FC<{ videoId: string; content: string }> = ({ videoId, content }) => {
+  const [showEmbed, setShowEmbed] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <p className="leading-relaxed">{content}</p>
+      {!showEmbed ? (
+        <div 
+          className="bg-black/40 border border-gray-600 rounded-lg p-3 cursor-pointer hover:bg-black/60 transition-colors"
+          onClick={() => setShowEmbed(true)}
+        >
+          <div className="flex items-center space-x-3">
+            <Image 
+              src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+              alt="YouTube video thumbnail"
+              width={80}
+              height={60}
+              className="object-cover rounded"
+            />
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-1">
+                <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">YouTube</div>
+              </div>
+              <p className="text-white text-sm">Click to play video</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="relative bg-black rounded-lg overflow-hidden">
+          <iframe
+            width="400"
+            height="225"
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full aspect-video"
+          ></iframe>
+          <button
+            onClick={() => setShowEmbed(false)}
+            className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded hover:bg-black/90 transition-colors"
+          >
+            <FontAwesomeIcon icon={faTimes} className="text-xs" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Enhanced message content renderer
+const MessageContent: React.FC<{ content: string }> = ({ content }) => {
+  const youtubeVideoId = detectYouTubeURL(content);
+  
+  if (youtubeVideoId) {
+    return <YouTubeEmbed videoId={youtubeVideoId} content={content} />;
+  }
+  
+  return <p className="leading-relaxed">{content}</p>;
+};
 
 // Interfaces
 interface PrivateMessage {
@@ -32,6 +106,7 @@ interface PrivateMessage {
 interface GroupMessage {
   message_id: string;
   group_id: string;
+  channel_id?: string;
   sender_id: string;
   content: string;
   timestamp: string;
@@ -41,6 +116,17 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+}
+
+interface Channel {
+  channel_id: string;
+  group_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  created_by: string;
+  is_default: boolean;
+  position: number;
 }
 
 interface User {
@@ -113,6 +199,7 @@ const UnifiedMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string>('');
   const [selectedConversationType, setSelectedConversationType] = useState<'direct' | 'group'>('direct');
+  const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups'>('direct');
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string } | null>(null);
@@ -121,6 +208,15 @@ const UnifiedMessages = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  
+  // Channel-related state
+  const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [createChannelForm, setCreateChannelForm] = useState({
+    name: '',
+    description: ''
+  });
   
   // Modal states
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -148,9 +244,9 @@ const UnifiedMessages = () => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    type: 'conversation' | 'message' | 'member';
+    type: 'conversation' | 'message' | 'member' | 'channel';
     id: string;
-    extra?: ContextMenuExtra | GroupMember;
+    extra?: ContextMenuExtra | GroupMember | Channel;
   } | null>(null);
 
   // Auto-scroll to bottom
@@ -198,6 +294,7 @@ const UnifiedMessages = () => {
       // Fetch groups
       const groupsRes = await fetch('/api/groups/list');
       const groupsData = await groupsRes.json();
+      console.log('Groups API response:', groupsData);
 
       const dmConversations: Conversation[] = [];
       const groupConversations: Conversation[] = [];
@@ -224,7 +321,9 @@ const UnifiedMessages = () => {
       }
 
       if (groupsData.success && groupsData.groups) {
+        console.log('Processing', groupsData.groups.length, 'groups');
         groupsData.groups.forEach((group: Group) => {
+          console.log('Adding group conversation:', group);
           groupConversations.push({
             id: group.group_id,
             name: group.name,
@@ -235,6 +334,8 @@ const UnifiedMessages = () => {
             unread_count: 0 // TODO: Implement unread count
           });
         });
+      } else {
+        console.log('No groups found or API error:', groupsData);
       }
 
       // Sort by last activity
@@ -268,6 +369,79 @@ const UnifiedMessages = () => {
     }
   }, []);
 
+  // Fetch channels for a group
+  const fetchChannels = useCallback(async (groupId: string) => {
+    try {
+      console.log('Fetching channels for group:', groupId);
+      const res = await fetch(`/api/groups/${groupId}/channels`);
+      const data = await res.json();
+      if (data.success) {
+        console.log('Channels fetched:', data.channels);
+        setGroupChannels(data.channels);
+        
+        // If no channel is selected, select the default one
+        if (!selectedChannel && data.channels.length > 0) {
+          const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
+          console.log('Auto-selecting default channel:', defaultChannel.channel_id);
+          setSelectedChannel(defaultChannel.channel_id);
+          // The useEffect for channel changes will handle fetching messages
+        } else if (selectedChannel) {
+          // Verify the selected channel still exists
+          const channelExists = data.channels.some((ch: Channel) => ch.channel_id === selectedChannel);
+          if (!channelExists && data.channels.length > 0) {
+            // If selected channel doesn't exist, select default
+            const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
+            console.log('Selected channel no longer exists, switching to default:', defaultChannel.channel_id);
+            setSelectedChannel(defaultChannel.channel_id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch channels:', err);
+    }
+  }, [selectedChannel]);
+
+  // Create a new channel
+  const createChannel = async (): Promise<void> => {
+    if (!selectedConversation || !createChannelForm.name.trim()) return;
+
+    try {
+      console.log('Creating channel with data:', createChannelForm);
+      const res = await fetch(`/api/groups/${selectedConversation}/channels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createChannelForm)
+      });
+
+      const data = await res.json();
+      console.log('Channel creation response:', data);
+
+      if (data.success) {
+        console.log('Channel created successfully, fetching channels...');
+        await fetchChannels(selectedConversation);
+        console.log('Channels fetched after channel creation');
+        
+        // Auto-select the newly created channel
+        if (data.channel_id) {
+          console.log('Auto-selecting new channel:', data.channel_id);
+          setSelectedChannel(data.channel_id);
+          // Clear messages and fetch for the new channel
+          setMessages([]);
+          await fetchChannelMessages(selectedConversation, data.channel_id);
+        }
+        
+        setShowCreateChannelModal(false);
+        setCreateChannelForm({ name: '', description: '' });
+      } else {
+        console.error('Channel creation failed:', data);
+        setError(data.error || 'Failed to create channel');
+      }
+    } catch (err) {
+      console.error('Error creating channel:', err);
+      setError('Failed to create channel');
+    }
+  };
+
   useEffect(() => {
     if (currentUser && users.length > 0) {
       fetchConversations();
@@ -275,16 +449,38 @@ const UnifiedMessages = () => {
     }
   }, [currentUser, users, fetchConversations, fetchInvitations]);
 
-  // Fetch messages for selected conversation
+  // Fetch channels when a group conversation is selected
+  useEffect(() => {
+    if (selectedConversation && selectedConversationType === 'group') {
+      fetchChannels(selectedConversation);
+    } else {
+      setGroupChannels([]);
+      setSelectedChannel('');
+      // Clear messages when switching away from groups
+      if (selectedConversationType !== 'group') {
+        setMessages([]);
+      }
+    }
+  }, [selectedConversation, selectedConversationType, fetchChannels]);
+
+  // Fetch messages for selected conversation or channel
   const fetchMessages = useCallback(async (conversationId: string, type: 'direct' | 'group') => {
     try {
       let url: string;
       if (type === 'direct') {
         url = `/api/messages`;
       } else {
-        url = `/api/groups/${conversationId}/messages`;
+        // For group messages, check if we have a selected channel
+        if (selectedChannel && groupChannels.length > 0) {
+          // Use channel-specific endpoint
+          url = `/api/groups/${conversationId}/channels/${selectedChannel}/messages`;
+        } else {
+          // Use default channel endpoint for backward compatibility
+          url = `/api/groups/${conversationId}/messages`;
+        }
       }
 
+      console.log('Fetching messages from:', url);
       const res = await fetch(url);
       const data = await res.json();
 
@@ -306,10 +502,42 @@ const UnifiedMessages = () => {
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
-  }, [currentUser]);
+  }, [currentUser, selectedChannel, groupChannels]);
+
+  // Fetch messages for selected channel
+  const fetchChannelMessages = useCallback(async (groupId: string, channelId: string) => {
+    try {
+      const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.success && data.messages) {
+        // Sort ascending by timestamp
+        (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setMessages(data.messages);
+      }
+    } catch (err) {
+      console.error('Failed to fetch channel messages:', err);
+    }
+  }, []);
+
+  // Fetch messages when channel changes
+  useEffect(() => {
+    if (selectedConversation && selectedConversationType === 'group' && selectedChannel) {
+      console.log('Channel changed, fetching messages for channel:', selectedChannel);
+      fetchChannelMessages(selectedConversation, selectedChannel);
+    } else if (selectedConversation && selectedConversationType === 'group' && groupChannels.length > 0 && !selectedChannel) {
+      // Auto-select default channel if none is selected
+      const defaultChannel = groupChannels.find(ch => ch.is_default) || groupChannels[0];
+      if (defaultChannel) {
+        console.log('Auto-selecting default channel:', defaultChannel.channel_id);
+        setSelectedChannel(defaultChannel.channel_id);
+      }
+    }
+  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
 
   // Fetch group members
-  const fetchGroupMembers = async (groupId: string) => {
+  const fetchGroupMembers = useCallback(async (groupId: string) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/members`);
       const data = await res.json();
@@ -319,7 +547,7 @@ const UnifiedMessages = () => {
     } catch (err) {
       console.error('Failed to fetch group members:', err);
     }
-  };
+  }, []);
 
   // Send message
   const sendMessage = async () => {
@@ -337,7 +565,13 @@ const UnifiedMessages = () => {
           attachments: []
         };
       } else {
-        url = `/api/groups/${selectedConversation}/messages`;
+        // For group messages, send to specific channel if selected
+        if (selectedChannel) {
+          url = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+        } else {
+          // Fallback to default channel endpoint
+          url = `/api/groups/${selectedConversation}/messages`;
+        }
         body = {
           content: newMessage,
           attachments: []
@@ -353,8 +587,22 @@ const UnifiedMessages = () => {
       const data = await res.json();
       if (data.success) {
         setNewMessage('');
-        fetchMessages(selectedConversation, selectedConversationType);
-        fetchConversations(); // Refresh conversation list
+        console.log('Message sent successfully, refreshing messages...');
+        
+        // Refresh messages based on current context
+        if (selectedConversationType === 'group' && selectedChannel) {
+          console.log('Refreshing channel messages for channel:', selectedChannel);
+          await fetchChannelMessages(selectedConversation, selectedChannel);
+        } else {
+          console.log('Refreshing default group/DM messages');
+          await fetchMessages(selectedConversation, selectedConversationType);
+        }
+        
+        // Refresh conversation list to update last activity
+        fetchConversations();
+      } else {
+        console.error('Failed to send message:', data);
+        setError(data.error || 'Failed to send message');
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -363,13 +611,22 @@ const UnifiedMessages = () => {
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
+    console.log('Selecting conversation:', conversation);
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
-    fetchMessages(conversation.id, conversation.type);
+    
+    // Clear messages immediately for better UX
+    setMessages([]);
+    
     if (conversation.type === 'group') {
+      // For groups, first fetch channels, then the fetchChannels effect will handle channel selection
       fetchGroupMembers(conversation.id);
+      // Don't fetch messages here - let the channel selection effect handle it
+    } else {
+      // For direct messages, fetch immediately
+      fetchMessages(conversation.id, conversation.type);
     }
-  }, [fetchMessages, fetchGroupMembers]); // Added fetchMessages and fetchGroupMembers as dependencies
+  }, [fetchMessages, fetchGroupMembers]);
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param
@@ -402,6 +659,7 @@ const UnifiedMessages = () => {
   // Create new group
   const createGroup = async () => {
     try {
+      console.log('Creating group with data:', createGroupForm);
       const res = await fetch('/api/groups/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -409,10 +667,15 @@ const UnifiedMessages = () => {
       });
 
       const data = await res.json();
+      console.log('Group creation response:', data);
       if (data.success) {
         setShowCreateGroupModal(false);
         setCreateGroupForm({ name: '', description: '', topic: '', is_private: false });
-        fetchConversations();
+        console.log('Group created successfully, fetching conversations...');
+        await fetchConversations();
+        console.log('Conversations fetched after group creation');
+      } else {
+        console.error('Group creation failed:', data);
       }
     } catch (err) {
       console.error('Failed to create group:', err);
@@ -464,14 +727,20 @@ const UnifiedMessages = () => {
   useEffect(() => {
     if (selectedConversation) {
       intervalRef.current = setInterval(() => {
-        fetchMessages(selectedConversation, selectedConversationType);
+        if (selectedConversationType === 'group' && selectedChannel) {
+          console.log('Auto-refreshing channel messages');
+          fetchChannelMessages(selectedConversation, selectedChannel);
+        } else {
+          console.log('Auto-refreshing default messages');
+          fetchMessages(selectedConversation, selectedConversationType);
+        }
       }, 3000);
 
       return () => {
         if (intervalRef.current) clearInterval(intervalRef.current);
       };
     }
-  }, [selectedConversation, selectedConversationType, fetchMessages]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -736,6 +1005,67 @@ const UnifiedMessages = () => {
     });
   };
 
+  // Handle right-click on channel
+  const handleChannelContextMenu = (e: React.MouseEvent, channel: Channel) => {
+    e.preventDefault();
+    // Only allow channel deletion for group owners and prevent deletion of default channels
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
+    const isOwner = currentUserMember && currentUserMember.role === 'owner';
+    
+    if (!isOwner || channel.is_default) return;
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      type: 'channel',
+      id: channel.channel_id,
+      extra: channel
+    });
+  };
+
+  // Delete channel
+  const deleteChannel = async (channelId: string) => {
+    if (!selectedConversation) return;
+    
+    if (!window.confirm('Are you sure you want to delete this channel? This will delete all messages in the channel and cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/channels/${channelId}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // If the deleted channel was selected, switch to default channel
+        if (selectedChannel === channelId) {
+          const defaultChannel = groupChannels.find(ch => ch.is_default);
+          if (defaultChannel) {
+            setSelectedChannel(defaultChannel.channel_id);
+          } else if (groupChannels.length > 1) {
+            // Find the first non-deleted channel
+            const remainingChannel = groupChannels.find(ch => ch.channel_id !== channelId);
+            if (remainingChannel) {
+              setSelectedChannel(remainingChannel.channel_id);
+            }
+          }
+        }
+        
+        // Refresh channels list
+        await fetchChannels(selectedConversation);
+        
+        alert('Channel deleted successfully');
+      } else {
+        alert(data.error || 'Failed to delete channel');
+      }
+    } catch (error) {
+      console.error('Error deleting channel:', error);
+      alert('Failed to delete channel');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-black text-white">
@@ -767,58 +1097,141 @@ const UnifiedMessages = () => {
 
   return (
     <div className="flex-1 flex bg-black text-white h-full overflow-hidden">
-      {/* Sidebar - Conversations List */}
-      <div className="w-80 bg-black flex flex-col border-r border-white h-full">
-        {/* Header */}
+      {/* Left Sidebar - Enhanced Discord-style with Navigation */}
+      <div className="w-16 bg-black flex flex-col border-r border-white h-full">
+        <div className="p-2 space-y-2">
+          {/* Home Navigation */}
+          <div 
+            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => window.location.href = '/'}
+            title="Home"
+          >
+            <FontAwesomeIcon icon={faHome} />
+          </div>
+          
+          {/* Profile Navigation */}
+          <div 
+            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => window.location.href = '/profile'}
+            title="Profile"
+          >
+            <FontAwesomeIcon icon={faUser} />
+          </div>
+          
+          {/* Search Navigation */}
+          <div 
+            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => window.location.href = '/search'}
+            title="Search Users"
+          >
+            <FontAwesomeIcon icon={faSearch} />
+          </div>
+          
+          {/* Catalogs Navigation */}
+          <div 
+            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => window.location.href = '/catalogs'}
+            title="My Catalogs"
+          >
+            <FontAwesomeIcon icon={faBook} />
+          </div>
+          
+          {/* First Separator */}
+          <div className="w-8 h-px bg-white mx-auto"></div>
+          
+          {/* Direct Messages Category */}
+          <div 
+            className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+              selectedCategory === 'direct' ? 'bg-white text-black' : ''
+            }`}
+            onClick={() => setSelectedCategory('direct')}
+            title="Direct Messages"
+          >
+            <FontAwesomeIcon icon={faEnvelope} />
+          </div>
+          
+          {/* Groups Category */}
+          <div 
+            className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+              selectedCategory === 'groups' ? 'bg-white text-black' : ''
+            }`}
+            onClick={() => setSelectedCategory('groups')}
+            title="Groups"
+          >
+            <FontAwesomeIcon icon={faUsers} />
+          </div>
+          
+          {/* Second Separator */}
+          <div className="w-8 h-px bg-white mx-auto"></div>
+          
+          {/* Actions */}
+          <div 
+            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => selectedCategory === 'direct' ? setShowNewDMModal(true) : setShowCreateGroupModal(true)}
+            title={selectedCategory === 'direct' ? 'New Direct Message' : 'Create Group'}
+          >
+            <FontAwesomeIcon icon={faUserPlus} />
+          </div>
+          
+          {/* Invitations */}
+          <div 
+            className="relative w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            onClick={() => {
+              setShowInvitationsModal(true);
+              fetchInvitations();
+            }}
+            title="Invitations"
+          >
+            <FontAwesomeIcon icon={faBell} />
+            {invitations.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {invitations.length}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {/* Bottom Navigation - Logout */}
+        <div className="mt-auto p-2 pb-4">
+          <div 
+            className="w-12 h-12 bg-red-900 border border-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+            onClick={async () => {
+              await fetch('/api/logout', { method: 'POST' });
+              window.location.href = '/';
+            }}
+            title="Logout"
+          >
+            <FontAwesomeIcon icon={faSignOutAlt} className="text-red-300" />
+          </div>
+        </div>
+      </div>
+
+      {/* Middle Sidebar - Conversations List (Discord-style) */}
+      <div className="w-60 bg-black flex flex-col border-r border-white h-full">
+        {/* Category Header */}
         <div className="p-4 border-b border-white">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold">Messages</h1>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowNewDMModal(true)
-                }
-                className="p-2 bg-white text-black rounded-full hover:bg-gray-200 transition-colors"
-                title="New Direct Message"
-              >
-                <FontAwesomeIcon icon={faUser} />
-              </button>
-              <button
-                onClick={() => setShowCreateGroupModal(true)}
-                className="p-2 bg-white text-black rounded-full hover:bg-gray-200 transition-colors"
-                title="Create Group"
-              >
-                <FontAwesomeIcon icon={faUsers} />
-              </button>
-              <button
-                onClick={() => {
-                  setShowInvitationsModal(true);
-                  fetchInvitations();
-                }}
-                className="relative p-2 bg-white text-black rounded-full hover:bg-gray-200 transition-colors"
-                title="Invitations"
-              >
-                <FontAwesomeIcon icon={faBell} />
-                {invitations.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border border-white">
-                    {invitations.length}
-                  </span>
-                )}
-              </button>
-            </div>
+            <h1 className="text-lg font-bold flex items-center">
+              <FontAwesomeIcon 
+                icon={selectedCategory === 'direct' ? faUser : faUsers} 
+                className="mr-2"
+              />
+              {selectedCategory === 'direct' ? 'Direct Messages' : 'Groups'}
+            </h1>
           </div>
           
           {/* Search Bar */}
           <div className="relative">
             <input
               type="text"
-              placeholder="Search conversations..."
+              placeholder={`Search ${selectedCategory === 'direct' ? 'conversations' : 'groups'}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black text-white border border-white rounded px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-white"
+              className="w-full bg-black text-white border border-white rounded px-3 py-2 pl-8 text-sm focus:outline-none focus:ring-1 focus:ring-white"
             />
             <FontAwesomeIcon 
               icon={faSearch} 
-              className="absolute left-3 top-3 text-white opacity-60"
+              className="absolute left-2 top-2.5 text-white opacity-60 text-sm"
             />
           </div>
         </div>
@@ -826,23 +1239,61 @@ const UnifiedMessages = () => {
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
           {(() => {
-            const filteredConversations = conversations.filter(conversation => 
-              conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            console.log('Filtering conversations - selectedCategory:', selectedCategory);
+            console.log('Total conversations:', conversations.length);
+            console.log('Conversations by type:', {
+              direct: conversations.filter(c => c.type === 'direct').length,
+              group: conversations.filter(c => c.type === 'group').length
+            });
             
-            if (filteredConversations.length === 0 && conversations.length > 0) {
+            const filteredConversations = conversations
+              .filter(conversation => {
+                if (selectedCategory === 'direct') {
+                  return conversation.type === 'direct';
+                } else if (selectedCategory === 'groups') {
+                  return conversation.type === 'group';
+                }
+                return false;
+              })
+              .filter(conversation => 
+                conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+            
+            console.log('Filtered conversations:', filteredConversations.length);
+            console.log('Filtered conversations list:', filteredConversations);
+            
+            if (filteredConversations.length === 0 && conversations.filter(c => {
+              if (selectedCategory === 'direct') {
+                return c.type === 'direct';
+              } else if (selectedCategory === 'groups') {
+                return c.type === 'group';
+              }
+              return false;
+            }).length > 0) {
               return (
-                <div className="p-4 text-center text-gray-400">
-                  No conversations match &quot;{searchQuery}&quot;
+                <div className="p-4 text-center text-gray-400 text-sm">
+                  No {selectedCategory === 'direct' ? 'conversations' : 'groups'} match &quot;{searchQuery}&quot;
                 </div>
               );
             }
             
-            if (conversations.length === 0) {
+            if (conversations.filter(c => {
+              if (selectedCategory === 'direct') {
+                return c.type === 'direct';
+              } else if (selectedCategory === 'groups') {
+                return c.type === 'group';
+              }
+              return false;
+            }).length === 0) {
               return (
                 <div className="p-4 text-center text-gray-400">
-                  <div className="mb-4">No conversations yet</div>
-                  <div className="text-sm">Start a new conversation or create a group to get started!</div>
+                  <div className="mb-2 text-sm">No {selectedCategory === 'direct' ? 'conversations' : 'groups'} yet</div>
+                  <div className="text-xs">
+                    {selectedCategory === 'direct' 
+                      ? 'Start a new conversation!' 
+                      : 'Create or join a group!'
+                    }
+                  </div>
                 </div>
               );
             }
@@ -852,41 +1303,37 @@ const UnifiedMessages = () => {
                 key={conversation.id}
                 onClick={() => selectConversation(conversation)}
                 onContextMenu={e => handleConversationContextMenu(e, conversation)}
-                className={`p-3 border-b border-white cursor-pointer hover:bg-gray-700 transition-colors ${
-                  selectedConversation === conversation.id ? 'bg-blue-600' : ''
+                className={`px-3 py-2 mx-2 my-1 rounded cursor-pointer hover:bg-gray-800 transition-colors ${
+                  selectedConversation === conversation.id ? 'bg-gray-700' : ''
                 }`}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   {conversation.type === 'direct' && conversation.user_id ? (
-                    <ProfileAvatar userId={conversation.user_id} size={40} />
+                    <ProfileAvatar userId={conversation.user_id} size={28} />
                   ) : (
-                    <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                    <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center">
                       <FontAwesomeIcon 
-                        icon={conversation.type === 'group' ? faUsers : faUser} 
-                        className="text-white"
+                        icon={conversation.type === 'group' ? faHashtag : faAt} 
+                        className="text-white text-xs"
                       />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium truncate">{conversation.name}</span>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm font-medium truncate text-white">
+                        {conversation.name}
+                      </span>
                       {conversation.type === 'group' && conversation.is_private && (
                         <FontAwesomeIcon icon={faLock} className="text-gray-400 text-xs" />
                       )}
-                      {conversation.type === 'group' && !conversation.is_private && (
-                        <FontAwesomeIcon icon={faGlobe} className="text-gray-400 text-xs" />
-                      )}
                     </div>
                     {conversation.last_message && (
-                      <p className="text-sm text-gray-400 truncate">{conversation.last_message}</p>
-                    )}
-                    {conversation.type === 'group' && conversation.members_count && (
-                      <p className="text-xs text-gray-500">{conversation.members_count} members</p>
+                      <p className="text-xs text-gray-400 truncate">{conversation.last_message}</p>
                     )}
                   </div>
                   {conversation.unread_count && conversation.unread_count > 0 && (
-                    <span className="bg-red-500 text-xs rounded-full px-2 py-1">
-                      {conversation.unread_count}
+                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                      {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                     </span>
                   )}
                 </div>
@@ -901,120 +1348,206 @@ const UnifiedMessages = () => {
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-white bg-black">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {selectedConversationType === 'direct' && selectedConversationData?.user_id ? (
-                    <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
-                  ) : (
-                    <div className="w-8 h-8 bg-black border border-white rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon 
-                        icon={selectedConversationType === 'group' ? faHashtag : faAt} 
-                        className="text-white text-sm"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <h2 className="font-bold">{selectedConversationData?.name}</h2>
-                    {selectedConversationType === 'group' && selectedConversationData?.members_count && (
-                      <p className="text-sm text-white opacity-60">{selectedConversationData.members_count} members</p>
-                    )}
-                  </div>
+            <div className="h-12 px-4 border-b border-white bg-black flex items-center justify-between shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <FontAwesomeIcon 
+                    icon={selectedConversationType === 'group' ? faHashtag : faAt} 
+                    className="text-gray-400 text-sm"
+                  />
+                  <h2 className="font-semibold text-white">
+                    {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 
+                      ? `${selectedConversationData?.name} / #${groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}`
+                      : selectedConversationData?.name
+                    }
+                  </h2>
                 </div>
-                <div className="flex space-x-2">
-                  {selectedConversationType === 'group' && (
-                    <>
+                {selectedConversationType === 'group' && selectedConversationData?.members_count && (
+                  <div className="h-4 w-px bg-gray-600"></div>
+                )}
+                {selectedConversationType === 'group' && selectedConversationData?.members_count && (
+                  <span className="text-sm text-gray-400">{selectedConversationData.members_count} members</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                {selectedConversationType === 'group' && (
+                  <>
+                    {groupMembers.some(member => 
+                      member.user_id === currentUser?.user_id && 
+                      (member.role === 'owner' || member.role === 'admin')
+                    ) && (
+                      <button
+                        onClick={() => setShowCreateChannelModal(true)}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                        title="Create Channel"
+                      >
+                        <FontAwesomeIcon icon={faHashtag} className="text-sm" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowMembersModal(true);
+                        fetchGroupMembers(selectedConversation);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                      title="View Members"
+                    >
+                      <FontAwesomeIcon icon={faUsers} className="text-sm" />
+                    </button>
+                    {selectedConversationData?.is_private && (
                       <button
                         onClick={() => {
-                          setShowMembersModal(true);
-                          fetchGroupMembers(selectedConversation);
+                          setShowInviteModal(true);
+                          fetchAvailableUsers();
                         }}
-                        className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
-                        title="View Members"
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                        title="Invite User"
                       >
-                        <FontAwesomeIcon icon={faUsers} />
+                        <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
                       </button>
-                      {selectedConversationData?.is_private && (
-                        <button
-                          onClick={() => {
-                            setShowInviteModal(true);
-                            fetchAvailableUsers();
-                          }}
-                          className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
-                          title="Invite User"
-                        >
-                          <FontAwesomeIcon icon={faUserPlus} />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black min-h-0">
-              {messages.map((message, index) => {
-                const isOwn = message.sender_id === currentUser?.user_id;
-                const senderName = selectedConversationType === 'group' 
-                  ? (message as GroupMessage).sender_username 
-                  : isOwn 
-                    ? 'You' 
-                    : selectedConversationData?.name;
-
-                return (
-                  <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                    onContextMenu={e => handleMessageContextMenu(e, message)}
+            {/* Channels Panel for Groups */}
+            {selectedConversationType === 'group' && groupChannels.length > 0 && (
+              <div className="h-10 px-4 border-b border-gray-700 bg-gray-900 flex items-center space-x-1 overflow-x-auto">
+                {groupChannels.map((channel) => (
+                  <button
+                    key={channel.channel_id}
+                    onClick={() => setSelectedChannel(channel.channel_id)}
+                    onContextMenu={(e) => handleChannelContextMenu(e, channel)}
+                    className={`px-3 py-1 rounded text-sm transition-colors whitespace-nowrap ${
+                      selectedChannel === channel.channel_id
+                        ? 'bg-white text-black'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}
                   >
-                    {!isOwn && (
-                      <div className="mr-2 mt-1">
-                        <ProfileAvatar userId={message.sender_id} size={32} />
-                      </div>
+                    <FontAwesomeIcon icon={faHashtag} className="text-xs mr-1" />
+                    {channel.name}
+                    {channel.is_default && (
+                      <span className="ml-1 text-xs opacity-75">(default)</span>
                     )}
-                    <div className={`max-w-xs lg:max-w-md ${isOwn ? 'bg-white text-black' : 'bg-black text-white border border-white'} rounded-lg p-3`}>
-                      {selectedConversationType === 'group' && !isOwn && (
-                        <p className="text-xs text-white opacity-60 mb-1">{senderName}</p>
-                      )}
-                      <p>{message.content}</p>
-                      <div className="flex items-center space-x-1 mt-1">
-                        <span className="text-xs text-white opacity-60">{new Date(message.timestamp).toLocaleTimeString()}</span>
-                        {isOwn && (
-                          <FontAwesomeIcon
-                            icon={
-                              selectedConversationType === 'direct'
-                                ? ((message as PrivateMessage).read ? faCheckDouble : faCheck)
-                                : ((message as GroupMessage).read_by_others ? faCheckDouble : faCheck)
-                            }
-                            className="text-xs"
-                            style={{
-                              color: selectedConversationType === 'direct'
-                                ? ((message as PrivateMessage).read ? '#4ade80' : '#9ca3af')
-                                : ((message as GroupMessage).read_by_others ? '#4ade80' : '#9ca3af')
-                            }}
-                          />
+                  </button>
+                ))}
+                <div className="flex-1 min-w-0"></div>
+                {groupMembers.some(member => 
+                  member.user_id === currentUser?.user_id && 
+                  (member.role === 'owner' || member.role === 'admin')
+                ) && (
+                  <button
+                    onClick={() => setShowCreateChannelModal(true)}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                    title="Create New Channel"
+                  >
+                    <FontAwesomeIcon icon={faUserPlus} className="text-xs" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto bg-black min-h-0">
+              <div className="p-4 space-y-3">
+                {messages.map((message, index) => {
+                  const isOwn = message.sender_id === currentUser?.user_id;
+                  const senderName = selectedConversationType === 'group' 
+                    ? (message as GroupMessage).sender_username 
+                    : isOwn 
+                      ? 'You' 
+                      : selectedConversationData?.name;
+
+                  const showAvatar = selectedConversationType === 'group' && !isOwn;
+                  const prevMessage = index > 0 ? messages[index - 1] : null;
+                  const isNewSender = !prevMessage || prevMessage.sender_id !== message.sender_id;
+                  const showSenderName = showAvatar && isNewSender;
+
+                  return (
+                    <div 
+                      key={index} 
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group hover:bg-gray-900/30 -mx-4 px-4 py-1 rounded`}
+                      onContextMenu={e => handleMessageContextMenu(e, message)}
+                    >
+                      {showAvatar ? (
+                        <div className="mr-3 mt-0.5">
+                          {showSenderName ? (
+                            <ProfileAvatar userId={message.sender_id} size={32} />
+                          ) : (
+                            <div className="w-8 h-8"></div>
+                          )}
+                        </div>
+                      ) : null}
+                      
+                      <div className={`max-w-md ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                        {showSenderName && (
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-sm font-semibold text-white hover:underline cursor-pointer">
+                              {senderName}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
                         )}
+                        
+                        <div className={`${
+                          isOwn 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-gray-800 text-white border border-gray-700'
+                        } rounded-lg px-3 py-2 max-w-full break-words`}>
+                          <MessageContent content={message.content} />
+                          {!showSenderName && (
+                            <div className="flex items-center justify-end space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs text-gray-300">
+                                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isOwn && (
+                                <FontAwesomeIcon
+                                  icon={
+                                    selectedConversationType === 'direct'
+                                      ? ((message as PrivateMessage).read ? faCheckDouble : faCheck)
+                                      : ((message as GroupMessage).read_by_others ? faCheckDouble : faCheck)
+                                  }
+                                  className="text-xs"
+                                  style={{
+                                    color: selectedConversationType === 'direct'
+                                      ? ((message as PrivateMessage).read ? '#4ade80' : '#9ca3af')
+                                      : ((message as GroupMessage).read_by_others ? '#4ade80' : '#9ca3af')
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-white bg-black">
-              <div className="flex space-x-2">
+            <div className="p-4 bg-black">
+              <div className="bg-gray-800 rounded-lg border border-gray-700 flex items-center">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder={`Message ${selectedConversationType === 'group' ? '#' : '@'}${selectedConversationData?.name}`}
-                  className="flex-1 bg-black text-white border border-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-white"
+                  placeholder={
+                    selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0
+                      ? `Message #${groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}`
+                      : `Message ${selectedConversationType === 'group' ? '#' : '@'}${selectedConversationData?.name}`
+                  }
+                  className="flex-1 bg-transparent text-white px-4 py-3 focus:outline-none placeholder-gray-400"
                 />
                 <button
                   onClick={sendMessage}
-                  className="bg-white text-black px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors border border-white"
+                  disabled={!newMessage.trim()}
+                  className="p-2 mr-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <FontAwesomeIcon icon={faPaperPlane} />
                 </button>
@@ -1022,16 +1555,77 @@ const UnifiedMessages = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-black">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Welcome to Messages</h2>
-              <p className="text-white opacity-60">Select a conversation to start messaging</p>
+          <div className="flex-1 flex flex-col items-center justify-center bg-black text-center px-8">
+            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+              <FontAwesomeIcon 
+                icon={selectedCategory === 'direct' ? faUser : faUsers} 
+                className="text-gray-400 text-2xl"
+              />
             </div>
+            <h2 className="text-xl font-semibold mb-2 text-white">
+              {selectedCategory === 'direct' ? 'No Direct Message Selected' : 'No Group Selected'}
+            </h2>
+            <p className="text-gray-400 mb-6 max-w-md">
+              {selectedCategory === 'direct' 
+                ? 'Choose a conversation from the sidebar to start messaging with friends.'
+                : 'Select a group from the sidebar to see what your community is talking about.'
+              }
+            </p>
+            <button
+              onClick={() => selectedCategory === 'direct' ? setShowNewDMModal(true) : setShowCreateGroupModal(true)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {selectedCategory === 'direct' ? 'Start New Conversation' : 'Create Group'}
+            </button>
           </div>
         )}
       </div>
 
       {/* Modals */}
+      {/* Create Channel Modal */}
+      {showCreateChannelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="bg-black border border-white p-6 rounded-lg w-96 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Create Channel</h3>
+              <button onClick={() => setShowCreateChannelModal(false)} className="text-white hover:text-gray-300">
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Channel Name (e.g., general, random)"
+                value={createChannelForm.name}
+                onChange={(e) => setCreateChannelForm({...createChannelForm, name: e.target.value})}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none"
+              />
+              <textarea
+                placeholder="Channel Description (optional)"
+                value={createChannelForm.description}
+                onChange={(e) => setCreateChannelForm({...createChannelForm, description: e.target.value})}
+                className="w-full bg-black text-white border border-white rounded px-3 py-2 h-20 focus:outline-none"
+              />
+            </div>
+            <div className="flex space-x-2 mt-6">
+              <button
+                onClick={() => setShowCreateChannelModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createChannel}
+                disabled={!createChannelForm.name.trim()}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Channel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Group Modal */}
       {showCreateGroupModal && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
@@ -1126,7 +1720,7 @@ const UnifiedMessages = () => {
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
               {groupMembers.map(member => {
                 const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
                 const isCurrentUserAdmin = currentUserMember && (currentUserMember.role === 'owner' || currentUserMember.role === 'admin');
@@ -1151,6 +1745,31 @@ const UnifiedMessages = () => {
                   </div>
                 );
               })}
+            </div>
+            <div className="flex space-x-2">
+              {/* Show invite button for private groups if user has admin privileges */}
+              {selectedConversationData?.is_private && groupMembers.some(member => 
+                member.user_id === currentUser?.user_id && 
+                (member.role === 'owner' || member.role === 'admin')
+              ) && (
+                <button
+                  onClick={() => {
+                    setShowMembersModal(false);
+                    setShowInviteModal(true);
+                    fetchAvailableUsers();
+                  }}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                  Invite User
+                </button>
+              )}
+              <button
+                onClick={() => setShowMembersModal(false)}
+                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -1257,6 +1876,17 @@ const UnifiedMessages = () => {
                 Ban Member
               </button>
             </>
+          ) : contextMenu.type === 'channel' ? (
+            // Channel management options for owners
+            <button
+              className="block w-full text-left px-4 py-2 hover:bg-red-600 hover:text-white rounded"
+              onClick={() => {
+                deleteChannel(contextMenu.id);
+                setContextMenu(null);
+              }}
+            >
+              Delete Channel
+            </button>
           ) : (
             // Existing conversation/message options
             <button

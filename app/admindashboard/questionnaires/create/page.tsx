@@ -1,5 +1,5 @@
 "use client";
-import Header from '../../../../components/Header';
+import Navigation from '../../../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -65,9 +65,9 @@ export default function CreateQuestionnaireGroup() {
   };
 
   return (
-    <>
-      <Header />
-      <main className="flex flex-col min-h-screen bg-black text-white">
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="admin" />
+      <main className="flex-1 flex flex-col overflow-hidden">
         <div className="w-full max-w-4xl mx-auto mt-12 p-6">
           <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
             <div className="flex items-center mb-6">
@@ -167,6 +167,6 @@ export default function CreateQuestionnaireGroup() {
           </div>
         </div>
       </main>
-    </>
+    </div>
   );
 }

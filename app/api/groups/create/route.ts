@@ -66,11 +66,26 @@ export async function POST(req: NextRequest) {
 
     await db.collection('group_members').insertOne(membership);
 
+    // Create default "general" channel for the group
+    const defaultChannel = {
+      channel_id: uuidv4(),
+      group_id: groupId,
+      name: 'general',
+      description: 'General discussion',
+      created_at: now,
+      created_by: session.user_id,
+      is_default: true,
+      position: 0
+    };
+
+    await db.collection('group_channels').insertOne(defaultChannel);
+
     await client.close();
 
     return NextResponse.json({ 
       success: true, 
       group_id: groupId,
+      default_channel_id: defaultChannel.channel_id,
       message: 'Group created successfully' 
     });
 

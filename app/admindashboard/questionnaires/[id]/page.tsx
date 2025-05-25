@@ -1,5 +1,5 @@
 "use client";
-import Header from '../../../../components/Header';
+import Navigation from '../../../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -236,22 +236,22 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <main className="flex flex-col min-h-screen bg-black text-white">
+      <div className="flex h-screen bg-black text-white">
+        <Navigation currentPage="admin" />
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="w-full max-w-6xl mx-auto mt-12 p-6">
             <div className="text-center">Loading...</div>
           </div>
         </main>
-      </>
+      </div>
     );
   }
 
   if (error || !group) {
     return (
-      <>
-        <Header />
-        <main className="flex flex-col min-h-screen bg-black text-white">
+      <div className="flex h-screen bg-black text-white">
+        <Navigation currentPage="admin" />
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="w-full max-w-6xl mx-auto mt-12 p-6">
             <div className="bg-black/80 border border-white rounded-lg p-8 text-center">
               <h1 className="text-2xl font-bold mb-4">Error</h1>
@@ -265,14 +265,14 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
             </div>
           </div>
         </main>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main className="flex flex-col min-h-screen bg-black text-white">
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="admin" />
+      <main className="flex-1 flex flex-col overflow-hidden">
         <div className="w-full max-w-6xl mx-auto mt-12 p-6">
           <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
             <div className="flex justify-between items-center mb-6">
@@ -666,6 +666,6 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
           </div>
         </div>
       </main>
-    </>
+    </div>
   );
 }
