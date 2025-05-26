@@ -178,6 +178,11 @@ const Groups = () => {
   }, []);
 
   useEffect(() => {
+    // Clear previous group data immediately when switching groups
+    setMessages([]);
+    setMembers([]);
+    setError('');
+    
     fetchMessages();
     fetchMembers();
     fetchInvitations();

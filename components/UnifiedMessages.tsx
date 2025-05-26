@@ -207,6 +207,7 @@ const UnifiedMessages = () => {
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [channelLoading, setChannelLoading] = useState(false); // Separate loading state for channel switching
+  const [contextSwitchLoading, setContextSwitchLoading] = useState(false); // Loading overlay for context switches
   const [error, setError] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -220,6 +221,9 @@ const UnifiedMessages = () => {
   // Channel-related state
   const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
+  
+  // Session tracking to prevent race conditions
+  const sessionIdRef = useRef<number>(0);
   
   // Debug: Log messages state changes
   useEffect(() => {
@@ -256,6 +260,8 @@ const UnifiedMessages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const failedChannelsRef = useRef<Set<string>>(new Set()); // Track channels that have failed with 403/404
+  const channelSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debouncing for channel switches
+  const contextSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for hiding loading overlay
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -392,32 +398,40 @@ const UnifiedMessages = () => {
       const data = await res.json();
       if (data.success) {
         console.log('Channels fetched:', data.channels);
-        setGroupChannels(data.channels);
         
-        // Clear failed channels for this group since we successfully fetched channels
-        const groupPrefix = `${groupId}:`;
-        const currentFailed = Array.from(failedChannelsRef.current);
-        currentFailed.forEach(key => {
-          if (key.startsWith(groupPrefix)) {
-            failedChannelsRef.current.delete(key);
+        // RACE CONDITION PROTECTION: Only update if we're still on the same group
+        if (selectedConversation === groupId && selectedConversationType === 'group') {
+          setGroupChannels(data.channels);
+          
+          // Clear failed channels for this group since we successfully fetched channels
+          const groupPrefix = `${groupId}:`;
+          const currentFailed = Array.from(failedChannelsRef.current);
+          currentFailed.forEach(key => {
+            if (key.startsWith(groupPrefix)) {
+              failedChannelsRef.current.delete(key);
+            }
+          });
+          
+          // Always auto-select default channel when fetching channels for a group
+          if (data.channels.length > 0) {
+            const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
+            console.log('Auto-selecting default channel:', defaultChannel.channel_id);
+            setSelectedChannel(defaultChannel.channel_id);
+          } else {
+            // No channels found, clear selected channel
+            setSelectedChannel('');
           }
-        });
-        
-        // Always auto-select default channel when fetching channels for a group
-        if (data.channels.length > 0) {
-          const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
-          console.log('Auto-selecting default channel:', defaultChannel.channel_id);
-          setSelectedChannel(defaultChannel.channel_id);
         } else {
-          // No channels found, clear selected channel
-          setSelectedChannel('');
+          console.warn('Discarding stale fetchChannels response for group:', groupId, 'current state:', selectedConversation, selectedConversationType);
         }
       }
     } catch (err) {
       console.error('Failed to fetch channels:', err);
-      setSelectedChannel('');
+      if (selectedConversation === groupId) {
+        setSelectedChannel('');
+      }
     }
-  }, []); // Remove selectedChannel dependency to prevent race conditions
+  }, [selectedConversation, selectedConversationType]); // Add dependencies to track current state
 
   // Create a new channel
   const createChannel = async (): Promise<void> => {
@@ -490,6 +504,10 @@ const UnifiedMessages = () => {
   // Fetch messages for selected conversation or channel
   const fetchMessages = useCallback(async (conversationId: string, type: 'direct' | 'group') => {
     try {
+      // Create a session ID for this fetch
+      const currentSessionId = ++sessionIdRef.current;
+      console.log(`Starting fetchMessages (session ${currentSessionId}) for conversation:`, conversationId, 'type:', type);
+      
       let url: string;
       if (type === 'direct') {
         url = `/api/messages?user_id=${conversationId}`;
@@ -511,6 +529,21 @@ const UnifiedMessages = () => {
       console.log('API Response Status:', res.status);
       console.log('API Response Data:', data);
 
+      // SESSION PROTECTION: Only update if this is still the current session and context
+      if (sessionIdRef.current !== currentSessionId || 
+          selectedConversation !== conversationId || 
+          selectedConversationType !== type) {
+        console.warn(`Session ${currentSessionId}: Discarding stale fetchMessages response`, {
+          currentSession: sessionIdRef.current,
+          requestSession: currentSessionId,
+          currentConversation: selectedConversation,
+          requestConversation: conversationId,
+          currentType: selectedConversationType,
+          requestType: type
+        });
+        return;
+      }
+
       if (data.success) {
         if (type === 'direct' && data.messages) {
           console.log('Raw messages from API:', data.messages);
@@ -528,10 +561,14 @@ const UnifiedMessages = () => {
           // Sort ascending by timestamp
           filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
           
-          console.log('Final sorted messages:', filteredMessages);
+          console.log(`Session ${currentSessionId}: Final sorted messages:`, filteredMessages);
           setMessages(filteredMessages);
         } else if (type === 'group' && data.messages) {
           console.log('Group messages from API:', data.messages);
+          // Additional protection for group messages with channels
+          if (selectedChannel && groupChannels.length > 0) {
+            console.log(`Session ${currentSessionId}: Setting group messages for channel:`, selectedChannel);
+          }
           // Sort ascending by timestamp
           (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
           setMessages(data.messages);
@@ -546,11 +583,15 @@ const UnifiedMessages = () => {
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
-  }, [currentUser?.user_id, selectedChannel, groupChannels.length]);
+  }, [currentUser?.user_id, selectedChannel, groupChannels.length, selectedConversation, selectedConversationType]);
 
   // Fetch messages for selected channel
   const fetchChannelMessages = useCallback(async (groupId: string, channelId: string) => {
     try {
+      // Create a session ID for this fetch
+      const currentSessionId = ++sessionIdRef.current;
+      console.log(`Starting fetchChannelMessages (session ${currentSessionId}) for channel:`, channelId, 'in group:', groupId);
+      
       setChannelLoading(true);
       const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
       console.log('Fetching channel messages from:', url);
@@ -564,25 +605,48 @@ const UnifiedMessages = () => {
         return;
       }
 
-      if (data.success && data.messages) {
-        // Sort ascending by timestamp
-        (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        setMessages(data.messages);
+      // SESSION PROTECTION: Only update if this is still the current session and context
+      if (sessionIdRef.current === currentSessionId && 
+          selectedConversation === groupId && 
+          selectedChannel === channelId && 
+          selectedConversationType === 'group') {
+        if (data.success && data.messages) {
+          // Sort ascending by timestamp
+          (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          console.log(`Session ${currentSessionId}: Setting messages for channel:`, channelId, 'in group:', groupId);
+          setMessages(data.messages);
+        } else {
+          console.warn(`Session ${currentSessionId}: Failed to fetch channel messages:`, data);
+          setMessages([]);
+        }
       } else {
-        console.warn('Failed to fetch channel messages:', data);
-        setMessages([]);
+        console.warn(`Session ${currentSessionId}: Discarding stale channel message response - session or context changed`, {
+          currentSession: sessionIdRef.current,
+          requestSession: currentSessionId,
+          currentGroup: selectedConversation,
+          requestGroup: groupId,
+          currentChannel: selectedChannel,
+          requestChannel: channelId
+        });
       }
     } catch (err) {
       console.error('Failed to fetch channel messages:', err);
-      setMessages([]);
+      // Only clear messages if we're still on the same context
+      if (selectedConversation === groupId && selectedChannel === channelId) {
+        setMessages([]);
+      }
     } finally {
       setChannelLoading(false);
     }
-  }, []);
+  }, [selectedConversation, selectedChannel, selectedConversationType]);
 
   // Refresh channel messages without loading indicator (for use after sending messages)
   const refreshChannelMessages = useCallback(async (groupId: string, channelId: string) => {
     try {
+      // Create a session ID for this refresh
+      const currentSessionId = ++sessionIdRef.current;
+      console.log(`Starting refreshChannelMessages (session ${currentSessionId}) for channel:`, channelId, 'in group:', groupId);
+      
       const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
       console.log('Refreshing channel messages from:', url);
       const res = await fetch(url);
@@ -598,25 +662,91 @@ const UnifiedMessages = () => {
         return;
       }
 
-      if (data.success && data.messages) {
+      // SESSION PROTECTION: Only update if this is still the current session and context
+      if (sessionIdRef.current === currentSessionId && 
+          selectedConversation === groupId && 
+          selectedChannel === channelId && 
+          selectedConversationType === 'group' && 
+          data.success && 
+          data.messages) {
         // Sort ascending by timestamp
         (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        console.log(`Session ${currentSessionId}: Refreshing messages for channel:`, channelId, 'in group:', groupId);
         setMessages(data.messages);
+      } else {
+        console.warn(`Session ${currentSessionId}: Discarding stale refresh response`, {
+          currentSession: sessionIdRef.current,
+          requestSession: currentSessionId,
+          currentGroup: selectedConversation,
+          requestGroup: groupId,
+          currentChannel: selectedChannel,
+          requestChannel: channelId,
+          hasSuccess: data.success,
+          hasMessages: !!data.messages
+        });
       }
     } catch (err) {
       console.error('Failed to refresh channel messages:', err);
     }
-  }, []);
+  }, [selectedConversation, selectedChannel, selectedConversationType]);
 
-  // Simplified channel switching - fetch messages when channel changes
+  // Simplified channel switching with debouncing and loading overlay - fetch messages when channel changes
   useEffect(() => {
+    console.log('🔄 Channel switching useEffect triggered:', {
+      selectedConversation,
+      selectedConversationType,
+      selectedChannel,
+      groupChannelsLength: groupChannels.length,
+      contextSwitchLoading
+    });
+    
+    // Clear any pending channel switch timeout
+    if (channelSwitchTimeoutRef.current) {
+      clearTimeout(channelSwitchTimeoutRef.current);
+      channelSwitchTimeoutRef.current = null;
+    }
+    
+    // Clear any pending context switch timeout
+    if (contextSwitchTimeoutRef.current) {
+      clearTimeout(contextSwitchTimeoutRef.current);
+      contextSwitchTimeoutRef.current = null;
+    }
+    
     if (selectedConversation && selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0) {
       // Validate that the selected channel exists in the current group's channels
       const channelExists = groupChannels.some(ch => ch.channel_id === selectedChannel);
       
       if (channelExists) {
-        console.log('Channel changed, fetching messages for channel:', selectedChannel);
-        fetchChannelMessages(selectedConversation, selectedChannel);
+        console.log('Channel changed, showing loading overlay and clearing messages for channel:', selectedChannel, 'in group:', selectedConversation);
+        
+        // Double-check we're still in a group conversation before showing overlay
+        if (selectedConversationType === 'group') {
+          console.log('🟢 Channel switch: Setting contextSwitchLoading=true for GROUP channel switch');
+          // Show loading overlay to mask any message flashing
+          setContextSwitchLoading(true);
+        } else {
+          console.log('⚠️ WARNING: Prevented setting overlay for non-group conversation in channel switch');
+        }
+        
+        // Clear messages immediately to prevent flash effect
+        setMessages([]);
+        
+        // Debounce the actual fetch to prevent rapid switches from causing race conditions
+        channelSwitchTimeoutRef.current = setTimeout(() => {
+          // Increment session ID to invalidate any pending requests
+          const newSessionId = ++sessionIdRef.current;
+          console.log(`Debounced channel switch (session ${newSessionId}): Fetching messages for channel:`, selectedChannel);
+          fetchChannelMessages(selectedConversation, selectedChannel);
+        }, 100); // 100ms debounce
+        
+        // Hide loading overlay after a short delay
+        contextSwitchTimeoutRef.current = setTimeout(() => {
+          console.log('🔴 Channel switch: Clearing contextSwitchLoading after 900ms timeout');
+          setContextSwitchLoading(false);
+        }, 900); // 900ms overlay to ensure fetch completes (was 400ms, increased by 500ms)
+        
+        // NOTE: We rely on the main auto-refresh interval for ongoing updates
+        // No need for a separate interval that could cause race conditions
       } else {
         console.warn('Selected channel does not exist in current group, auto-selecting default');
         const defaultChannel = groupChannels.find(ch => ch.is_default) || groupChannels[0];
@@ -625,6 +755,18 @@ const UnifiedMessages = () => {
         }
       }
     }
+    
+    // Cleanup function
+    return () => {
+      if (channelSwitchTimeoutRef.current) {
+        clearTimeout(channelSwitchTimeoutRef.current);
+        channelSwitchTimeoutRef.current = null;
+      }
+      if (contextSwitchTimeoutRef.current) {
+        clearTimeout(contextSwitchTimeoutRef.current);
+        contextSwitchTimeoutRef.current = null;
+      }
+    };
   }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
 
   // Fetch group members
@@ -704,11 +846,35 @@ const UnifiedMessages = () => {
     console.log('=== SELECTING CONVERSATION ===');
     console.log('Conversation:', conversation);
     console.log('Current user:', currentUser);
+    console.log('Current contextSwitchLoading state:', contextSwitchLoading);
     
-    // Aggressively clear any existing intervals first
+    // Only show loading overlay for group conversations, not private messages
+    if (conversation.type === 'group') {
+      console.log('🟢 Setting contextSwitchLoading=true for GROUP conversation');
+      setContextSwitchLoading(true);
+    } else {
+      console.log('🔵 NOT setting contextSwitchLoading for DIRECT conversation');
+    }
+    
+    // Clear any existing context switch timeout
+    if (contextSwitchTimeoutRef.current) {
+      clearTimeout(contextSwitchTimeoutRef.current);
+      contextSwitchTimeoutRef.current = null;
+    }
+    
+    // Invalidate all previous requests by incrementing session ID
+    const newSessionId = ++sessionIdRef.current;
+    console.log(`Starting new conversation session: ${newSessionId}`);
+    
+    // Aggressively clear any existing intervals and timeouts first
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    
+    if (channelSwitchTimeoutRef.current) {
+      clearTimeout(channelSwitchTimeoutRef.current);
+      channelSwitchTimeoutRef.current = null;
     }
     
     // Clear failed channels when switching conversations
@@ -720,6 +886,15 @@ const UnifiedMessages = () => {
     // Clear messages immediately for better UX
     console.log('Clearing messages before loading new conversation');
     setMessages([]);
+    
+    // Only hide loading overlay for group conversations (since we only showed it for groups)
+    if (conversation.type === 'group') {
+      // Hide loading overlay after a short delay to ensure smooth transition
+      contextSwitchTimeoutRef.current = setTimeout(() => {
+        console.log('🔴 Conversation switch: Clearing contextSwitchLoading after 800ms timeout for GROUP');
+        setContextSwitchLoading(false);
+      }, 800); // 800ms overlay to mask any flashing (was 300ms, increased by 500ms)
+    }
     
     if (conversation.type === 'group') {
       // Reset channel state first to prevent race conditions
@@ -734,6 +909,15 @@ const UnifiedMessages = () => {
       setSelectedChannel('');
       setGroupChannels([]);
       setGroupMembers([]);
+      
+      // Clear any pending timeouts that might set the loading overlay
+      if (contextSwitchTimeoutRef.current) {
+        clearTimeout(contextSwitchTimeoutRef.current);
+        contextSwitchTimeoutRef.current = null;
+      }
+      
+      // Explicitly ensure loading overlay is cleared for direct messages
+      setContextSwitchLoading(false);
       
       // For direct messages, fetch immediately
       fetchMessages(conversation.id, conversation.type);
@@ -856,21 +1040,27 @@ const UnifiedMessages = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+      console.log('Auto-refresh: Cleared existing interval');
     }
 
     if (selectedConversation && currentUser) {
+      console.log('Auto-refresh: Setting up new interval for:', selectedConversation, selectedConversationType, selectedChannel);
+      
       // Set up new interval
       intervalRef.current = setInterval(async () => {
         try {
-          // Capture current state to prevent race conditions
+          // Capture current state and create session ID to prevent race conditions
           const currentConversation = selectedConversation;
           const currentType = selectedConversationType;
           const currentChannel = selectedChannel;
           const currentChannels = groupChannels;
+          const autoRefreshSessionId = ++sessionIdRef.current;
+          
+          console.log(`Auto-refresh (session ${autoRefreshSessionId}): Running for:`, currentConversation, currentType, currentChannel);
           
           // Early exit if no valid conversation
           if (!currentConversation) {
-            console.log('Auto-refresh: No current conversation, skipping');
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): No current conversation, skipping`);
             return;
           }
           
@@ -878,10 +1068,9 @@ const UnifiedMessages = () => {
           if (currentType === 'group' && currentChannel && currentChannels.length > 0) {
             // Check if this channel has already failed with 403/404 - FIRST CHECK
             const channelKey = `${currentConversation}:${currentChannel}`;
-            console.log('Auto-refresh: Checking channel:', channelKey);
-            console.log('Auto-refresh: Failed channels:', Array.from(failedChannelsRef.current));
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Checking channel:`, channelKey);
             if (failedChannelsRef.current.has(channelKey)) {
-              console.warn('Auto-refresh: Skipping channel that previously failed:', channelKey);
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Skipping channel that previously failed:`, channelKey);
               return;
             }
             
@@ -889,30 +1078,30 @@ const UnifiedMessages = () => {
             const channelExists = currentChannels.some(ch => ch.channel_id === currentChannel);
             
             if (!channelExists) {
-              console.warn('Auto-refresh: Selected channel no longer exists in current group, adding to failed channels:', channelKey);
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Selected channel no longer exists in current group, adding to failed channels:`, channelKey);
               failedChannelsRef.current.add(channelKey);
               return;
             }
 
-            console.log('Auto-refreshing channel messages for:', channelKey);
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Refreshing channel messages for:`, channelKey);
             const url = `/api/groups/${currentConversation}/channels/${currentChannel}/messages`;
             const res = await fetch(url);
             
             // Handle 404 and 403 errors gracefully (channel deleted or no access)
             if (res.status === 404 || res.status === 403) {
-              console.warn(`Auto-refresh: Channel access denied or not found (${res.status}), adding to failed channels:`, channelKey);
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Channel access denied or not found (${res.status}), adding to failed channels:`, channelKey);
               // Add to failed channels to prevent future attempts
               failedChannelsRef.current.add(channelKey);
               
               // Clear the selected channel to prevent continuous failed requests
               if (selectedConversation === currentConversation && selectedChannel === currentChannel) {
-                console.log('Auto-refresh: Clearing selected channel due to access error');
+                console.log(`Auto-refresh (session ${autoRefreshSessionId}): Clearing selected channel due to access error`);
                 setSelectedChannel('');
                 setMessages([]);
                 // Try to select a default channel if available
                 const defaultChannel = currentChannels.find(ch => ch.is_default);
                 if (defaultChannel) {
-                  console.log('Auto-selecting default channel after access error:', defaultChannel.channel_id);
+                  console.log(`Auto-refresh (session ${autoRefreshSessionId}): Auto-selecting default channel after access error:`, defaultChannel.channel_id);
                   setSelectedChannel(defaultChannel.channel_id);
                 }
               }
@@ -921,44 +1110,69 @@ const UnifiedMessages = () => {
             
             const data = await res.json();
             
-            // Only update if we're still on the same conversation and channel
+            // SESSION PROTECTION: Only update if this is still the current session and context
             if (data.success && data.messages && 
+                sessionIdRef.current === autoRefreshSessionId &&
                 selectedConversation === currentConversation && 
                 selectedConversationType === currentType && 
                 selectedChannel === currentChannel) {
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Updating messages for channel:`, currentChannel);
               // Sort ascending by timestamp
               (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
               setMessages(data.messages);
+            } else {
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Discarding stale group response - current state changed`, {
+                currentSession: sessionIdRef.current,
+                requestSession: autoRefreshSessionId,
+                capturedConversation: currentConversation,
+                currentConversation: selectedConversation,
+                capturedType: currentType,
+                currentType: selectedConversationType,
+                capturedChannel: currentChannel,
+                currentChannel: selectedChannel,
+                hasSuccess: data.success,
+                hasMessages: !!data.messages
+              });
             }
           } else if (currentType === 'direct') {
-            console.log('Auto-refreshing direct messages');
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Refreshing direct messages`);
             const res = await fetch(`/api/messages?user_id=${currentConversation}`);
             const data = await res.json();
             
-            // Only update if we're still on the same conversation
+            // SESSION PROTECTION: Only update if this is still the current session and context
             if (data.success && data.messages && 
+                sessionIdRef.current === autoRefreshSessionId &&
                 selectedConversation === currentConversation && 
                 selectedConversationType === currentType) {
-              console.log('Auto-refresh raw messages:', data.messages);
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Raw messages:`, data.messages);
               
               // Use the same fixed filtering logic as in fetchMessages
               const filteredMessages = data.messages.filter((msg: PrivateMessage) => 
                 msg.sender_id === currentConversation || msg.sender_id === currentUser.user_id
               );
               
-              console.log('Auto-refresh filtered messages:', filteredMessages);
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Filtered messages:`, filteredMessages);
               
               // Sort ascending by timestamp
               filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => 
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
               
-              console.log('Auto-refresh final messages:', filteredMessages);
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Final messages:`, filteredMessages);
               setMessages(filteredMessages);
             } else {
-              console.log('Auto-refresh: No messages or API not successful');
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Discarding stale direct response - current state changed`, {
+                currentSession: sessionIdRef.current,
+                requestSession: autoRefreshSessionId,
+                capturedConversation: currentConversation,
+                currentConversation: selectedConversation,
+                capturedType: currentType,
+                currentType: selectedConversationType,
+                hasSuccess: data.success,
+                hasMessages: !!data.messages
+              });
             }
           }
         } catch (err) {
@@ -970,8 +1184,11 @@ const UnifiedMessages = () => {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
+          console.log('Auto-refresh: Cleanup - cleared interval');
         }
       };
+    } else {
+      console.log('Auto-refresh: Not setting up interval - missing requirements');
     }
   }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, groupChannels]); // Add groupChannels dependency for validation
 
@@ -1792,7 +2009,17 @@ const UnifiedMessages = () => {
             )}
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto bg-black min-h-0">
+            <div className="flex-1 overflow-y-auto bg-black min-h-0 relative">
+              {/* Context Switch Loading Overlay */}
+              {contextSwitchLoading && (
+                <div className="absolute inset-0 bg-black backdrop-blur-sm flex items-center justify-center z-10">
+                  <div className="flex items-center space-x-3 text-white">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <span className="text-sm">Loading...</span>
+                  </div>
+                </div>
+              )}
+              {/* Debug logging moved to useEffect */}
               <div className="p-4 space-y-3">
                 {channelLoading ? (
                   <div className="flex items-center justify-center py-8">
