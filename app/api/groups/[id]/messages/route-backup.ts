@@ -8,6 +8,7 @@ const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 interface MessageDocument {
   _id?: unknown;
   message_id: string;
+  encrypted_content?: string;
   content: string;
   sender_id: string;
   sender_username?: string;
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Decrypt messages
     const decryptedMessages = (messages as MessageDocument[]).map((msg: MessageDocument) => {
       try {
-        const decryptedBytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
+        const decryptedBytes = CryptoJS.AES.decrypt(msg.encrypted_content || msg.content, SECRET_KEY);
         const content = decryptedBytes.toString(CryptoJS.enc.Utf8);
         return {
           ...msg,
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       group_id: groupId,
       channel_id,
       sender_id: auth.userId,
-      content: encryptedContent,
+      encrypted_content: encryptedContent,
       timestamp: new Date().toISOString(),
       edited: false,
       attachments: []

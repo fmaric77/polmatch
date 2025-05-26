@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
+import { getAuthenticatedUser, connectToDatabase } from '../../../../lib/mongodb-connection';
 
 export async function GET() {
   try {
-    // Validate session
+    // Fast authentication
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     
@@ -13,42 +12,42 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    const db = client.db('polmatch');
-
-    // Verify session
-    const session = await db.collection('sessions').findOne({ 
-      sessionToken: sessionToken 
-    });
-    
-    if (!session) {
-      await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    const auth = await getAuthenticatedUser(sessionToken);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's group memberships
-    const memberships = await db.collection('group_members').find({
-      user_id: session.user_id
-    }).toArray();
+    const { db } = await connectToDatabase();
 
-    const groupIds = memberships.map(m => m.group_id);
-
-    // Get group details
-    const groups = await db.collection('groups').find({
-      group_id: { $in: groupIds }
-    }).sort({ last_activity: -1 }).toArray();
-
-    // Add user's role to each group
-    const groupsWithRoles = groups.map(group => {
-      const membership = memberships.find(m => m.group_id === group.group_id);
-      return {
-        ...group,
-        user_role: membership?.role || 'member'
-      };
-    });
-
-    await client.close();
+    // Use aggregation pipeline for efficient query
+    const groupsWithRoles = await db.collection('group_members').aggregate([
+      { $match: { user_id: auth.user.user_id } },
+      {
+        $lookup: {
+          from: 'groups',
+          localField: 'group_id',
+          foreignField: 'group_id',
+          as: 'group_details'
+        }
+      },
+      { $unwind: '$group_details' },
+      {
+        $project: {
+          _id: 0,
+          group_id: '$group_details.group_id',
+          name: '$group_details.name',
+          description: '$group_details.description',
+          is_private: '$group_details.is_private',
+          topic: '$group_details.topic',
+          created_at: '$group_details.created_at',
+          created_by: '$group_details.created_by',
+          last_activity: '$group_details.last_activity',
+          member_count: '$group_details.member_count',
+          user_role: '$role'
+        }
+      },
+      { $sort: { last_activity: -1 } }
+    ]).toArray();
 
     return NextResponse.json({ 
       success: true, 
