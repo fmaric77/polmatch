@@ -1,5 +1,5 @@
 // Database indexing utility for ensuring optimal performance
-import { MongoClient, Db } from 'mongodb';
+import { Db } from 'mongodb';
 
 interface IndexDefinition {
   collection: string;
@@ -204,7 +204,8 @@ export async function ensureCollectionIndexes(db: Db, collectionName: string): P
       await coll.createIndex(fields, { ...options, background: true });
     } catch (error) {
       // Index might already exist, which is fine
-      if (!error.message?.includes('already exists')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('already exists')) {
         console.log(`⚠️  Failed to create index on ${collectionName}:`, error);
       }
     }
@@ -215,8 +216,8 @@ export async function ensureCollectionIndexes(db: Db, collectionName: string): P
  * Gets index statistics for performance monitoring
  * @param db MongoDB database instance
  */
-export async function getIndexStats(db: Db): Promise<Record<string, any>> {
-  const stats: Record<string, any> = {};
+export async function getIndexStats(db: Db): Promise<Record<string, unknown>> {
+  const stats: Record<string, unknown> = {};
   
   for (const { collection } of INDEX_DEFINITIONS) {
     try {
@@ -232,7 +233,8 @@ export async function getIndexStats(db: Db): Promise<Record<string, any>> {
         usage: indexStats
       };
     } catch (error) {
-      stats[collection] = { error: error.message };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      stats[collection] = { error: errorMessage };
     }
   }
   
@@ -251,8 +253,8 @@ export function createGroupMessagesPipeline(
   channelId?: string, 
   userId?: string, 
   limit: number = 50
-): any[] {
-  const pipeline: any[] = [
+): Record<string, unknown>[] {
+  const pipeline: Record<string, unknown>[] = [
     // Match stage - uses group_id + channel_id index
     {
       $match: {
@@ -340,7 +342,7 @@ export function createGroupMessagesPipeline(
  * @param userId Current user ID
  * @param limit Number of conversations to retrieve
  */
-export function createPrivateConversationsPipeline(userId: string, limit: number = 50): any[] {
+export function createPrivateConversationsPipeline(userId: string, limit: number = 50): Record<string, unknown>[] {
   return [
     // Match conversations where user is a participant
     {

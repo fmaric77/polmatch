@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
 // Essential indexing function inlined to avoid import issues
-async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
     if (collectionName === 'groups') {
@@ -18,7 +18,7 @@ async function ensureIndexes(db: any, collectionName: string): Promise<void> {
       await coll.createIndex({ group_id: 1, name: 1 }, { background: true });
       await coll.createIndex({ channel_id: 1 }, { unique: true, background: true });
     }
-  } catch (error) {
+  } catch {
     // Index might already exist, which is fine
   }
 }

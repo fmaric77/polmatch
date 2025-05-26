@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
-const DebugMessages = () => {
-  const [debugInfo, setDebugInfo] = useState<any>({});
+interface DebugInfo {
+  session: unknown;
+  [key: string]: unknown;
+}
+
+const DebugMessages = (): JSX.Element => {
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({ session: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,7 +23,7 @@ const DebugMessages = () => {
         const sessionRes = await fetch('/api/session');
         debug.session = await sessionRes.json();
 
-        if (debug.session.valid) {
+        if (debug.session && (debug.session as { valid?: boolean }).valid) {
           // Check private conversations
           const privateRes = await fetch('/api/private-conversations');
           debug.privateConversations = await privateRes.json();

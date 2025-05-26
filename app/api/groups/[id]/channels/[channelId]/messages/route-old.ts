@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
-import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
+import { MongoClient, Db } from 'mongodb';
+import MONGODB_URI from '../../../../../mongo-uri';
 
 // Essential indexing functions inlined to avoid import issues
-async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
     if (collectionName === 'group_messages') {
@@ -16,7 +17,7 @@ async function ensureIndexes(db: any, collectionName: string): Promise<void> {
       await coll.createIndex({ message_id: 1, user_id: 1 }, { unique: true, background: true });
       await coll.createIndex({ user_id: 1, read_at: -1 }, { background: true });
     }
-  } catch (error) {
+  } catch {
     // Index might already exist, which is fine
   }
 }

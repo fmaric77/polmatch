@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import CryptoJS from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
-import { getAuthenticatedUser, connectToDatabase, getGroupMessages } from '../../../lib/mongodb-connection';
+import { getAuthenticatedUser, connectToDatabase, getGroupMessages } from '../../../../../lib/mongodb-connection';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
+
+interface MessageDocument {
+  _id?: unknown;
+  message_id: string;
+  encrypted_content?: string;
+  content: string;
+  sender_id: string;
+  sender_username?: string;
+  timestamp: Date;
+  group_id: string;
+  channel_id: string;
+  attachments?: number;
+  [key: string]: unknown;
+}
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -47,15 +61,15 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     const messages = await getGroupMessages(groupId, channelId || undefined, limit);
 
     // Decrypt messages
-    const decryptedMessages = messages.map(msg => {
+    const decryptedMessages = (messages as MessageDocument[]).map((msg: MessageDocument) => {
       try {
-        const decryptedBytes = CryptoJS.AES.decrypt(msg.encrypted_content, SECRET_KEY);
+        const decryptedBytes = CryptoJS.AES.decrypt(msg.encrypted_content || msg.content, SECRET_KEY);
         const content = decryptedBytes.toString(CryptoJS.enc.Utf8);
         return {
           ...msg,
           content: content || '[Decryption failed]'
         };
-      } catch (error) {
+      } catch {
         return {
           ...msg,
           content: '[Decryption failed]'

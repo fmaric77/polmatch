@@ -6,6 +6,18 @@ import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
+interface PrivateMessage {
+  _id?: unknown;
+  sender_id: string;
+  receiver_id?: string;
+  encrypted_content?: string;
+  content: string;
+  timestamp: string;
+  read: boolean;
+  attachments: string[];
+  [key: string]: unknown;
+}
+
 // Helper function to get sorted participant IDs for consistent conversation lookup
 function getSortedParticipants(userId1: string, userId2: string): string[] {
   return [userId1, userId2].sort();
@@ -38,12 +50,12 @@ export async function GET(request: Request): Promise<NextResponse> {
       pms = await getPrivateMessages(auth.userId, otherUserId, 50);
       
       // Decrypt messages
-      for (const pm of pms) {
+      for (const pm of pms as PrivateMessage[]) {
         try {
-          const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content, SECRET_KEY);
+          const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content || pm.content, SECRET_KEY);
           pm.content = decryptedBytes.toString(CryptoJS.enc.Utf8);
           delete pm.encrypted_content;
-        } catch (error) {
+        } catch {
           pm.content = '[Decryption failed]';
           delete pm.encrypted_content;
         }
@@ -89,7 +101,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             const decryptedBytes = CryptoJS.AES.decrypt(conv.lastMessage.encrypted_content, SECRET_KEY);
             conv.lastMessage.content = decryptedBytes.toString(CryptoJS.enc.Utf8);
             delete conv.lastMessage.encrypted_content;
-          } catch (error) {
+          } catch {
             conv.lastMessage.content = '[Decryption failed]';
             delete conv.lastMessage.encrypted_content;
           }
@@ -142,7 +154,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const sortedParticipants = getSortedParticipants(auth.userId, receiver_id);
     
     // Find or create private conversation using upsert
-    const conversationResult = await db.collection('private_conversations').findOneAndUpdate(
+    await db.collection('private_conversations').findOneAndUpdate(
       { participant_ids: sortedParticipants },
       { 
         $set: { updated_at: now },
@@ -242,7 +254,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       let objectId;
       try {
         objectId = typeof message_id === 'string' ? new ObjectId(message_id) : message_id;
-      } catch (error) {
+      } catch {
         return NextResponse.json({ success: false, message: 'Invalid message_id format' }, { status: 400 });
       }
       

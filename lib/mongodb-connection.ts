@@ -37,10 +37,21 @@ export async function connectToDatabase(): Promise<CachedConnection> {
 
 // Session and user caching
 const sessionCache = new Map<string, { userId: string; timestamp: number }>();
-const userCache = new Map<string, any>();
+const userCache = new Map<string, { data: UserDocument; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export async function getAuthenticatedUser(sessionToken: string): Promise<{ user: any; userId: string } | null> {
+interface UserDocument {
+  user_id: string;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+  is_admin?: boolean;
+  [key: string]: unknown;
+}
+
+export async function getAuthenticatedUser(sessionToken: string): Promise<{ user: UserDocument; userId: string } | null> {
   // Check session cache first
   const cachedSession = sessionCache.get(sessionToken);
   if (cachedSession && Date.now() - cachedSession.timestamp < CACHE_TTL) {
@@ -66,9 +77,9 @@ export async function getAuthenticatedUser(sessionToken: string): Promise<{ user
 
   // Cache session and user data
   sessionCache.set(sessionToken, { userId: session.user_id, timestamp: Date.now() });
-  userCache.set(session.user_id, { data: user, timestamp: Date.now() });
+  userCache.set(session.user_id, { data: user as unknown as UserDocument, timestamp: Date.now() });
 
-  return { user, userId: session.user_id };
+  return { user: user as unknown as UserDocument, userId: session.user_id };
 }
 
 // Optimized profile picture lookup using aggregation
@@ -125,7 +136,7 @@ export async function getProfilePicture(userId: string): Promise<string | null> 
 }
 
 // Optimized message retrieval for private conversations
-export async function getPrivateMessages(userId1: string, userId2: string, limit: number = 50): Promise<any[]> {
+export async function getPrivateMessages(userId1: string, userId2: string, limit: number = 50): Promise<unknown[]> {
   const { db } = await connectToDatabase();
   
   const sortedParticipants = [userId1, userId2].sort();
@@ -146,10 +157,10 @@ export async function getPrivateMessages(userId1: string, userId2: string, limit
 }
 
 // Optimized group messages retrieval
-export async function getGroupMessages(groupId: string, channelId?: string, limit: number = 50): Promise<any[]> {
+export async function getGroupMessages(groupId: string, channelId?: string, limit: number = 50): Promise<unknown[]> {
   const { db } = await connectToDatabase();
   
-  const matchStage: any = { group_id: groupId };
+  const matchStage: Record<string, unknown> = { group_id: groupId };
   if (channelId) {
     matchStage.channel_id = channelId;
   }

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
+import { Db } from 'mongodb';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -10,8 +11,21 @@ interface RouteContext {
   params: Promise<{ id: string; channelId: string }>;
 }
 
+interface MessageDocument {
+  _id?: unknown;
+  message_id: string;
+  content: string;
+  sender_id: string;
+  sender_username?: string;
+  timestamp: Date;
+  group_id: string;
+  channel_id: string;
+  attachments?: number;
+  [key: string]: unknown;
+}
+
 // Essential indexing functions inlined to avoid import issues
-async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
     if (collectionName === 'group_messages') {
@@ -22,7 +36,7 @@ async function ensureIndexes(db: any, collectionName: string): Promise<void> {
       await coll.createIndex({ message_id: 1, user_id: 1 }, { unique: true, background: true });
       await coll.createIndex({ user_id: 1, read_at: -1 }, { background: true });
     }
-  } catch (error) {
+  } catch {
     // Index might already exist, which is fine
   }
 }
@@ -106,12 +120,12 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     ]).toArray();
 
     // Decrypt message content
-    const decryptedMessages = messages.map((message: any) => {
+    const decryptedMessages = (messages as MessageDocument[]).map((message: MessageDocument) => {
       try {
         const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
         return { ...message, content: decryptedContent };
-      } catch (error) {
-        console.error('Failed to decrypt message:', error);
+      } catch {
+        console.error('Failed to decrypt message for ID:', message.message_id);
         return { ...message, content: '[Decryption failed]' };
       }
     });

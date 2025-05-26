@@ -5,6 +5,36 @@ import { getAuthenticatedUser, connectToDatabase } from '../../../lib/mongodb-co
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
+interface ConversationDocument {
+  _id: unknown;
+  participant_ids: string[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface UserDocument {
+  user_id: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+  [key: string]: unknown;
+}
+
+interface MessageDocument {
+  _id: unknown;
+  conversation_id: unknown;
+  content: string;
+  sender_id: string;
+  timestamp: Date;
+  [key: string]: unknown;
+}
+
+interface LatestMessageAggregate {
+  _id: unknown;
+  latestMessage: MessageDocument;
+}
+
 // Helper function to get sorted participant IDs
 function getSortedParticipants(userId1: string, userId2: string): string[] {
   return [userId1, userId2].sort();
@@ -32,7 +62,7 @@ export async function GET() {
     }
 
     // Get the other participant IDs
-    const otherUserIds = privateConversations.map((conv: any) => {
+    const otherUserIds = (privateConversations as ConversationDocument[]).map((conv: ConversationDocument) => {
       return conv.participant_ids.find((id: string) => id !== auth.user.user_id);
     }).filter(Boolean);
 
@@ -42,10 +72,10 @@ export async function GET() {
     }).toArray();
 
     // Create a map for quick lookup
-    const userMap = new Map(otherUsers.map((u: any) => [u.user_id, u]));
+    const userMap = new Map((otherUsers as unknown as UserDocument[]).map((u: UserDocument) => [u.user_id, u]));
 
     // Get the latest message for each conversation
-    const conversationIds = privateConversations.map((conv: any) => conv._id);
+    const conversationIds = (privateConversations as ConversationDocument[]).map((conv: ConversationDocument) => conv._id);
     const latestMessages = await db.collection('pm').aggregate([
       { $match: { conversation_id: { $in: conversationIds } } },
       { $sort: { timestamp: -1 } },
@@ -55,13 +85,13 @@ export async function GET() {
       }}
     ]).toArray();
 
-    const messageMap = new Map(latestMessages.map((msg: any) => [msg._id.toString(), msg.latestMessage]));
+    const messageMap = new Map((latestMessages as unknown as LatestMessageAggregate[]).map((msg: LatestMessageAggregate) => [msg._id?.toString(), msg.latestMessage]));
 
     // Format the response
-    const conversations = privateConversations.map((conv: any) => {
+    const conversations = (privateConversations as unknown as ConversationDocument[]).map((conv: ConversationDocument) => {
       const otherUserId = conv.participant_ids.find((id: string) => id !== auth.user.user_id);
-      const otherUser = userMap.get(otherUserId);
-      const latestMessage = messageMap.get(conv._id.toString());
+      const otherUser = otherUserId ? userMap.get(otherUserId) : null;
+      const latestMessage = messageMap.get(conv._id?.toString() ?? '');
       
       // Decrypt latest message content if it exists
       let decryptedLatestMessage = null;

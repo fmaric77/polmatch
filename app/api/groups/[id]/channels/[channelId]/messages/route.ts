@@ -10,6 +10,19 @@ interface RouteContext {
   params: Promise<{ id: string; channelId: string }>;
 }
 
+interface MessageDocument {
+  _id?: unknown;
+  message_id: string;
+  content: string;
+  sender_id: string;
+  sender_username?: string;
+  timestamp: Date;
+  group_id: string;
+  channel_id: string;
+  attachments?: number;
+  [key: string]: unknown;
+}
+
 // GET: Fetch messages for a specific channel (OPTIMIZED)
 export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
@@ -96,7 +109,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     ]).toArray();
 
     // Decrypt message content
-    const decryptedMessages = messages.map((message: any) => {
+    const decryptedMessages = (messages as MessageDocument[]).map((message: MessageDocument) => {
       try {
         if (!message.content) {
           return { ...message, content: '[No content field]' };
@@ -104,8 +117,8 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
         
         const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
         return { ...message, content: decryptedContent };
-      } catch (error) {
-        console.error('Failed to decrypt message:', error);
+      } catch {
+        console.error('Failed to decrypt message for ID:', message.message_id);
         return { ...message, content: '[Decryption failed]' };
       }
     });

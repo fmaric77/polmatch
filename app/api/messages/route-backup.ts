@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { MongoClient } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import CryptoJS from 'crypto-js';
 
 // Essential indexing function inlined to avoid import issues
-async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
     if (collectionName === 'private_conversations') {
@@ -14,7 +14,7 @@ async function ensureIndexes(db: any, collectionName: string): Promise<void> {
       await coll.createIndex({ conversation_id: 1, timestamp: 1 }, { background: true });
       await coll.createIndex({ sender_id: 1, timestamp: -1 }, { background: true });
     }
-  } catch (error) {
+  } catch {
     // Index might already exist, which is fine
   }
 }

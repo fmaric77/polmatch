@@ -625,7 +625,7 @@ const UnifiedMessages = () => {
         }
       }
     }
-  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels]); // Remove fetchChannelMessages from dependencies
+  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
 
   // Fetch group members
   const fetchGroupMembers = useCallback(async (groupId: string) => {
@@ -738,7 +738,7 @@ const UnifiedMessages = () => {
       // For direct messages, fetch immediately
       fetchMessages(conversation.id, conversation.type);
     }
-  }, [fetchGroupMembers, fetchMessages]);
+  }, [fetchGroupMembers, fetchMessages, currentUser]);
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param

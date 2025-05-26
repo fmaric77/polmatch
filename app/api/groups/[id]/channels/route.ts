@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import MONGODB_URI from '../../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
 // Essential indexing function inlined to avoid import issues
-async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
     if (collectionName === 'group_channels') {
@@ -16,9 +16,10 @@ async function ensureIndexes(db: any, collectionName: string): Promise<void> {
       // Create index for sorting by position
       await coll.createIndex({ group_id: 1, position: 1 }, { background: true });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Index might already exist, which is fine
-    console.log('Index creation note:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log('Index creation note:', errorMessage);
   }
 }
 
@@ -196,13 +197,13 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
         message: 'Channel created successfully' 
       });
       
-    } catch (insertError: any) {
+    } catch (insertError: unknown) {
       await client.close();
       
       console.error('Channel insertion error:', insertError);
       
       // Handle duplicate key errors specifically
-      if (insertError.code === 11000) {
+      if (insertError && typeof insertError === 'object' && 'code' in insertError && insertError.code === 11000) {
         return NextResponse.json({ 
           error: 'Channel name already exists in this group' 
         }, { status: 409 });
