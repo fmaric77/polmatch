@@ -9,7 +9,8 @@ import {
   faBook, 
   faEnvelope, 
   faSignOutAlt,
-  faKey
+  faKey,
+  faUsers
 } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
 
@@ -98,6 +99,17 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           title="Chat"
         >
           <FontAwesomeIcon icon={faEnvelope} />
+        </div>
+
+        {/* Discover Groups Navigation */}
+        <div 
+          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+            isActive('discover-groups') ? 'bg-white text-black' : ''
+          }`}
+          onClick={() => window.location.href = '/discover-groups'}
+          title="Discover Groups"
+        >
+          <FontAwesomeIcon icon={faUsers} />
         </div>
 
         {/* Admin Dashboard */}
