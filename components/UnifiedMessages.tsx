@@ -206,6 +206,7 @@ const UnifiedMessages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [channelLoading, setChannelLoading] = useState(false); // Separate loading state for channel switching
   const [error, setError] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
@@ -219,6 +220,12 @@ const UnifiedMessages = () => {
   // Channel-related state
   const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
+  
+  // Debug: Log messages state changes
+  useEffect(() => {
+    console.log('Messages state changed:', messages);
+    console.log('Messages count:', messages.length);
+  }, [messages]);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [createChannelForm, setCreateChannelForm] = useState({
     name: '',
@@ -248,6 +255,7 @@ const UnifiedMessages = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const failedChannelsRef = useRef<Set<string>>(new Set()); // Track channels that have failed with 403/404
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -386,16 +394,28 @@ const UnifiedMessages = () => {
         console.log('Channels fetched:', data.channels);
         setGroupChannels(data.channels);
         
-        // Always select the default channel when fetching channels for a new group
+        // Clear failed channels for this group since we successfully fetched channels
+        const groupPrefix = `${groupId}:`;
+        const currentFailed = Array.from(failedChannelsRef.current);
+        currentFailed.forEach(key => {
+          if (key.startsWith(groupPrefix)) {
+            failedChannelsRef.current.delete(key);
+          }
+        });
+        
+        // Always auto-select default channel when fetching channels for a group
         if (data.channels.length > 0) {
           const defaultChannel = data.channels.find((ch: Channel) => ch.is_default) || data.channels[0];
           console.log('Auto-selecting default channel:', defaultChannel.channel_id);
           setSelectedChannel(defaultChannel.channel_id);
-          // The useEffect for channel changes will handle fetching messages
+        } else {
+          // No channels found, clear selected channel
+          setSelectedChannel('');
         }
       }
     } catch (err) {
       console.error('Failed to fetch channels:', err);
+      setSelectedChannel('');
     }
   }, []); // Remove selectedChannel dependency to prevent race conditions
 
@@ -450,6 +470,12 @@ const UnifiedMessages = () => {
   // Fetch channels when a group conversation is selected
   useEffect(() => {
     if (selectedConversation && selectedConversationType === 'group') {
+      // Clear channel state first to prevent race conditions
+      setSelectedChannel('');
+      setGroupChannels([]);
+      setMessages([]);
+      
+      // Fetch channels for the group
       fetchChannels(selectedConversation);
     } else {
       setGroupChannels([]);
@@ -466,7 +492,7 @@ const UnifiedMessages = () => {
     try {
       let url: string;
       if (type === 'direct') {
-        url = `/api/messages`;
+        url = `/api/messages?user_id=${conversationId}`;
       } else {
         // For group messages, check if we have a selected channel
         if (selectedChannel && groupChannels.length > 0) {
@@ -481,21 +507,41 @@ const UnifiedMessages = () => {
       console.log('Fetching messages from:', url);
       const res = await fetch(url);
       const data = await res.json();
+      
+      console.log('API Response Status:', res.status);
+      console.log('API Response Data:', data);
 
       if (data.success) {
-        if (type === 'direct' && data.pms) {
-          const filteredMessages = data.pms.filter((msg: PrivateMessage) => 
-            (msg.sender_id === conversationId && msg.receiver_id === currentUser?.user_id) ||
-            (msg.sender_id === currentUser?.user_id && msg.receiver_id === conversationId)
+        if (type === 'direct' && data.messages) {
+          console.log('Raw messages from API:', data.messages);
+          console.log('Current user ID:', currentUser?.user_id);
+          console.log('Conversation ID:', conversationId);
+          
+          // Since the API returns messages for a specific conversation between two users,
+          // we just need to check that the sender is either the current user or the other user
+          const filteredMessages = data.messages.filter((msg: PrivateMessage) => 
+            msg.sender_id === conversationId || msg.sender_id === currentUser?.user_id
           );
+          
+          console.log('Filtered messages:', filteredMessages);
+          
           // Sort ascending by timestamp
           filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          
+          console.log('Final sorted messages:', filteredMessages);
           setMessages(filteredMessages);
         } else if (type === 'group' && data.messages) {
+          console.log('Group messages from API:', data.messages);
           // Sort ascending by timestamp
           (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
           setMessages(data.messages);
+        } else {
+          console.log('No messages found in API response or wrong type');
+          console.log('Type:', type);
+          console.log('data.messages exists:', !!data.messages);
         }
+      } else {
+        console.log('API response not successful:', data);
       }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
@@ -505,9 +551,52 @@ const UnifiedMessages = () => {
   // Fetch messages for selected channel
   const fetchChannelMessages = useCallback(async (groupId: string, channelId: string) => {
     try {
+      setChannelLoading(true);
       const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
+      console.log('Fetching channel messages from:', url);
       const res = await fetch(url);
       const data = await res.json();
+
+      if (res.status === 404 || res.status === 403) {
+        console.warn(`Channel not found or access denied (${res.status}), clearing messages and selected channel`);
+        setMessages([]);
+        setSelectedChannel('');
+        return;
+      }
+
+      if (data.success && data.messages) {
+        // Sort ascending by timestamp
+        (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setMessages(data.messages);
+      } else {
+        console.warn('Failed to fetch channel messages:', data);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch channel messages:', err);
+      setMessages([]);
+    } finally {
+      setChannelLoading(false);
+    }
+  }, []);
+
+  // Refresh channel messages without loading indicator (for use after sending messages)
+  const refreshChannelMessages = useCallback(async (groupId: string, channelId: string) => {
+    try {
+      const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
+      console.log('Refreshing channel messages from:', url);
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (res.status === 404 || res.status === 403) {
+        console.warn(`Channel not found or access denied during refresh (${res.status}), clearing selected channel`);
+        // Immediately clear the selected channel to stop all future requests
+        setSelectedChannel('');
+        // Add to failed channels
+        const channelKey = `${groupId}:${channelId}`;
+        failedChannelsRef.current.add(channelKey);
+        return;
+      }
 
       if (data.success && data.messages) {
         // Sort ascending by timestamp
@@ -515,24 +604,28 @@ const UnifiedMessages = () => {
         setMessages(data.messages);
       }
     } catch (err) {
-      console.error('Failed to fetch channel messages:', err);
+      console.error('Failed to refresh channel messages:', err);
     }
   }, []);
 
-  // Fetch messages when channel changes
+  // Simplified channel switching - fetch messages when channel changes
   useEffect(() => {
-    if (selectedConversation && selectedConversationType === 'group' && selectedChannel) {
-      console.log('Channel changed, fetching messages for channel:', selectedChannel);
-      fetchChannelMessages(selectedConversation, selectedChannel);
-    } else if (selectedConversation && selectedConversationType === 'group' && groupChannels.length > 0 && !selectedChannel) {
-      // Auto-select default channel if none is selected
-      const defaultChannel = groupChannels.find(ch => ch.is_default) || groupChannels[0];
-      if (defaultChannel) {
-        console.log('Auto-selecting default channel:', defaultChannel.channel_id);
-        setSelectedChannel(defaultChannel.channel_id);
+    if (selectedConversation && selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0) {
+      // Validate that the selected channel exists in the current group's channels
+      const channelExists = groupChannels.some(ch => ch.channel_id === selectedChannel);
+      
+      if (channelExists) {
+        console.log('Channel changed, fetching messages for channel:', selectedChannel);
+        fetchChannelMessages(selectedConversation, selectedChannel);
+      } else {
+        console.warn('Selected channel does not exist in current group, auto-selecting default');
+        const defaultChannel = groupChannels.find(ch => ch.is_default) || groupChannels[0];
+        if (defaultChannel) {
+          setSelectedChannel(defaultChannel.channel_id);
+        }
       }
     }
-  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
+  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels]); // Remove fetchChannelMessages from dependencies
 
   // Fetch group members
   const fetchGroupMembers = useCallback(async (groupId: string) => {
@@ -581,16 +674,15 @@ const UnifiedMessages = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-
       const data = await res.json();
       if (data.success) {
         setNewMessage('');
         console.log('Message sent successfully, refreshing messages...');
         
-        // Refresh messages based on current context
+        // Refresh messages based on current context WITHOUT loading indicator
         if (selectedConversationType === 'group' && selectedChannel) {
           console.log('Refreshing channel messages for channel:', selectedChannel);
-          await fetchChannelMessages(selectedConversation, selectedChannel);
+          await refreshChannelMessages(selectedConversation, selectedChannel);
         } else {
           console.log('Refreshing default group/DM messages');
           await fetchMessages(selectedConversation, selectedConversationType);
@@ -609,11 +701,24 @@ const UnifiedMessages = () => {
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
-    console.log('Selecting conversation:', conversation);
+    console.log('=== SELECTING CONVERSATION ===');
+    console.log('Conversation:', conversation);
+    console.log('Current user:', currentUser);
+    
+    // Aggressively clear any existing intervals first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Clear failed channels when switching conversations
+    failedChannelsRef.current.clear();
+    
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
     
     // Clear messages immediately for better UX
+    console.log('Clearing messages before loading new conversation');
     setMessages([]);
     
     if (conversation.type === 'group') {
@@ -665,6 +770,17 @@ const UnifiedMessages = () => {
 
   // Create new group
   const createGroup = async () => {
+    // Validate required fields
+    if (!createGroupForm.name.trim()) {
+      setError('Group name is required');
+      return;
+    }
+    
+    if (!createGroupForm.description.trim()) {
+      setError('Group description is required');
+      return;
+    }
+
     try {
       console.log('Creating group with data:', createGroupForm);
       const res = await fetch('/api/groups/create', {
@@ -675,17 +791,21 @@ const UnifiedMessages = () => {
 
       const data = await res.json();
       console.log('Group creation response:', data);
+      
       if (data.success) {
         setShowCreateGroupModal(false);
         setCreateGroupForm({ name: '', description: '', topic: '', is_private: false });
+        setError(''); // Clear any previous errors
         console.log('Group created successfully, fetching conversations...');
         await fetchConversations();
         console.log('Conversations fetched after group creation');
       } else {
         console.error('Group creation failed:', data);
+        setError(data.error || 'Failed to create group');
       }
     } catch (err) {
       console.error('Failed to create group:', err);
+      setError('Failed to create group. Please try again.');
     }
   };
 
@@ -732,7 +852,7 @@ const UnifiedMessages = () => {
 
   // Auto-refresh
   useEffect(() => {
-    // Clear any existing interval first
+    // Clear any existing interval first - be more aggressive about cleanup
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -742,35 +862,103 @@ const UnifiedMessages = () => {
       // Set up new interval
       intervalRef.current = setInterval(async () => {
         try {
+          // Capture current state to prevent race conditions
+          const currentConversation = selectedConversation;
+          const currentType = selectedConversationType;
+          const currentChannel = selectedChannel;
+          const currentChannels = groupChannels;
+          
+          // Early exit if no valid conversation
+          if (!currentConversation) {
+            console.log('Auto-refresh: No current conversation, skipping');
+            return;
+          }
+          
           // Directly call the API without using the callback functions to avoid dependency issues
-          if (selectedConversationType === 'group' && selectedChannel) {
-            console.log('Auto-refreshing channel messages');
-            const url = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+          if (currentType === 'group' && currentChannel && currentChannels.length > 0) {
+            // Check if this channel has already failed with 403/404 - FIRST CHECK
+            const channelKey = `${currentConversation}:${currentChannel}`;
+            console.log('Auto-refresh: Checking channel:', channelKey);
+            console.log('Auto-refresh: Failed channels:', Array.from(failedChannelsRef.current));
+            if (failedChannelsRef.current.has(channelKey)) {
+              console.warn('Auto-refresh: Skipping channel that previously failed:', channelKey);
+              return;
+            }
+            
+            // Validate that the channel still exists in the current group
+            const channelExists = currentChannels.some(ch => ch.channel_id === currentChannel);
+            
+            if (!channelExists) {
+              console.warn('Auto-refresh: Selected channel no longer exists in current group, adding to failed channels:', channelKey);
+              failedChannelsRef.current.add(channelKey);
+              return;
+            }
+
+            console.log('Auto-refreshing channel messages for:', channelKey);
+            const url = `/api/groups/${currentConversation}/channels/${currentChannel}/messages`;
             const res = await fetch(url);
+            
+            // Handle 404 and 403 errors gracefully (channel deleted or no access)
+            if (res.status === 404 || res.status === 403) {
+              console.warn(`Auto-refresh: Channel access denied or not found (${res.status}), adding to failed channels:`, channelKey);
+              // Add to failed channels to prevent future attempts
+              failedChannelsRef.current.add(channelKey);
+              
+              // Clear the selected channel to prevent continuous failed requests
+              if (selectedConversation === currentConversation && selectedChannel === currentChannel) {
+                console.log('Auto-refresh: Clearing selected channel due to access error');
+                setSelectedChannel('');
+                setMessages([]);
+                // Try to select a default channel if available
+                const defaultChannel = currentChannels.find(ch => ch.is_default);
+                if (defaultChannel) {
+                  console.log('Auto-selecting default channel after access error:', defaultChannel.channel_id);
+                  setSelectedChannel(defaultChannel.channel_id);
+                }
+              }
+              return;
+            }
+            
             const data = await res.json();
             
-            if (data.success && data.messages) {
+            // Only update if we're still on the same conversation and channel
+            if (data.success && data.messages && 
+                selectedConversation === currentConversation && 
+                selectedConversationType === currentType && 
+                selectedChannel === currentChannel) {
               // Sort ascending by timestamp
               (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
               setMessages(data.messages);
             }
-          } else if (selectedConversationType === 'direct') {
+          } else if (currentType === 'direct') {
             console.log('Auto-refreshing direct messages');
-            const res = await fetch('/api/messages');
+            const res = await fetch(`/api/messages?user_id=${currentConversation}`);
             const data = await res.json();
             
-            if (data.success && data.pms) {
-              const filteredMessages = data.pms.filter((msg: PrivateMessage) => 
-                (msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id) ||
-                (msg.sender_id === currentUser.user_id && msg.receiver_id === selectedConversation)
+            // Only update if we're still on the same conversation
+            if (data.success && data.messages && 
+                selectedConversation === currentConversation && 
+                selectedConversationType === currentType) {
+              console.log('Auto-refresh raw messages:', data.messages);
+              
+              // Use the same fixed filtering logic as in fetchMessages
+              const filteredMessages = data.messages.filter((msg: PrivateMessage) => 
+                msg.sender_id === currentConversation || msg.sender_id === currentUser.user_id
               );
+              
+              console.log('Auto-refresh filtered messages:', filteredMessages);
+              
               // Sort ascending by timestamp
               filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => 
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
+              
+              console.log('Auto-refresh final messages:', filteredMessages);
               setMessages(filteredMessages);
+            } else {
+              console.log('Auto-refresh: No messages or API not successful');
             }
           }
         } catch (err) {
@@ -785,7 +973,7 @@ const UnifiedMessages = () => {
         }
       };
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser]); // Only depend on primitive values
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, groupChannels]); // Add groupChannels dependency for validation
 
   useEffect(() => {
     scrollToBottom();
@@ -808,9 +996,14 @@ const UnifiedMessages = () => {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sender_id: selectedConversation }),
-        }).then(() => {
-          // Refresh messages to show updated read status
-          fetchMessages(selectedConversation, selectedConversationType);
+        }).then((res) => {
+          // Only refresh if the request was successful
+          if (res.ok) {
+            // Refresh messages to show updated read status
+            fetchMessages(selectedConversation, selectedConversationType);
+          }
+        }).catch((err) => {
+          console.error('Failed to mark direct messages as read:', err);
         });
       }
     } else if (selectedConversationType === 'group') {
@@ -823,9 +1016,16 @@ const UnifiedMessages = () => {
         fetch(`/api/groups/${selectedConversation}/messages/read`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-        }).then(() => {
-          // Refresh messages to show updated read status
-          fetchMessages(selectedConversation, selectedConversationType);
+        }).then((res) => {
+          // Only refresh if the request was successful (not 403/404)
+          if (res.ok) {
+            // Refresh messages to show updated read status
+            fetchMessages(selectedConversation, selectedConversationType);
+          } else if (res.status === 403) {
+            console.warn('Access denied when marking group messages as read');
+          }
+        }).catch((err) => {
+          console.error('Failed to mark group messages as read:', err);
         });
       }
     }
@@ -1594,80 +1794,89 @@ const UnifiedMessages = () => {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto bg-black min-h-0">
               <div className="p-4 space-y-3">
-                {messages.map((message, index) => {
-                  const isOwn = message.sender_id === currentUser?.user_id;
-                  const senderName = selectedConversationType === 'group' 
-                    ? (message as GroupMessage).sender_username 
-                    : isOwn 
-                      ? 'You' 
-                      : selectedConversationData?.name;
+                {channelLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center space-x-2 text-gray-400">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                      <span className="text-sm">Loading messages...</span>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((message, index) => {
+                    const isOwn = message.sender_id === currentUser?.user_id;
+                    const senderName = selectedConversationType === 'group' 
+                      ? (message as GroupMessage).sender_username 
+                      : isOwn 
+                        ? 'You' 
+                        : selectedConversationData?.name;
 
-                  const showAvatar = selectedConversationType === 'group' && !isOwn;
-                  const prevMessage = index > 0 ? messages[index - 1] : null;
-                  const isNewSender = !prevMessage || prevMessage.sender_id !== message.sender_id;
-                  const showSenderName = showAvatar && isNewSender;
+                    const showAvatar = selectedConversationType === 'group' && !isOwn;
+                    const prevMessage = index > 0 ? messages[index - 1] : null;
+                    const isNewSender = !prevMessage || prevMessage.sender_id !== message.sender_id;
+                    const showSenderName = showAvatar && isNewSender;
 
-                  return (
-                    <div 
-                      key={index} 
-                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group hover:bg-gray-900/30 -mx-4 px-4 py-1 rounded`}
-                      onContextMenu={e => handleMessageContextMenu(e, message)}
-                    >
-                      {showAvatar ? (
-                        <div className="mr-3 mt-0.5">
-                          {showSenderName ? (
-                            <ProfileAvatar userId={message.sender_id} size={32} />
-                          ) : (
-                            <div className="w-8 h-8"></div>
-                          )}
-                        </div>
-                      ) : null}
-                      
-                      <div className={`max-w-md ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
-                        {showSenderName && (
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-sm font-semibold text-white hover:underline cursor-pointer">
-                              {senderName}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                    return (
+                      <div 
+                        key={index} 
+                        className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group hover:bg-gray-900/30 -mx-4 px-4 py-1 rounded`}
+                        onContextMenu={e => handleMessageContextMenu(e, message)}
+                      >
+                        {showAvatar ? (
+                          <div className="mr-3 mt-0.5">
+                            {showSenderName ? (
+                              <ProfileAvatar userId={message.sender_id} size={32} />
+                            ) : (
+                              <div className="w-8 h-8"></div>
+                            )}
                           </div>
-                        )}
+                        ) : null}
                         
-                        <div className={`${
-                          isOwn 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-gray-800 text-white border border-gray-700'
-                        } rounded-lg px-3 py-2 max-w-full break-words`}>
-                          <MessageContent content={message.content} />
-                          {!showSenderName && (
-                            <div className="flex items-center justify-end space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="text-xs text-gray-300">
+                        <div className={`max-w-md ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                          {showSenderName && (
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="text-sm font-semibold text-white hover:underline cursor-pointer">
+                                {senderName}
+                              </span>
+                              <span className="text-xs text-gray-400">
                                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
-                              {isOwn && (
-                                <FontAwesomeIcon
-                                  icon={
-                                    selectedConversationType === 'direct'
-                                      ? ((message as PrivateMessage).read ? faCheckDouble : faCheck)
-                                      : ((message as GroupMessage).read_by_others ? faCheckDouble : faCheck)
-                                  }
-                                  className="text-xs"
-                                  style={{
-                                    color: selectedConversationType === 'direct'
-                                      ? ((message as PrivateMessage).read ? '#4ade80' : '#9ca3af')
-                                      : ((message as GroupMessage).read_by_others ? '#4ade80' : '#9ca3af')
-                                  }}
-                                />
-                              )}
                             </div>
                           )}
+                          
+                          <div className={`${
+                            isOwn 
+                              ? 'bg-indigo-600 text-white' 
+                              : 'bg-gray-800 text-white border border-gray-700'
+                          } rounded-lg px-3 py-2 max-w-full break-words`}>
+                            <MessageContent content={message.content} />
+                            {!showSenderName && (
+                              <div className="flex items-center justify-end space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-xs text-gray-300">
+                                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isOwn && (
+                                  <FontAwesomeIcon
+                                    icon={
+                                      selectedConversationType === 'direct'
+                                        ? ((message as PrivateMessage).read ? faCheckDouble : faCheck)
+                                        : ((message as GroupMessage).read_by_others ? faCheckDouble : faCheck)
+                                    }
+                                    className="text-xs"
+                                    style={{
+                                      color: selectedConversationType === 'direct'
+                                        ? ((message as PrivateMessage).read ? '#4ade80' : '#9ca3af')
+                                        : ((message as GroupMessage).read_by_others ? '#4ade80' : '#9ca3af')
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -2043,3 +2252,4 @@ const UnifiedMessages = () => {
 };
 
 export default UnifiedMessages;
+

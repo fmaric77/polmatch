@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import CryptoJS from 'crypto-js';
-import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../../../lib/mongodb-connection';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
@@ -62,17 +61,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             from: 'pm',
             let: { participantIds: '$participant_ids' },
             pipeline: [
-              { 
-                $match: { 
-                  $expr: { 
-                    $and: [
-                      { $isArray: '$participant_ids' },
-                      { $isArray: '$$participantIds' },
-                      { $setEquals: ['$participant_ids', '$$participantIds'] }
-                    ]
-                  }
-                }
-              },
+              { $match: { $expr: { $setEquals: ['$participant_ids', '$$participantIds'] } } },
               { $sort: { timestamp: -1 } },
               { $limit: 1 }
             ],
@@ -216,7 +205,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   }
 }
 
-// DELETE: Delete conversation or individual message
+// DELETE: Delete conversation
 export async function DELETE(request: Request): Promise<NextResponse> {
   try {
     const cookieStore = await cookies();
@@ -234,43 +223,9 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     const { db } = await connectToDatabase();
     
     const body = await request.json();
-    const { other_user_id, message_id } = body;
-    
-    // If message_id is provided, delete individual message
-    if (message_id) {
-      // Convert string to ObjectId if needed
-      let objectId;
-      try {
-        objectId = typeof message_id === 'string' ? new ObjectId(message_id) : message_id;
-      } catch (error) {
-        return NextResponse.json({ success: false, message: 'Invalid message_id format' }, { status: 400 });
-      }
-      
-      // Find the message to verify ownership and get conversation details
-      const message = await db.collection('pm').findOne({ _id: objectId });
-      
-      if (!message) {
-        return NextResponse.json({ success: false, message: 'Message not found' }, { status: 404 });
-      }
-      
-      // Check if user is the sender of the message
-      if (message.sender_id !== auth.userId) {
-        return NextResponse.json({ success: false, message: 'Not authorized to delete this message' }, { status: 403 });
-      }
-      
-      // Delete the individual message
-      const deleteResult = await db.collection('pm').deleteOne({ _id: objectId });
-      
-      return NextResponse.json({ 
-        success: true, 
-        deletedMessages: deleteResult.deletedCount,
-        type: 'message'
-      });
-    }
-    
-    // If other_user_id is provided, delete entire conversation
+    const { other_user_id } = body;
     if (!other_user_id) {
-      return NextResponse.json({ success: false, message: 'Missing other_user_id or message_id' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Missing other_user_id' }, { status: 400 });
     }
     
     const sortedParticipants = getSortedParticipants(auth.userId, other_user_id);
@@ -284,8 +239,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     return NextResponse.json({ 
       success: true, 
       deletedMessages: deleteMessagesResult.deletedCount,
-      deletedConversation: deleteConversationResult.deletedCount,
-      type: 'conversation'
+      deletedConversation: deleteConversationResult.deletedCount
     });
   } catch (err) {
     console.error('Messages DELETE error:', err);

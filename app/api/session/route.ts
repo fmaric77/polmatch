@@ -1,35 +1,34 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../mongo-uri';
+import { getAuthenticatedUser } from '../../../lib/mongodb-connection';
 
-const client = new MongoClient(MONGODB_URI);
+export async function GET(): Promise<NextResponse> {
+  try {
+    // Auth check using optimized connection and caching
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
-export async function GET() {
-  // Auth check
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('session')?.value;
-  if (!sessionToken) {
-    return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+    const auth = await getAuthenticatedUser(sessionToken);
+    if (!auth) {
+      return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    return NextResponse.json({ 
+      valid: true, 
+      user: {
+        user_id: auth.user.user_id,
+        username: auth.user.username,
+        email: auth.user.email,
+        is_admin: auth.user.is_admin,
+        is_superadmin: auth.user.is_superadmin,
+        account_status: auth.user.account_status,
+      }
+    });
+  } catch (err) {
+    console.error('Session API error:', err);
+    return NextResponse.json({ valid: false, message: 'Server error' }, { status: 500 });
   }
-  await client.connect();
-  const db = client.db('polmatch');
-  const session = await db.collection('sessions').findOne({ sessionToken });
-  if (!session) {
-    await client.close();
-    return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
-  }
-  // Fetch user info for admin check
-  const user = await db.collection('users').findOne({ user_id: session.user_id });
-  if (!user) {
-    return NextResponse.json({ valid: false });
-  }
-  return NextResponse.json({ valid: true, user: {
-    user_id: user.user_id,
-    username: user.username,
-    email: user.email,
-    is_admin: user.is_admin,
-    is_superadmin: user.is_superadmin,
-    account_status: user.account_status,
-  }});
 }

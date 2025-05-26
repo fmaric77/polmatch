@@ -1,3 +1,6 @@
+# Performance test Instructions
+For authorisation use login sokol@example.com with password `mango`
+
 # GitHub Copilot Style Instructions
 
 Always follow these rules when generating or editing code for this project:

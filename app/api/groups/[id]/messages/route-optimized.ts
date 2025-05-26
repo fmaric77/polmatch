@@ -49,7 +49,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Decrypt messages
     const decryptedMessages = messages.map(msg => {
       try {
-        const decryptedBytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
+        const decryptedBytes = CryptoJS.AES.decrypt(msg.encrypted_content, SECRET_KEY);
         const content = decryptedBytes.toString(CryptoJS.enc.Utf8);
         return {
           ...msg,
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       group_id: groupId,
       channel_id,
       sender_id: auth.userId,
-      content: encryptedContent,
+      encrypted_content: encryptedContent,
       timestamp: new Date().toISOString(),
       edited: false,
       attachments: []

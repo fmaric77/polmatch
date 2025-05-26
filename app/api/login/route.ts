@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { MongoClient, Db } from 'mongodb';
+import { Db } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
-import MONGODB_URI from '../mongo-uri';
-
-const client = new MongoClient(MONGODB_URI);
+import { connectToDatabase } from '../../../lib/mongodb-connection';
 
 // Brute force protection configuration
 const BRUTE_FORCE_CONFIG = {
@@ -162,8 +160,7 @@ export async function POST(request: Request) {
     const ip_address = getClientIP(request);
     const user_agent = request.headers.get('user-agent') || 'unknown';
 
-    await client.connect();
-    const db = client.db('polmatch');
+    const { db } = await connectToDatabase();
 
     // Clean up old attempts periodically (1% chance per request)
     if (Math.random() < 0.01) {
@@ -278,8 +275,5 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('Login error:', err);
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) });
-  } finally {
-    await client.close();
-    console.log('MongoDB connection closed');
   }
 }

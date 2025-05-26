@@ -10,6 +10,23 @@ interface RouteContext {
   params: Promise<{ id: string; channelId: string }>;
 }
 
+// Essential indexing functions inlined to avoid import issues
+async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+  const coll = db.collection(collectionName);
+  try {
+    if (collectionName === 'group_messages') {
+      await coll.createIndex({ group_id: 1, channel_id: 1, timestamp: 1 }, { background: true });
+      await coll.createIndex({ message_id: 1 }, { unique: true, background: true });
+      await coll.createIndex({ sender_id: 1, timestamp: -1 }, { background: true });
+    } else if (collectionName === 'group_message_reads') {
+      await coll.createIndex({ message_id: 1, user_id: 1 }, { unique: true, background: true });
+      await coll.createIndex({ user_id: 1, read_at: -1 }, { background: true });
+    }
+  } catch (error) {
+    // Index might already exist, which is fine
+  }
+}
+
 // GET: Fetch messages for a specific channel (OPTIMIZED)
 export async function GET(req: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
@@ -39,11 +56,11 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       db.collection('group_members').findOne({
         group_id: groupId,
         user_id: auth.userId
-      }, { projection: { _id: 1 } }),
+      }),
       db.collection('group_channels').findOne({
         channel_id: channelId,
         group_id: groupId
-      }, { projection: { _id: 1 } })
+      })
     ]);
 
     if (!membership) {
@@ -79,14 +96,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
           group_id: 1,
           channel_id: 1,
           sender_id: 1,
-          // Handle both field names - some messages use 'content', others use 'encrypted_content'
-          content: { 
-            $cond: { 
-              if: { $ifNull: ['$content', false] }, 
-              then: '$content', 
-              else: '$encrypted_content' 
-            } 
-          },
+          content: 1,
           timestamp: 1,
           attachments: 1,
           sender_username: '$sender.username'
@@ -98,10 +108,6 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Decrypt message content
     const decryptedMessages = messages.map((message: any) => {
       try {
-        if (!message.content) {
-          return { ...message, content: '[No content field]' };
-        }
-        
         const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
         return { ...message, content: decryptedContent };
       } catch (error) {
@@ -159,11 +165,11 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       db.collection('group_members').findOne({
         group_id: groupId,
         user_id: auth.userId
-      }, { projection: { _id: 1 } }),
+      }),
       db.collection('group_channels').findOne({
         channel_id: channelId,
         group_id: groupId
-      }, { projection: { _id: 1 } })
+      })
     ]);
 
     if (!membership) {
@@ -189,16 +195,26 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       channel_id: channelId,
       sender_id: auth.userId,
       content: encryptedContent,
-      timestamp: new Date().toISOString(),
-      edited: false,
+      timestamp: new Date(),
       attachments: attachments || []
     };
 
-    await db.collection('group_messages').insertOne(message);
+    // Ensure indexes exist before inserting
+    await ensureIndexes(db, 'group_messages');
+
+    // OPTIMIZATION 4: Parallel operations for message insertion and group update
+    await Promise.all([
+      db.collection('group_messages').insertOne(message),
+      db.collection('groups').updateOne(
+        { group_id: groupId },
+        { $set: { last_activity: new Date() } }
+      )
+    ]);
 
     return NextResponse.json({ 
       success: true, 
-      message: { ...message, content, encrypted_content: undefined }
+      message_id: messageId,
+      message: 'Message sent successfully' 
     });
 
   } catch (error) {

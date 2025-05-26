@@ -4,6 +4,25 @@ import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
+// Essential indexing function inlined to avoid import issues
+async function ensureIndexes(db: any, collectionName: string): Promise<void> {
+  const coll = db.collection(collectionName);
+  try {
+    if (collectionName === 'groups') {
+      await coll.createIndex({ group_id: 1 }, { unique: true, background: true });
+      await coll.createIndex({ creator_id: 1, created_at: -1 }, { background: true });
+    } else if (collectionName === 'group_members') {
+      await coll.createIndex({ group_id: 1, user_id: 1 }, { unique: true, background: true });
+      await coll.createIndex({ user_id: 1, joined_at: -1 }, { background: true });
+    } else if (collectionName === 'group_channels') {
+      await coll.createIndex({ group_id: 1, name: 1 }, { background: true });
+      await coll.createIndex({ channel_id: 1 }, { unique: true, background: true });
+    }
+  } catch (error) {
+    // Index might already exist, which is fine
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Validate session
@@ -53,6 +72,11 @@ export async function POST(req: NextRequest) {
       status: 'active',
       last_activity: now
     };
+
+    // Ensure indexes exist before inserting
+    await ensureIndexes(db, 'groups');
+    await ensureIndexes(db, 'group_members');
+    await ensureIndexes(db, 'group_channels');
 
     await db.collection('groups').insertOne(group);
 
