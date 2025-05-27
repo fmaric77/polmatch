@@ -522,15 +522,22 @@ export default function ProfilePage() {
                               <ProfileAvatar userId={userId} size={48} />
                             </div>
                           )}
-                          <select 
-                            name="visibility" 
-                            value={basicProfile?.visibility || 'public'} 
-                            onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none"
-                          >
-                            <option value="public">Public</option>
-                            <option value="private">Private</option>
-                          </select>
+                          <div className="space-y-2">
+                            <label className="text-white text-sm font-medium">Profile Visibility</label>
+                            <select 
+                              name="visibility" 
+                              value={basicProfile?.visibility || 'public'} 
+                              onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
+                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            >
+                              <option value="public">Public - Visible to everyone</option>
+                              <option value="friends">Friends Only - Visible only to your friends</option>
+                              <option value="private">Private - Visible only to you</option>
+                            </select>
+                            <p className="text-gray-400 text-xs">
+                              Choose who can see your basic profile information and questionnaire answers.
+                            </p>
+                          </div>
                           <button 
                             type="submit" 
                             className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
@@ -575,15 +582,22 @@ export default function ProfilePage() {
                               <ProfileAvatar userId={userId} size={48} />
                             </div>
                           )}
-                          <select 
-                            name="visibility" 
-                            value={loveProfile?.visibility || 'public'} 
-                            onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none"
-                          >
-                            <option value="public">Public</option>
-                            <option value="private">Private</option>
-                          </select>
+                          <div className="space-y-2">
+                            <label className="text-white text-sm font-medium">Profile Visibility</label>
+                            <select 
+                              name="visibility" 
+                              value={loveProfile?.visibility || 'public'} 
+                              onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
+                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            >
+                              <option value="public">Public - Visible to everyone</option>
+                              <option value="friends">Friends Only - Visible only to your friends</option>
+                              <option value="private">Private - Visible only to you</option>
+                            </select>
+                            <p className="text-gray-400 text-xs">
+                              Choose who can see your love profile information and relationship questionnaires.
+                            </p>
+                          </div>
                           <button 
                             type="submit" 
                             className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
@@ -628,15 +642,22 @@ export default function ProfilePage() {
                               <ProfileAvatar userId={userId} size={48} />
                             </div>
                           )}
-                          <select 
-                            name="visibility" 
-                            value={businessProfile?.visibility || 'public'} 
-                            onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none"
-                          >
-                            <option value="public">Public</option>
-                            <option value="private">Private</option>
-                          </select>
+                          <div className="space-y-2">
+                            <label className="text-white text-sm font-medium">Profile Visibility</label>
+                            <select 
+                              name="visibility" 
+                              value={businessProfile?.visibility || 'public'} 
+                              onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
+                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            >
+                              <option value="public">Public - Visible to everyone</option>
+                              <option value="friends">Friends Only - Visible only to your friends</option>
+                              <option value="private">Private - Visible only to you</option>
+                            </select>
+                            <p className="text-gray-400 text-xs">
+                              Choose who can see your business profile information and professional questionnaires.
+                            </p>
+                          </div>
                           <button 
                             type="submit" 
                             className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"

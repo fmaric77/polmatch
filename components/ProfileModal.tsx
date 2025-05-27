@@ -181,8 +181,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, o
                         </div>
                         <div>
                           <span className="text-gray-400">Visibility: </span>
-                          <span className="text-white capitalize">
-                            {profileData.profiles[activeTab]?.visibility || 'public'}
+                          <span className={`capitalize font-medium ${
+                            profileData.profiles[activeTab]?.visibility === 'public' ? 'text-green-400' :
+                            profileData.profiles[activeTab]?.visibility === 'friends' ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {profileData.profiles[activeTab]?.visibility === 'friends' ? 'Friends Only' : 
+                             profileData.profiles[activeTab]?.visibility || 'Public'}
                           </span>
                         </div>
                       </div>

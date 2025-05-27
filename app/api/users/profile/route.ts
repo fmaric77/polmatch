@@ -5,6 +5,29 @@ import MONGODB_URI from '../../mongo-uri';
 
 const client = new MongoClient(MONGODB_URI);
 
+// Helper function to determine if a profile should be visible based on visibility settings
+function getVisibleProfile(profile: unknown, isFriends: boolean, isOwnProfile: boolean): unknown {
+  if (!profile) return null;
+  
+  const profileObj = profile as { visibility?: string };
+  const visibility = profileObj.visibility || 'public';
+  
+  // Own profile is always visible
+  if (isOwnProfile) return profile;
+  
+  // Handle visibility levels
+  switch (visibility) {
+    case 'public':
+      return profile;
+    case 'friends':
+      return isFriends ? profile : null;
+    case 'private':
+      return null;
+    default:
+      return profile; // Default to public for backward compatibility
+  }
+}
+
 // GET: Fetch all profiles and questionnaire answers for a specific user
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +63,7 @@ export async function GET(request: NextRequest) {
     // Fetch all profile types for the target user
     const basicProfile = await db.collection('basicprofiles').findOne({ user_id: targetUserId });
     const loveProfile = await db.collection('loveprofiles').findOne({ user_id: targetUserId });
-    const businessProfile = await db.collection('busprofiles').findOne({ user_id: targetUserId });
+    const businessProfile = await db.collection('businessprofiles').findOne({ user_id: targetUserId });
     
     // Check visibility settings - only return public profiles or profiles where user is friends
     const friendshipCheck = await db.collection('friends').findOne({
@@ -54,9 +77,9 @@ export async function GET(request: NextRequest) {
     
     // Filter profiles based on visibility
     const profiles = {
-      basic: (basicProfile && (basicProfile.visibility === 'public' || isFriends)) ? basicProfile : null,
-      love: (loveProfile && (loveProfile.visibility === 'public' || isFriends)) ? loveProfile : null,
-      business: (businessProfile && (businessProfile.visibility === 'public' || isFriends)) ? businessProfile : null
+      basic: getVisibleProfile(basicProfile, isFriends, session.user_id === targetUserId),
+      love: getVisibleProfile(loveProfile, isFriends, session.user_id === targetUserId),
+      business: getVisibleProfile(businessProfile, isFriends, session.user_id === targetUserId)
     };
     
     // Fetch questionnaire answers for public/visible profiles

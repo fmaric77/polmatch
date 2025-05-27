@@ -6,7 +6,6 @@ import {
   faHome, 
   faUser, 
   faSearch, 
-  faBook, 
   faEnvelope, 
   faSignOutAlt,
   faKey,
@@ -74,17 +73,6 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           title="Search Users"
         >
           <FontAwesomeIcon icon={faSearch} />
-        </div>
-        
-        {/* Catalogs Navigation */}
-        <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
-            isActive('catalogs') ? 'bg-white text-black' : ''
-          }`}
-          onClick={() => window.location.href = '/catalogs'}
-          title="My Catalogs"
-        >
-          <FontAwesomeIcon icon={faBook} />
         </div>
         
         {/* Separator */}

@@ -18,7 +18,7 @@ export async function GET() {
     if (!session) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     const user_id = session.user_id;
     // Find business profile
-    const profile = await db.collection('busprofiles').findOne({ user_id });
+    const profile = await db.collection('businessprofiles').findOne({ user_id });
     return NextResponse.json({ success: true, profile });
   } catch (err) {
     return NextResponse.json({ success: false, message: String(err) }, { status: 500 });
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const user_id = session.user_id;
     const data = await request.json();
     // Ensure required fields
-    const profile = await db.collection('busprofiles').findOne({ user_id });
+    const profile = await db.collection('businessprofiles').findOne({ user_id });
     const profile_id = profile?.profile_id || data.profile_id || uuidv4();
     const doc = {
       profile_id,
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       assigned_questionnaires: data.assigned_questionnaires || {},
       completed_questionnaires: data.completed_questionnaires || {},
     };
-    await db.collection('busprofiles').updateOne(
+    await db.collection('businessprofiles').updateOne(
       { user_id },
       { $set: doc },
       { upsert: true }
