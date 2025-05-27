@@ -46,6 +46,11 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     const params = await context.params;
     const groupId = params.id;
     const channelId = params.channelId;
+    
+    // OPTIMIZATION: Support count_only and last_check parameters
+    const url = new URL(req.url);
+    const lastCheck = url.searchParams.get('last_check');
+    const countOnly = url.searchParams.get('count_only') === 'true';
 
     // OPTIMIZATION 3: Combine membership and channel checks in parallel
     const [membership, channel] = await Promise.all([
@@ -69,6 +74,23 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       return NextResponse.json({ 
         error: 'Channel not found' 
       }, { status: 404 });
+    }
+
+    // OPTIMIZATION: If count_only is true, just check if there are new messages
+    if (countOnly && lastCheck) {
+      const query: Record<string, unknown> = { group_id: groupId, channel_id: channelId };
+      
+      if (lastCheck) {
+        query.timestamp = { $gt: new Date(lastCheck) };
+      }
+      
+      const newMessageCount = await db.collection('group_messages').countDocuments(query);
+      
+      return NextResponse.json({ 
+        success: true, 
+        has_new_messages: newMessageCount > 0,
+        new_message_count: newMessageCount
+      });
     }
 
     // OPTIMIZATION 4: Simplified aggregation pipeline (removed complex read status lookup)

@@ -42,10 +42,30 @@ export async function GET(request: Request): Promise<NextResponse> {
     
     const url = new URL(request.url);
     const otherUserId = url.searchParams.get('user_id');
+    const lastCheck = url.searchParams.get('last_check');
+    const countOnly = url.searchParams.get('count_only') === 'true';
     
     let pms;
     
     if (otherUserId) {
+      // OPTIMIZATION: If count_only is true, just check if there are new messages
+      if (countOnly && lastCheck) {
+        const sortedParticipants = getSortedParticipants(auth.userId, otherUserId);
+        const query: Record<string, unknown> = { participant_ids: sortedParticipants };
+        
+        if (lastCheck) {
+          query.timestamp = { $gt: lastCheck };
+        }
+        
+        const newMessageCount = await db.collection('pm').countDocuments(query);
+        
+        return NextResponse.json({ 
+          success: true, 
+          has_new_messages: newMessageCount > 0,
+          new_message_count: newMessageCount
+        });
+      }
+      
       // Get messages for specific conversation using optimized function
       pms = await getPrivateMessages(auth.userId, otherUserId, 50);
       
