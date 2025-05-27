@@ -18,6 +18,12 @@ interface Group {
   user_role: string;
 }
 
+interface Friend {
+  user_id: string;
+  friend_id: string;
+  status: string;
+}
+
 export default function SearchUsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
@@ -31,6 +37,8 @@ export default function SearchUsersPage() {
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Friend[]>([]);
 
   // Fetch current user ID and validate session
   useEffect(() => {
@@ -48,7 +56,10 @@ export default function SearchUsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+    if (currentUserId) {
+      fetchFriends();
+    }
+  }, [currentUserId]);
 
   useEffect(() => {
     setFiltered(
@@ -67,6 +78,33 @@ export default function SearchUsersPage() {
     } catch {}
   }
 
+  async function fetchFriends() {
+    try {
+      const res = await fetch('/api/friends');
+      const data = await res.json();
+      if (data.success) {
+        setFriends(data.friends);
+        setPendingRequests([...data.incoming, ...data.outgoing]);
+      }
+    } catch {}
+  }
+
+  function isFriend(userId: string): boolean {
+    if (!currentUserId) return false;
+    return friends.some(friend => 
+      (friend.user_id === currentUserId && friend.friend_id === userId) ||
+      (friend.user_id === userId && friend.friend_id === currentUserId)
+    );
+  }
+
+  function hasPendingRequest(userId: string): boolean {
+    if (!currentUserId) return false;
+    return pendingRequests.some(request =>
+      (request.user_id === currentUserId && request.friend_id === userId) ||
+      (request.user_id === userId && request.friend_id === currentUserId)
+    );
+  }
+
   async function sendFriendRequest(friend_id: string) {
     setActionMessage('');
     try {
@@ -77,8 +115,29 @@ export default function SearchUsersPage() {
       });
       const data = await res.json();
       setActionMessage(data.message);
+      if (data.success) {
+        fetchFriends(); // Refresh friends list
+      }
     } catch {
       setActionMessage('Failed to send request');
+    }
+  }
+
+  async function removeFriend(friend_id: string) {
+    setActionMessage('');
+    try {
+      const res = await fetch('/api/friends/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friend_id })
+      });
+      const data = await res.json();
+      setActionMessage(data.message);
+      if (data.success) {
+        fetchFriends(); // Refresh friends list
+      }
+    } catch {
+      setActionMessage('Failed to remove friend');
     }
   }
 
@@ -221,12 +280,28 @@ export default function SearchUsersPage() {
                       >
                         View Profile
                       </button>
-                      <button 
-                        onClick={() => sendFriendRequest(user.user_id)} 
-                        className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded text-xs md:text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
-                      >
-                        Add Friend
-                      </button>
+                      {isFriend(user.user_id) ? (
+                        <button 
+                          onClick={() => removeFriend(user.user_id)} 
+                          className="flex-1 sm:flex-none px-3 py-2 bg-red-600 text-white rounded text-xs md:text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
+                        >
+                          Remove Friend
+                        </button>
+                      ) : hasPendingRequest(user.user_id) ? (
+                        <button 
+                          disabled
+                          className="flex-1 sm:flex-none px-3 py-2 bg-gray-600 text-white rounded text-xs md:text-sm cursor-not-allowed transition-colors whitespace-nowrap"
+                        >
+                          Request Pending
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => sendFriendRequest(user.user_id)} 
+                          className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded text-xs md:text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
+                        >
+                          Add Friend
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleDirectMessage(user)} 
                         className="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white rounded text-xs md:text-sm hover:bg-green-700 transition-colors whitespace-nowrap"

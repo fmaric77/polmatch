@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ProfileAvatar from './ProfileAvatar';
+import ProfileModal from './ProfileModal';
 
 interface User {
   user_id: string;
@@ -23,6 +24,11 @@ export default function Friends() {
   const [error, setError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [myId, setMyId] = useState<string | null>(null);
+  
+  // Profile modal state
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedUsername, setSelectedUsername] = useState<string>('');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -115,6 +121,18 @@ export default function Friends() {
     }
   }
 
+  function openProfileModal(userId: string, username: string): void {
+    setSelectedUserId(userId);
+    setSelectedUsername(username);
+    setIsProfileModalOpen(true);
+  }
+
+  function closeProfileModal(): void {
+    setIsProfileModalOpen(false);
+    setSelectedUserId('');
+    setSelectedUsername('');
+  }
+
   // Users not already friends or pending
   const availableUsers = users.filter(u =>
     u.user_id !== myId &&
@@ -147,7 +165,12 @@ export default function Friends() {
                     <li key={f.user_id + f.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
                       <div className="flex items-center space-x-3">
                         <ProfileAvatar userId={friendId} size={32} />
-                        <span>{friendUser?.display_name || friendUser?.username || friendUser?.user_id}</span>
+                        <button 
+                          onClick={() => openProfileModal(friendId, friendUser?.username || friendId)}
+                          className="text-white hover:text-blue-400 transition-colors text-left"
+                        >
+                          {friendUser?.display_name || friendUser?.username || friendUser?.user_id}
+                        </button>
                       </div>
                       <button onClick={() => removeFriend(friendId)} className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Remove</button>
                     </li>
@@ -168,7 +191,12 @@ export default function Friends() {
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
                       <div className="flex items-center space-x-3">
                         <ProfileAvatar userId={req.user_id} size={32} />
-                        <span>{fromUser?.display_name || fromUser?.username || fromUser?.user_id}</span>
+                        <button 
+                          onClick={() => openProfileModal(req.user_id, fromUser?.username || req.user_id)}
+                          className="text-white hover:text-blue-400 transition-colors text-left"
+                        >
+                          {fromUser?.display_name || fromUser?.username || fromUser?.user_id}
+                        </button>
                       </div>
                       <span>
                         <button onClick={() => respondRequest(req.user_id, 'accept')} className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 mr-2">Accept</button>
@@ -192,7 +220,12 @@ export default function Friends() {
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
                       <div className="flex items-center space-x-3">
                         <ProfileAvatar userId={req.friend_id} size={32} />
-                        <span>{toUser?.display_name || toUser?.username || toUser?.user_id}</span>
+                        <button 
+                          onClick={() => openProfileModal(req.friend_id, toUser?.username || req.friend_id)}
+                          className="text-white hover:text-blue-400 transition-colors text-left"
+                        >
+                          {toUser?.display_name || toUser?.username || toUser?.user_id}
+                        </button>
                       </div>
                       <span className="text-yellow-400 text-xs">Pending</span>
                     </li>
@@ -211,7 +244,12 @@ export default function Friends() {
                   <li key={u.user_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
                     <div className="flex items-center space-x-3">
                       <ProfileAvatar userId={u.user_id} size={32} />
-                      <span>{u.display_name || u.username || u.user_id}</span>
+                      <button 
+                        onClick={() => openProfileModal(u.user_id, u.username || u.user_id)}
+                        className="text-white hover:text-blue-400 transition-colors text-left"
+                      >
+                        {u.display_name || u.username || u.user_id}
+                      </button>
                     </div>
                     <button onClick={() => sendRequest(u.user_id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Send Request</button>
                   </li>
@@ -221,6 +259,14 @@ export default function Friends() {
           </div>
         </>
       )}
+      
+      {/* Profile Modal */}
+      <ProfileModal
+        userId={selectedUserId}
+        username={selectedUsername}
+        isOpen={isProfileModalOpen}
+        onClose={closeProfileModal}
+      />
     </div>
   );
 }

@@ -15,7 +15,6 @@ import {
   faCheckDouble,
   faHome,
   faEnvelope,
-  faBook,
   faSignOutAlt,
   faBars,
   faKey
@@ -253,8 +252,8 @@ const UnifiedMessages = () => {
   const [selectedUserForDM, setSelectedUserForDM] = useState('');
   const [selectedUserToInvite, setSelectedUserToInvite] = useState('');
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [inviteLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
   // Remove localStorage-based deleted conversations - now handled by database
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -771,7 +770,7 @@ const UnifiedMessages = () => {
         contextSwitchTimeoutRef.current = null;
       }
     };
-  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages, contextSwitchLoading]);
+  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
 
   // Fetch group members
   const fetchGroupMembers = useCallback(async (groupId: string) => {
@@ -929,7 +928,7 @@ const UnifiedMessages = () => {
       // For direct messages, fetch immediately
       fetchMessages(conversation.id, conversation.type);
     }
-  }, [fetchGroupMembers, fetchMessages, currentUser, contextSwitchLoading]);
+  }, [fetchGroupMembers, fetchMessages, currentUser]);
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param
@@ -1190,7 +1189,7 @@ const UnifiedMessages = () => {
     } else {
       console.log('Auto-refresh: Not setting up interval - missing requirements');
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, groupChannels]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser]);
 
   useEffect(() => {
     scrollToBottom();
@@ -1435,6 +1434,7 @@ const UnifiedMessages = () => {
   // Invite user to group
   const inviteUserToGroup = async () => {
     if (!selectedUserToInvite || !selectedConversation) return;
+    setInviteLoading(true);
     try {
       const res = await fetch(`/api/groups/${selectedConversation}/invite`, {
         method: 'POST',
@@ -1450,6 +1450,8 @@ const UnifiedMessages = () => {
       }
     } catch {
       setError('Failed to send invitation');
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -1661,15 +1663,6 @@ const UnifiedMessages = () => {
             title="Search Users"
           >
             <FontAwesomeIcon icon={faSearch} />
-          </div>
-          
-          {/* Catalogs Navigation */}
-          <div 
-            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
-            onClick={() => window.location.href = '/catalogs'}
-            title="My Catalogs"
-          >
-            <FontAwesomeIcon icon={faBook} />
           </div>
           
           {/* First Separator */}
@@ -2017,18 +2010,16 @@ const UnifiedMessages = () => {
                     >
                       <FontAwesomeIcon icon={faUsers} className="text-sm" />
                     </button>
-                    {selectedConversationData?.is_private && (
-                      <button
-                        onClick={() => {
-                          setShowInviteModal(true);
-                          fetchAvailableUsers();
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-                        title="Invite User"
-                      >
-                        <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setShowInviteModal(true);
+                        fetchAvailableUsers();
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                      title="Invite User"
+                    >
+                      <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
+                    </button>
                   </>
                 )}
               </div>

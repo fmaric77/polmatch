@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const client = new MongoClient(MONGODB_URI);
 
-// Send invitation to join a private group
+// Send invitation to join a group (public or private)
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
@@ -34,14 +34,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const group_id = resolvedParams.id;
     const inviter_id = session.user_id;
 
-    // Check if group exists and is private
+    // Check if group exists
     const group = await db.collection('groups').findOne({ group_id });
     if (!group) {
       return NextResponse.json({ success: false, message: 'Group not found' }, { status: 404 });
-    }
-
-    if (!group.is_private) {
-      return NextResponse.json({ success: false, message: 'Can only invite to private groups' }, { status: 400 });
     }
 
     // Check if inviter is a member of the group (and optionally has permission to invite)

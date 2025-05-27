@@ -486,14 +486,57 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
 
                             {(question.question_type === 'select' || question.question_type === 'radio' || question.question_type === 'checkbox') && (
                               <div>
-                                <label className="block text-sm font-medium mb-2">Options (one per line)</label>
-                                <textarea
-                                  placeholder="Option 1&#10;Option 2&#10;Option 3"
-                                  value={question.options.join('\n')}
-                                  onChange={(e) => updateQuestion(index, 'options', e.target.value.split('\n').filter(o => o.trim()))}
-                                  rows={3}
-                                  className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
-                                />
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="block text-sm font-medium">Options</label>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newOptions: string[] = [...question.options, ''];
+                                      updateQuestion(index, 'options', newOptions);
+                                    }}
+                                    className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs"
+                                  >
+                                    Add Option
+                                  </button>
+                                </div>
+                                <div className="space-y-2">
+                                  {question.options.length === 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuestion(index, 'options', [''])}
+                                      className="w-full p-2 border-2 border-dashed border-gray-600 rounded text-gray-400 hover:border-blue-400 hover:text-blue-400 transition-colors"
+                                    >
+                                      Click to add first option
+                                    </button>
+                                  ) : (
+                                    question.options.map((option, optionIndex) => (
+                                      <div key={optionIndex} className="flex gap-2">
+                                        <input
+                                          type="text"
+                                          placeholder={`Option ${optionIndex + 1}`}
+                                          value={option}
+                                          onChange={(e) => {
+                                            const newOptions: string[] = [...question.options];
+                                            newOptions[optionIndex] = e.target.value;
+                                            updateQuestion(index, 'options', newOptions);
+                                          }}
+                                          className="flex-1 p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newOptions: string[] = question.options.filter((_, i) => i !== optionIndex);
+                                            updateQuestion(index, 'options', newOptions);
+                                          }}
+                                          className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                                          disabled={question.options.length <= 1}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -625,14 +668,57 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                             </div>
                             {(question.question_type === 'select' || question.question_type === 'radio' || question.question_type === 'checkbox') && (
                               <div>
-                                <label className="block text-sm font-medium mb-2">Options (one per line)</label>
-                                <textarea
-                                  placeholder="Option 1\nOption 2\nOption 3"
-                                  value={question.options.join('\n')}
-                                  onChange={(e) => updateEditQuestion(index, 'options', e.target.value.split('\n').filter((o: string) => o.trim()))}
-                                  rows={3}
-                                  className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
-                                />
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="block text-sm font-medium">Options</label>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newOptions: string[] = [...question.options, ''];
+                                      updateEditQuestion(index, 'options', newOptions);
+                                    }}
+                                    className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs"
+                                  >
+                                    Add Option
+                                  </button>
+                                </div>
+                                <div className="space-y-2">
+                                  {question.options.length === 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateEditQuestion(index, 'options', [''])}
+                                      className="w-full p-2 border-2 border-dashed border-gray-600 rounded text-gray-400 hover:border-blue-400 hover:text-blue-400 transition-colors"
+                                    >
+                                      Click to add first option
+                                    </button>
+                                  ) : (
+                                    question.options.map((option: string, optionIndex: number) => (
+                                      <div key={optionIndex} className="flex gap-2">
+                                        <input
+                                          type="text"
+                                          placeholder={`Option ${optionIndex + 1}`}
+                                          value={option}
+                                          onChange={(e) => {
+                                            const newOptions: string[] = [...question.options];
+                                            newOptions[optionIndex] = e.target.value;
+                                            updateEditQuestion(index, 'options', newOptions);
+                                          }}
+                                          className="flex-1 p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newOptions: string[] = question.options.filter((_: string, i: number) => i !== optionIndex);
+                                            updateEditQuestion(index, 'options', newOptions);
+                                          }}
+                                          className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                                          disabled={question.options.length <= 1}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>

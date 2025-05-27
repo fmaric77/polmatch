@@ -195,7 +195,7 @@ const Groups = () => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [selectedGroup, fetchMessages, fetchMembers, fetchInvitations, fetchAvailableUsers]);
+  }, [selectedGroup]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -403,18 +403,16 @@ const Groups = () => {
                 >
                   👥 Members ({members.length})
                 </button>
-                {groups.find(g => g.group_id === selectedGroup)?.is_private && (
-                  <button
-                    className="p-2 rounded bg-green-600 text-white hover:bg-green-500 text-sm"
-                    onClick={() => {
-                      fetchAvailableUsers();
-                      setShowInviteModal(true);
-                    }}
-                    title="Invite Users to Private Group"
-                  >
-                    ➕ Invite
-                  </button>
-                )}
+                <button
+                  className="p-2 rounded bg-green-600 text-white hover:bg-green-500 text-sm"
+                  onClick={() => {
+                    fetchAvailableUsers();
+                    setShowInviteModal(true);
+                  }}
+                  title="Invite Users to Group"
+                >
+                  ➕ Invite
+                </button>
               </div>
             </div>
 

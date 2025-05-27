@@ -107,7 +107,7 @@ export async function getProfilePicture(userId: string): Promise<string | null> 
     },
     {
       $lookup: {
-        from: 'busprofiles',
+        from: 'businessprofiles',
         localField: 'user_id',
         foreignField: 'user_id',
         as: 'businessProfile'
