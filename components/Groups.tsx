@@ -305,6 +305,124 @@ const Groups = () => {
     }
   };
 
+  // Member management functions
+  const handleRemoveMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedGroup) return;
+    if (!window.confirm(`Are you sure you want to remove ${memberUsername} from the group?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedGroup}/members/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchMembers(); // Refresh members list
+        alert('Member removed successfully');
+      } else {
+        alert(data.error || 'Failed to remove member');
+      }
+    } catch {
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleBanMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedGroup) return;
+    const reason = prompt(`Enter reason for banning ${memberUsername} (optional):`);
+    if (reason === null) return; // User cancelled
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedGroup}/members/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId, reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchMembers(); // Refresh members list
+        alert('Member banned successfully');
+      } else {
+        alert(data.error || 'Failed to ban member');
+      }
+    } catch {
+      alert('Failed to ban member');
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId: string, memberUsername: string, newRole: 'admin' | 'member') => {
+    if (!selectedGroup) return;
+    const action = newRole === 'admin' ? 'promote' : 'demote';
+    if (!window.confirm(`Are you sure you want to ${action} ${memberUsername} ${newRole === 'admin' ? 'to admin' : 'to member'}?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedGroup}/members/${memberId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchMembers(); // Refresh members list
+        alert(`Member ${action}d successfully`);
+      } else {
+        alert(data.error || `Failed to ${action} member`);
+      }
+    } catch {
+      alert(`Failed to ${action} member`);
+    }
+  };
+
+  // Helper function to check if current user can manage members
+  const canManageMembers = (selectedGroup: string): boolean => {
+    if (!currentUser) return false;
+    const group = groups.find(g => g.group_id === selectedGroup);
+    if (!group) return false;
+    
+    // Check if user is creator
+    if (group.creator_id === currentUser.user_id) return true;
+    
+    // Check if user has admin role
+    return group.user_role === 'admin' || group.user_role === 'owner';
+  };
+
+  // Helper function to check if a member can be managed by current user
+  const canManageMember = (member: GroupMember, selectedGroup: string): boolean => {
+    if (!currentUser || !canManageMembers(selectedGroup)) return false;
+    
+    const group = groups.find(g => g.group_id === selectedGroup);
+    if (!group) return false;
+    
+    // Can't manage yourself
+    if (member.user_id === currentUser.user_id) return false;
+    
+    // Can't manage the group creator
+    if (group.creator_id === member.user_id) return false;
+    
+    // If current user is not the creator, they can't manage other admins
+    if (group.creator_id !== currentUser.user_id && (member.role === 'admin' || member.role === 'owner')) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Check if current user can promote members to admin (only owners can promote)
+  const canPromoteToAdmin = (selectedGroup: string): boolean => {
+    if (!currentUser || !selectedGroup) return false;
+    
+    const group = groups.find(g => g.group_id === selectedGroup);
+    if (!group) return false;
+    
+    // Find current user's membership in this group
+    const currentUserMember = members.find(m => m.user_id === currentUser.user_id);
+    if (!currentUserMember) return false;
+    
+    // Only owners can promote to admin
+    return currentUserMember.role === 'owner';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -528,21 +646,66 @@ const Groups = () => {
       {/* Members Modal */}
       {showMembersModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
-          <div className="bg-black border border-white p-6 rounded max-w-md w-full">
+          <div className="bg-black border border-white p-6 rounded max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
             <h2 className="text-2xl font-bold mb-4 text-white">Group Members</h2>
-            <div className="max-h-60 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto space-y-1">
               {members.map(member => (
-                <div key={member.user_id} className="flex items-center justify-between p-2 border-b border-gray-600">
-                  <div className="flex items-center space-x-3">
-                    <ProfileAvatar userId={member.user_id} size={32} />
-                    <div>
-                      <div className="font-semibold text-white">{member.username}</div>
-                      <div className="text-sm text-gray-400">Role: {member.role}</div>
+                <div key={member.user_id} className="flex flex-col p-3 border-b border-gray-600 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <ProfileAvatar userId={member.user_id} size={32} />
+                      <div>
+                        <div className="font-semibold text-white">{member.username}</div>
+                        <div className="text-sm text-gray-400">Role: {member.role}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Joined: {new Date(member.join_date).toLocaleDateString()}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Joined: {new Date(member.join_date).toLocaleDateString()}
-                  </div>
+                  
+                  {/* Admin Actions */}
+                  {selectedGroup && canManageMembers(selectedGroup) && canManageMember(member, selectedGroup) && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {/* Promote/Demote buttons */}
+                      {member.role === 'member' && canPromoteToAdmin(selectedGroup) && (
+                        <button
+                          onClick={() => handleUpdateMemberRole(member.user_id, member.username, 'admin')}
+                          className="px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
+                          title={`Promote ${member.username} to admin`}
+                        >
+                          ⬆️ Promote
+                        </button>
+                      )}
+                      {member.role === 'admin' && (
+                        <button
+                          onClick={() => handleUpdateMemberRole(member.user_id, member.username, 'member')}
+                          className="px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors"
+                          title={`Demote ${member.username} to member`}
+                        >
+                          ⬇️ Demote
+                        </button>
+                      )}
+                      
+                      {/* Kick button */}
+                      <button
+                        onClick={() => handleRemoveMember(member.user_id, member.username)}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
+                        title={`Remove ${member.username} from group`}
+                      >
+                        👢 Kick
+                      </button>
+                      
+                      {/* Ban button */}
+                      <button
+                        onClick={() => handleBanMember(member.user_id, member.username)}
+                        className="px-2 py-1 bg-red-800 text-white rounded text-xs hover:bg-red-900 transition-colors"
+                        title={`Ban ${member.username} from group`}
+                      >
+                        🚫 Ban
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

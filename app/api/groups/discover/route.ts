@@ -38,13 +38,21 @@ export async function GET(req: NextRequest) {
       is_private: false
     };
 
-    // Add text search if provided
-    if (searchQuery) {
+    // Escape regex special characters in search query
+    function escapeRegex(str: string): string {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    // Add text search if provided and not just whitespace
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const safeQuery = escapeRegex(searchQuery.trim());
       matchQuery.$or = [
-        { name: { $regex: searchQuery, $options: 'i' } },
-        { description: { $regex: searchQuery, $options: 'i' } },
-        { topic: { $regex: searchQuery, $options: 'i' } }
+        { name: { $regex: safeQuery, $options: 'i' } },
+        { description: { $regex: safeQuery, $options: 'i' } },
+        { topic: { $regex: safeQuery, $options: 'i' } }
       ];
+    } else {
+      // Make sure $or is not present if search is empty
+      if (matchQuery.$or) delete matchQuery.$or;
     }
 
     // Get groups the user is already a member of
@@ -62,6 +70,8 @@ export async function GET(req: NextRequest) {
     if (userGroupIds.length > 0) {
       matchQuery.group_id = { $nin: userGroupIds };
     }
+
+
 
     // Get public groups with aggregation pipeline
     const groups = await db.collection('groups').aggregate([

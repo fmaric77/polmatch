@@ -201,6 +201,8 @@ const UnifiedMessages = () => {
   const [selectedConversation, setSelectedConversation] = useState<string>('');
   const [selectedConversationType, setSelectedConversationType] = useState<'direct' | 'group'>('direct');
   const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups'>('direct');
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
@@ -211,29 +213,12 @@ const UnifiedMessages = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  const [bannedUsers, setBannedUsers] = useState<{ user_id: string; username: string; banned_at: string; reason: string }[]>([]);
   
-  // Sidebar state for mobile responsiveness
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  // Mobile and responsive states
   const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isConversationsSidebarHidden, setIsConversationsSidebarHidden] = useState(false);
-  
-  // Channel-related state
-  const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<string>('');
-  
-  // Session tracking to prevent race conditions
-  const sessionIdRef = useRef<number>(0);
-  
-  // Debug: Log messages state changes
-  useEffect(() => {
-    console.log('Messages state changed:', messages);
-    console.log('Messages count:', messages.length);
-  }, [messages]);
-  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
-  const [createChannelForm, setCreateChannelForm] = useState({
-    name: '',
-    description: ''
-  });
   
   // Modal states
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -241,6 +226,8 @@ const UnifiedMessages = () => {
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [showBannedUsersModal, setShowBannedUsersModal] = useState(false);
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   
   // Form states
   const [createGroupForm, setCreateGroupForm] = useState({
@@ -248,6 +235,10 @@ const UnifiedMessages = () => {
     description: '',
     topic: '',
     is_private: false
+  });
+  const [createChannelForm, setCreateChannelForm] = useState({
+    name: '',
+    description: ''
   });
   const [selectedUserForDM, setSelectedUserForDM] = useState('');
   const [selectedUserToInvite, setSelectedUserToInvite] = useState('');
@@ -258,6 +249,7 @@ const UnifiedMessages = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionIdRef = useRef<number>(0);
   const failedChannelsRef = useRef<Set<string>>(new Set()); // Track channels that have failed with 403/404
   const channelSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debouncing for channel switches
   const contextSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for hiding loading overlay
@@ -782,6 +774,20 @@ const UnifiedMessages = () => {
       }
     } catch (err) {
       console.error('Failed to fetch group members:', err);
+    }
+  }, []);
+
+  // Fetch banned users
+  const fetchBannedUsers = useCallback(async (groupId: string) => {
+    try {
+      const res = await fetch(`/api/groups/${groupId}/banned`);
+      const data = await res.json();
+      if (data.success) {
+        setBannedUsers(data.banned_users || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch banned users:', err);
+      setBannedUsers([]);
     }
   }, []);
 
@@ -1500,15 +1506,171 @@ const UnifiedMessages = () => {
     }
   };
 
+  // Promote or demote member role
+  const updateMemberRole = async (memberId: string, newRole: 'admin' | 'member') => {
+    if (!selectedConversation) return;
+    const action = newRole === 'admin' ? 'promote' : 'demote';
+    if (!window.confirm(`Are you sure you want to ${action} this member ${newRole === 'admin' ? 'to admin' : 'to member'}?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/${memberId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert(`Member ${action}d successfully`);
+      } else {
+        alert(data.error || `Failed to ${action} member`);
+      }
+    } catch {
+      alert(`Failed to ${action} member`);
+    }
+  };
+
+  // Permission checking functions
+  const canManageMembers = (): boolean => {
+    if (!currentUser || !selectedConversation || selectedConversationType !== 'group') return false;
+    
+    // Find current user's role in the group members
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser.user_id);
+    if (!currentUserMember) return false;
+    
+    // Check if user has admin or owner role
+    return currentUserMember.role === 'admin' || currentUserMember.role === 'owner';
+  };
+
+  const canManageMember = (member: GroupMember): boolean => {
+    if (!currentUser || !canManageMembers()) return false;
+    
+    // Can't manage yourself
+    if (member.user_id === currentUser.user_id) return false;
+    
+    // Find current user's role
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser.user_id);
+    if (!currentUserMember) return false;
+    
+    // Owners can manage everyone except other owners
+    if (currentUserMember.role === 'owner') {
+      return member.role !== 'owner';
+    }
+    
+    // Admins can only manage regular members
+    if (currentUserMember.role === 'admin') {
+      return member.role === 'member';
+    }
+    
+    return false;
+  };
+
+  // Check if current user can promote members to admin (only owners can promote)
+  const canPromoteToAdmin = (): boolean => {
+    if (!currentUser || !selectedConversation || selectedConversationType !== 'group') return false;
+    
+    // Find current user's role in the group members
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser.user_id);
+    if (!currentUserMember) return false;
+    
+    // Only owners can promote to admin
+    return currentUserMember.role === 'owner';
+  };
+
+  // Member management handler functions
+  const handleRemoveMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedConversation) return;
+    if (!window.confirm(`Are you sure you want to remove ${memberUsername} from the group?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member removed successfully');
+      } else {
+        alert(data.error || 'Failed to remove member');
+      }
+    } catch {
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleBanMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedConversation) return;
+    const reason = prompt(`Enter reason for banning ${memberUsername} (optional):`);
+    if (reason === null) return; // User cancelled
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: memberId, reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member banned successfully');
+      } else {
+        alert(data.error || 'Failed to ban member');
+      }
+    } catch {
+      alert('Failed to ban member');
+    }
+  };
+
+  const handlePromoteMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedConversation) return;
+    if (!window.confirm(`Are you sure you want to promote ${memberUsername} to admin?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/${memberId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'admin' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member promoted successfully');
+      } else {
+        alert(data.error || 'Failed to promote member');
+      }
+    } catch {
+      alert('Failed to promote member');
+    }
+  };
+
+  const handleDemoteMember = async (memberId: string, memberUsername: string) => {
+    if (!selectedConversation) return;
+    if (!window.confirm(`Are you sure you want to demote ${memberUsername} to member?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/members/${memberId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'member' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchGroupMembers(selectedConversation);
+        alert('Member demoted successfully');
+      } else {
+        alert(data.error || 'Failed to demote member');
+      }
+    } catch {
+      alert('Failed to demote member');
+    }
+  };
+
   // Handle right-click on member
   const handleMemberContextMenu = (e: React.MouseEvent, member: GroupMember) => {
     e.preventDefault();
-    // Only allow admin actions if current user is admin and target is not creator
-    const currentUserMember = groupMembers.find(m => m.user_id === currentUser?.user_id);
-    const isCurrentUserAdmin = currentUserMember && (currentUserMember.role === 'owner' || currentUserMember.role === 'admin');
-    const isTargetCreator = member.role === 'owner' || member.role === 'admin';
-    
-    if (!isCurrentUserAdmin || isTargetCreator || member.user_id === currentUser?.user_id) return;
+    if (!canManageMember(member)) return;
     
     setContextMenu({
       x: e.clientX,
@@ -1517,6 +1679,29 @@ const UnifiedMessages = () => {
       id: member.user_id,
       extra: member
     });
+  };
+
+  // Unban user from group
+  const handleUnbanUser = async (userId: string, username: string) => {
+    if (!selectedConversation) return;
+    if (!window.confirm(`Are you sure you want to unban ${username}?`)) return;
+    
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/unban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchBannedUsers(selectedConversation);
+        alert('User unbanned successfully');
+      } else {
+        alert(data.error || 'Failed to unban user');
+      }
+    } catch {
+      alert('Failed to unban user');
+    }
   };
 
   // Handle right-click on channel
@@ -2020,6 +2205,18 @@ const UnifiedMessages = () => {
                     >
                       <FontAwesomeIcon icon={faUserPlus} className="text-sm" />
                     </button>
+                    {canManageMembers() && (
+                      <button
+                        onClick={() => {
+                          setShowBannedUsersModal(true);
+                          fetchBannedUsers(selectedConversation);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                        title="View Banned Users"
+                      >
+                        🚫
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -2257,6 +2454,20 @@ const UnifiedMessages = () => {
               >
                 Ban Member
               </button>
+              {canPromoteToAdmin() && (
+                <button
+                  onClick={() => updateMemberRole(contextMenu.id, 'admin')}
+                  className="w-full text-left px-4 py-2 text-yellow-400 hover:bg-gray-700 transition-colors"
+                >
+                  Promote to Admin
+                </button>
+              )}
+              <button
+                onClick={() => updateMemberRole(contextMenu.id, 'member')}
+                className="w-full text-left px-4 py-2 text-yellow-400 hover:bg-gray-700 transition-colors"
+              >
+                Demote to Member
+              </button>
             </>
           )}
           {contextMenu.type === 'channel' && (
@@ -2411,22 +2622,70 @@ const UnifiedMessages = () => {
               {groupMembers.map(member => (
                 <div
                   key={member.user_id}
-                  className="flex items-center justify-between p-2 bg-gray-800 rounded"
+                  className="flex flex-col p-3 border-b border-gray-600 space-y-2"
                   onContextMenu={(e) => handleMemberContextMenu(e, member)}
                 >
-                  <div className="flex items-center space-x-2">
-                    <ProfileAvatar userId={member.user_id} size={24} />
-                    <span className="text-white">{member.username}</span>
-                    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
-                      {member.role}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <ProfileAvatar userId={member.user_id} size={32} />
+                      <div>
+                        <div className="font-semibold text-white">{member.username}</div>
+                        <div className="text-sm text-gray-400">Role: {member.role}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Joined: {new Date(member.join_date).toLocaleDateString()}
+                    </div>
                   </div>
+                  
+                  {/* Admin Actions */}
+                  {canManageMembers() && canManageMember(member) && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {/* Promote/Demote buttons */}
+                      {member.role === 'member' && canPromoteToAdmin() && (
+                        <button
+                          onClick={() => handlePromoteMember(member.user_id, member.username)}
+                          className="px-2 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition-colors"
+                          title={`Promote ${member.username} to admin`}
+                        >
+                          ⬆️ Promote
+                        </button>
+                      )}
+                      {member.role === 'admin' && (
+                        <button
+                          onClick={() => handleDemoteMember(member.user_id, member.username)}
+                          className="px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors"
+                          title={`Demote ${member.username} to member`}
+                        >
+                          ⬇️ Demote
+                        </button>
+                      )}
+                      
+                      {/* Kick button */}
+                      <button
+                        onClick={() => handleRemoveMember(member.user_id, member.username)}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
+                        title={`Remove ${member.username} from group`}
+                      >
+                        👢 Kick
+                      </button>
+                      
+                      {/* Ban button */}
+                      <button
+                        onClick={() => handleBanMember(member.user_id, member.username)}
+                        className="px-2 py-1 bg-red-800 text-white rounded text-xs hover:bg-red-900 transition-colors"
+                        title={`Ban ${member.username} from group`}
+                      >
+                        🚫 Ban
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
             <button
               onClick={() => setShowMembersModal(false)}
-              className="mt-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+              className="mt-4 w-full p-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
             >
               Close
             </button>
@@ -2509,6 +2768,53 @@ const UnifiedMessages = () => {
             <button
               onClick={() => setShowInvitationsModal(false)}
               className="mt-4 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Banned Users Modal */}
+      {showBannedUsersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 w-96 max-h-96 overflow-hidden flex flex-col">
+            <h2 className="text-xl font-bold mb-4 text-white">Banned Users</h2>
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {bannedUsers.length === 0 ? (
+                <p className="text-gray-400">No banned users</p>
+              ) : (
+                bannedUsers.map(user => (
+                  <div key={user.user_id} className="p-3 bg-gray-800 rounded">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-semibold text-white">{user.username}</div>
+                        <div className="text-xs text-gray-400">
+                          Banned: {new Date(user.banned_at).toLocaleDateString()}
+                        </div>
+                        {user.reason && (
+                          <div className="text-xs text-gray-300 mt-1">
+                            Reason: {user.reason}
+                          </div>
+                        )}
+                      </div>
+                      {canManageMembers() && (
+                        <button
+                          onClick={() => handleUnbanUser(user.user_id, user.username)}
+                          className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                          title={`Unban ${user.username}`}
+                        >
+                          🔓 Unban
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <button
+              onClick={() => setShowBannedUsersModal(false)}
+              className="mt-4 w-full p-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
             >
               Close
             </button>
