@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
-import CryptoJS from 'crypto-js';
+import * as CryptoJS from 'crypto-js';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
@@ -238,6 +238,84 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
   } catch (error) {
     console.error('Error sending channel message:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { status: 500 });
+  }
+}
+
+// DELETE: Delete a message from a specific channel
+export async function DELETE(req: NextRequest, context: RouteContext): Promise<NextResponse> {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const auth = await getAuthenticatedUser(sessionToken);
+    if (!auth) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+
+    const { db } = await connectToDatabase();
+    const params = await context.params;
+    const groupId = params.id;
+    const channelId = params.channelId;
+
+    const body = await req.json();
+    const { message_id } = body;
+
+    if (!message_id) {
+      return NextResponse.json({ error: 'Missing message_id' }, { status: 400 });
+    }
+
+    // Verify user can delete this message (either sender or group owner/admin)
+    const [message, membership] = await Promise.all([
+      db.collection('group_messages').findOne({
+        message_id,
+        group_id: groupId,
+        channel_id: channelId
+      }),
+      db.collection('group_members').findOne({
+        group_id: groupId,
+        user_id: auth.userId
+      })
+    ]);
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+    }
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
+    }
+
+    // Check if user is sender or has admin privileges
+    const canDelete = message.sender_id === auth.userId || 
+                     membership.role === 'owner' || 
+                     membership.role === 'admin';
+    
+    if (!canDelete) {
+      return NextResponse.json({ 
+        error: 'Not authorized to delete this message' 
+      }, { status: 403 });
+    }
+
+    const result = await db.collection('group_messages').deleteOne({
+      message_id,
+      group_id: groupId,
+      channel_id: channelId
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      deleted: result.deletedCount > 0
+    });
+
+  } catch (error) {
+    console.error('Error deleting channel message:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

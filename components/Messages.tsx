@@ -219,6 +219,36 @@ const Messages = () => {
     return () => clearTimeout(timer);
   }, [messages]);
 
+  // Delete individual message function
+  const deleteMessage = async (messageId: string): Promise<boolean> => {
+    try {
+      // For private messages, use the general messages endpoint
+      const response = await fetch('/api/messages', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message_id: messageId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete message');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh messages after deletion
+        fetchMessages();
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      return false;
+    }
+  };
+
   // Add settings button and modal in main chat area header
   return (
     <div className="flex flex-col md:flex-row h-[80vh] max-w-4xl w-full mx-auto bg-black/80 border border-white rounded-lg shadow-lg mt-8 min-h-[500px] min-w-[350px]">
@@ -374,6 +404,15 @@ const Messages = () => {
                           </span>
                         )}
                       </div>
+                      {msg.sender_id === currentUser?.user_id && (
+                        <button
+                          onClick={() => deleteMessage(msg._id!)}
+                          className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500"
+                          title="Delete message"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

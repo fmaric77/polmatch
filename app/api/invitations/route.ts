@@ -3,10 +3,18 @@ import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../mongo-uri';
 import { cookies } from 'next/headers';
 
-const client = new MongoClient(MONGODB_URI);
+let client: MongoClient | null = null;
+
+async function connectToDatabase(): Promise<MongoClient> {
+  if (!client) {
+    client = new MongoClient(MONGODB_URI);
+    await client.connect();
+  }
+  return client;
+}
 
 // Get all pending invitations for the current user
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
   
@@ -15,8 +23,8 @@ export async function GET() {
   }
 
   try {
-    await client.connect();
-    const db = client.db('polmatch');
+    const dbClient = await connectToDatabase();
+    const db = dbClient.db('polmatch');
     
     // Verify session
     const session = await db.collection('sessions').findOne({ sessionToken });
@@ -41,7 +49,5 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching invitations:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

@@ -195,7 +195,7 @@ const Groups = () => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [selectedGroup]);
+  }, [selectedGroup, currentUser, fetchMembers, fetchInvitations, fetchAvailableUsers, fetchMessages]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
