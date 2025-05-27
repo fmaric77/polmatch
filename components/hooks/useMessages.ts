@@ -312,17 +312,24 @@ export const useMessages = (
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     try {
       if (selectedConversationType === 'direct') {
-        // Private message
+        // Private message - use _id field
         const response = await fetch('/api/messages', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message_id: messageId })
         });
+        
+        if (!response.ok) {
+          console.error('Failed to delete direct message - HTTP error:', response.status, response.statusText);
+          return false;
+        }
+        
         const data = await response.json();
         if (data.success) {
           await fetchMessages(selectedConversation, selectedConversationType);
           return true;
         }
+        console.error('Failed to delete direct message:', data?.message || data?.error || 'Unknown error', data);
         return false;
       } else if (selectedConversationType === 'group') {
         // Group message - use correct endpoint based on whether we're in a channel
@@ -340,6 +347,12 @@ export const useMessages = (
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message_id: messageId })
         });
+        
+        if (!response.ok) {
+          console.error('Failed to delete group message - HTTP error:', response.status, response.statusText);
+          return false;
+        }
+        
         const data = await response.json();
         if (data.success) {
           // Refresh messages using the appropriate fetch method
@@ -350,6 +363,7 @@ export const useMessages = (
           }
           return true;
         }
+        console.error('Failed to delete group message:', data?.message || data?.error || 'Unknown error', data);
         return false;
       }
       return false;

@@ -161,11 +161,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             color: 'text-red-500',
             disabled: !isOwnMessage,
             onClick: () => {
-              if (message.id) {
-                if (typeof message.id === 'string') {
-                  messages.deleteMessage(message.id);
-                }
-              }
+              // Use contextMenu.id instead of message.id - this is the fix!
+              messages.deleteMessage(contextMenu.id);
             }
           }
         ];
