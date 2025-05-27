@@ -262,6 +262,10 @@ const UnifiedMessages = () => {
   const failedChannelsRef = useRef<Set<string>>(new Set()); // Track channels that have failed with 403/404
   const channelSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debouncing for channel switches
   const contextSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for hiding loading overlay
+  const lastMessageTimestampRef = useRef<string>(''); // Track last message timestamp for optimized refresh
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for refresh operations
+  const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debouncing for mark-as-read operations
+  const hasMarkedReadRef = useRef<boolean>(false); // Flag to prevent duplicate mark-as-read requests
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -767,7 +771,7 @@ const UnifiedMessages = () => {
         contextSwitchTimeoutRef.current = null;
       }
     };
-  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages]);
+  }, [selectedChannel, selectedConversation, selectedConversationType, groupChannels, fetchChannelMessages, contextSwitchLoading]);
 
   // Fetch group members
   const fetchGroupMembers = useCallback(async (groupId: string) => {
@@ -820,6 +824,9 @@ const UnifiedMessages = () => {
       if (data.success) {
         setNewMessage('');
         console.log('Message sent successfully, refreshing messages...');
+        
+        // Update last message timestamp to trigger immediate refresh
+        lastMessageTimestampRef.current = '';
         
         // Refresh messages based on current context WITHOUT loading indicator
         if (selectedConversationType === 'group' && selectedChannel) {
@@ -922,7 +929,7 @@ const UnifiedMessages = () => {
       // For direct messages, fetch immediately
       fetchMessages(conversation.id, conversation.type);
     }
-  }, [fetchGroupMembers, fetchMessages, currentUser]);
+  }, [fetchGroupMembers, fetchMessages, currentUser, contextSwitchLoading]);
 
   const searchParams = useSearchParams();
   // Auto-select direct message based on query param
@@ -1034,151 +1041,144 @@ const UnifiedMessages = () => {
     }
   };
 
-  // Auto-refresh
+  // Auto-refresh - OPTIMIZED: Only refresh when new messages are detected
+  
+  // Optimized auto-refresh: Check for new messages with minimal requests
   useEffect(() => {
-    // Clear any existing interval first - be more aggressive about cleanup
+    // Clear any existing interval/timeout first
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
       console.log('Auto-refresh: Cleared existing interval');
     }
+    
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+
+    // Reset last message timestamp when conversation changes
+    lastMessageTimestampRef.current = '';
 
     if (selectedConversation && currentUser) {
-      console.log('Auto-refresh: Setting up new interval for:', selectedConversation, selectedConversationType, selectedChannel);
+      console.log('Auto-refresh: Setting up optimized refresh for:', selectedConversation, selectedConversationType, selectedChannel);
       
-      // Set up new interval
+      // Check for new messages periodically - but only fetch if there are new messages
       intervalRef.current = setInterval(async () => {
         try {
-          // Capture current state and create session ID to prevent race conditions
+          // Capture current state to prevent race conditions
           const currentConversation = selectedConversation;
           const currentType = selectedConversationType;
           const currentChannel = selectedChannel;
           const currentChannels = groupChannels;
           const autoRefreshSessionId = ++sessionIdRef.current;
           
-          console.log(`Auto-refresh (session ${autoRefreshSessionId}): Running for:`, currentConversation, currentType, currentChannel);
+          console.log(`Auto-refresh (session ${autoRefreshSessionId}): Checking for new messages in:`, currentConversation, currentType, currentChannel);
           
-          // Early exit if no valid conversation
           if (!currentConversation) {
             console.log(`Auto-refresh (session ${autoRefreshSessionId}): No current conversation, skipping`);
             return;
           }
           
-          // Directly call the API without using the callback functions to avoid dependency issues
+          // Build URL for last message check
+          let checkUrl: string;
           if (currentType === 'group' && currentChannel && currentChannels.length > 0) {
-            // Check if this channel has already failed with 403/404 - FIRST CHECK
+            // Check if this channel has failed before
             const channelKey = `${currentConversation}:${currentChannel}`;
-            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Checking channel:`, channelKey);
             if (failedChannelsRef.current.has(channelKey)) {
-              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Skipping channel that previously failed:`, channelKey);
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Skipping failed channel:`, channelKey);
               return;
             }
             
-            // Validate that the channel still exists in the current group
+            // Validate channel still exists
             const channelExists = currentChannels.some(ch => ch.channel_id === currentChannel);
-            
             if (!channelExists) {
-              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Selected channel no longer exists in current group, adding to failed channels:`, channelKey);
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Channel no longer exists:`, channelKey);
               failedChannelsRef.current.add(channelKey);
               return;
             }
-
-            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Refreshing channel messages for:`, channelKey);
-            const url = `/api/groups/${currentConversation}/channels/${currentChannel}/messages`;
-            const res = await fetch(url);
             
-            // Handle 404 and 403 errors gracefully (channel deleted or no access)
-            if (res.status === 404 || res.status === 403) {
-              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Channel access denied or not found (${res.status}), adding to failed channels:`, channelKey);
-              // Add to failed channels to prevent future attempts
-              failedChannelsRef.current.add(channelKey);
-              
-              // Clear the selected channel to prevent continuous failed requests
-              if (selectedConversation === currentConversation && selectedChannel === currentChannel) {
-                console.log(`Auto-refresh (session ${autoRefreshSessionId}): Clearing selected channel due to access error`);
-                setSelectedChannel('');
-                setMessages([]);
-                // Try to select a default channel if available
-                const defaultChannel = currentChannels.find(ch => ch.is_default);
-                if (defaultChannel) {
-                  console.log(`Auto-refresh (session ${autoRefreshSessionId}): Auto-selecting default channel after access error:`, defaultChannel.channel_id);
-                  setSelectedChannel(defaultChannel.channel_id);
-                }
-              }
-              return;
-            }
-            
-            const data = await res.json();
-            
-            // SESSION PROTECTION: Only update if this is still the current session and context
-            if (data.success && data.messages && 
-                sessionIdRef.current === autoRefreshSessionId &&
-                selectedConversation === currentConversation && 
-                selectedConversationType === currentType && 
-                selectedChannel === currentChannel) {
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Updating messages for channel:`, currentChannel);
-              // Sort ascending by timestamp
-              (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
-                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-              );
-              setMessages(data.messages);
-            } else {
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Discarding stale group response - current state changed`, {
-                currentSession: sessionIdRef.current,
-                requestSession: autoRefreshSessionId,
-                capturedConversation: currentConversation,
-                currentConversation: selectedConversation,
-                capturedType: currentType,
-                currentType: selectedConversationType,
-                capturedChannel: currentChannel,
-                currentChannel: selectedChannel,
-                hasSuccess: data.success,
-                hasMessages: !!data.messages
-              });
-            }
+            checkUrl = `/api/groups/${currentConversation}/channels/${currentChannel}/messages?last_check=${lastMessageTimestampRef.current}&count_only=true`;
           } else if (currentType === 'direct') {
-            console.log(`Auto-refresh (session ${autoRefreshSessionId}): Refreshing direct messages`);
-            const res = await fetch(`/api/messages?user_id=${currentConversation}`);
-            const data = await res.json();
+            checkUrl = `/api/messages?user_id=${currentConversation}&last_check=${lastMessageTimestampRef.current}&count_only=true`;
+          } else {
+            return;
+          }
+          
+          console.log(`Auto-refresh (session ${autoRefreshSessionId}): Checking URL:`, checkUrl);
+          const res = await fetch(checkUrl);
+          const data = await res.json();
+          
+          // Handle errors gracefully
+          if (res.status === 404 || res.status === 403) {
+            if (currentType === 'group' && currentChannel) {
+              const channelKey = `${currentConversation}:${currentChannel}`;
+              console.warn(`Auto-refresh (session ${autoRefreshSessionId}): Channel access denied, marking as failed:`, channelKey);
+              failedChannelsRef.current.add(channelKey);
+            }
+            return;
+          }
+          
+          // Only fetch full messages if there are new ones or if this is the first check
+          if (data.success && (data.has_new_messages || !lastMessageTimestampRef.current)) {
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): New messages detected, fetching full messages`);
             
-            // SESSION PROTECTION: Only update if this is still the current session and context
-            if (data.success && data.messages && 
+            // Fetch full messages
+            let fullUrl: string;
+            if (currentType === 'group' && currentChannel) {
+              fullUrl = `/api/groups/${currentConversation}/channels/${currentChannel}/messages`;
+            } else {
+              fullUrl = `/api/messages?user_id=${currentConversation}`;
+            }
+            
+            const fullRes = await fetch(fullUrl);
+            const fullData = await fullRes.json();
+            
+            // SESSION PROTECTION: Only update if context hasn't changed
+            if (fullData.success && fullData.messages && 
                 sessionIdRef.current === autoRefreshSessionId &&
                 selectedConversation === currentConversation && 
-                selectedConversationType === currentType) {
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Raw messages:`, data.messages);
+                selectedConversationType === currentType &&
+                (currentType === 'direct' || selectedChannel === currentChannel)) {
               
-              // Use the same fixed filtering logic as in fetchMessages
-              const filteredMessages = data.messages.filter((msg: PrivateMessage) => 
-                msg.sender_id === currentConversation || msg.sender_id === currentUser.user_id
-              );
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Updating messages`);
               
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Filtered messages:`, filteredMessages);
+              let processedMessages: (PrivateMessage | GroupMessage)[];
               
-              // Sort ascending by timestamp
-              filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => 
-                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-              );
+              if (currentType === 'direct') {
+                // Filter and sort direct messages
+                const filteredMessages = fullData.messages.filter((msg: PrivateMessage) => 
+                  msg.sender_id === currentConversation || msg.sender_id === currentUser.user_id
+                );
+                filteredMessages.sort((a: PrivateMessage, b: PrivateMessage) => 
+                  new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                );
+                processedMessages = filteredMessages;
+              } else {
+                // Sort group messages
+                (fullData.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
+                  new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                );
+                processedMessages = fullData.messages;
+              }
               
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Final messages:`, filteredMessages);
-              setMessages(filteredMessages);
+              setMessages(processedMessages);
+              
+              // Update last message timestamp for future checks
+              if (processedMessages.length > 0) {
+                const lastMessage = processedMessages[processedMessages.length - 1];
+                lastMessageTimestampRef.current = lastMessage.timestamp;
+              }
             } else {
-              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Discarding stale direct response - current state changed`, {
-                currentSession: sessionIdRef.current,
-                requestSession: autoRefreshSessionId,
-                capturedConversation: currentConversation,
-                currentConversation: selectedConversation,
-                capturedType: currentType,
-                currentType: selectedConversationType,
-                hasSuccess: data.success,
-                hasMessages: !!data.messages
-              });
+              console.log(`Auto-refresh (session ${autoRefreshSessionId}): Discarding stale response - context changed`);
             }
+          } else {
+            console.log(`Auto-refresh (session ${autoRefreshSessionId}): No new messages`);
           }
         } catch (err) {
           console.error('Auto-refresh failed:', err);
         }
-      }, 5000); // 5 second interval
+      }, 10000); // Check every 10 seconds instead of 5 (reduced frequency)
 
       return () => {
         if (intervalRef.current) {
@@ -1190,63 +1190,113 @@ const UnifiedMessages = () => {
     } else {
       console.log('Auto-refresh: Not setting up interval - missing requirements');
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, groupChannels]); // Add groupChannels dependency for validation
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, groupChannels]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Mark messages as read when viewing a conversation
+  // Mark messages as read when viewing a conversation - OPTIMIZED: Only when actually needed
+  
   useEffect(() => {
-    if (!selectedConversation || !currentUser) return;
-    
-    if (selectedConversationType === 'direct') {
-      // Find if there are any unread messages from selectedConversation (sender) to currentUser (receiver)
-      const hasUnread = messages
-        .filter((msg): msg is PrivateMessage => (msg as PrivateMessage).receiver_id !== undefined && (msg as PrivateMessage).read !== undefined)
-        .some(
-          msg => msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id && !msg.read
-        );
-      
-      if (hasUnread) {
-        fetch('/api/messages', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender_id: selectedConversation }),
-        }).then((res) => {
-          // Only refresh if the request was successful
-          if (res.ok) {
-            // Refresh messages to show updated read status
-            fetchMessages(selectedConversation, selectedConversationType);
-          }
-        }).catch((err) => {
-          console.error('Failed to mark direct messages as read:', err);
-        });
-      }
-    } else if (selectedConversationType === 'group') {
-      // Find if there are any unread group messages for the current user
-      const hasUnread = messages
-        .filter((msg): msg is GroupMessage => (msg as GroupMessage).group_id !== undefined)
-        .some(msg => !msg.current_user_read && msg.sender_id !== currentUser.user_id);
-      
-      if (hasUnread) {
-        fetch(`/api/groups/${selectedConversation}/messages/read`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-        }).then((res) => {
-          // Only refresh if the request was successful (not 403/404)
-          if (res.ok) {
-            // Refresh messages to show updated read status
-            fetchMessages(selectedConversation, selectedConversationType);
-          } else if (res.status === 403) {
-            console.warn('Access denied when marking group messages as read');
-          }
-        }).catch((err) => {
-          console.error('Failed to mark group messages as read:', err);
-        });
-      }
+    // Clear any pending mark-as-read timeout
+    if (markAsReadTimeoutRef.current) {
+      clearTimeout(markAsReadTimeoutRef.current);
+      markAsReadTimeoutRef.current = null;
     }
-  }, [selectedConversation, selectedConversationType, currentUser, messages, fetchMessages]);
+    
+    // Reset the flag when conversation changes
+    hasMarkedReadRef.current = false;
+    
+    if (!selectedConversation || !currentUser || messages.length === 0) {
+      return;
+    }
+    
+    // Debounce mark-as-read to avoid spamming while scrolling through messages
+    markAsReadTimeoutRef.current = setTimeout(() => {
+      // Prevent multiple mark-as-read requests for the same conversation
+      if (hasMarkedReadRef.current) {
+        console.log('Mark as read: Already marked for this conversation, skipping');
+        return;
+      }
+      
+      if (selectedConversationType === 'direct') {
+        // Find if there are any unread messages from selectedConversation (sender) to currentUser (receiver)
+        const unreadMessages = messages
+          .filter((msg): msg is PrivateMessage => (msg as PrivateMessage).receiver_id !== undefined && (msg as PrivateMessage).read !== undefined)
+          .filter(msg => msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id && !msg.read);
+        
+        if (unreadMessages.length > 0) {
+          console.log(`Mark as read: Found ${unreadMessages.length} unread direct messages, marking as read`);
+          hasMarkedReadRef.current = true; // Set flag to prevent duplicate requests
+          
+          fetch('/api/messages', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sender_id: selectedConversation }),
+          }).then((res) => {
+            if (res.ok) {
+              console.log('Mark as read: Direct messages marked successfully');
+              // Only refresh if the request was successful and we're still on the same conversation
+              if (selectedConversation === selectedConversation && selectedConversationType === 'direct') {
+                fetchMessages(selectedConversation, selectedConversationType);
+              }
+            } else {
+              console.warn('Mark as read: Failed to mark direct messages as read');
+              hasMarkedReadRef.current = false; // Reset flag on failure
+            }
+          }).catch((err) => {
+            console.error('Failed to mark direct messages as read:', err);
+            hasMarkedReadRef.current = false; // Reset flag on error
+          });
+        } else {
+          console.log('Mark as read: No unread direct messages found');
+        }
+      } else if (selectedConversationType === 'group') {
+        // Find if there are any unread group messages for the current user
+        const unreadMessages = messages
+          .filter((msg): msg is GroupMessage => (msg as GroupMessage).group_id !== undefined)
+          .filter(msg => !msg.current_user_read && msg.sender_id !== currentUser.user_id);
+        
+        if (unreadMessages.length > 0) {
+          console.log(`Mark as read: Found ${unreadMessages.length} unread group messages, marking as read`);
+          hasMarkedReadRef.current = true; // Set flag to prevent duplicate requests
+          
+          fetch(`/api/groups/${selectedConversation}/messages/read`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+          }).then((res) => {
+            if (res.ok) {
+              console.log('Mark as read: Group messages marked successfully');
+              // Only refresh if the request was successful and we're still on the same conversation
+              if (selectedConversation === selectedConversation && selectedConversationType === 'group') {
+                fetchMessages(selectedConversation, selectedConversationType);
+              }
+            } else if (res.status === 403) {
+              console.warn('Mark as read: Access denied when marking group messages as read');
+              hasMarkedReadRef.current = false; // Reset flag on access denied
+            } else {
+              console.warn('Mark as read: Failed to mark group messages as read');
+              hasMarkedReadRef.current = false; // Reset flag on failure
+            }
+          }).catch((err) => {
+            console.error('Failed to mark group messages as read:', err);
+            hasMarkedReadRef.current = false; // Reset flag on error
+          });
+        } else {
+          console.log('Mark as read: No unread group messages found');
+        }
+      }
+    }, 2000); // 2 second delay to debounce rapid conversation switches
+    
+    // Cleanup timeout on unmount or when dependencies change
+    return () => {
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+        markAsReadTimeoutRef.current = null;
+      }
+    };
+  }, [selectedConversation, selectedConversationType, currentUser, messages, fetchMessages]); // Include messages since we're filtering their content
 
   // Fetch available users for invitation
   const fetchAvailableUsers = async () => {
