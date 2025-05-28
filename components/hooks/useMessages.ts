@@ -300,7 +300,7 @@ export const useMessages = (
         markAsReadTimeoutRef.current = null;
       }
     };
-  }, [selectedConversation, selectedConversationType, currentUser, messages, fetchMessages]); // Added missing fetchMessages dependency
+  }, [selectedConversation, selectedConversationType, currentUser, messages]); // Removed fetchMessages to prevent infinite loops
 
   // Clear messages when conversation changes
   useEffect(() => {
