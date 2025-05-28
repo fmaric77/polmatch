@@ -345,15 +345,18 @@ export const useMessages = (
         const response = await fetch(deleteUrl, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message_id: messageId })
+          body: JSON.stringify({ messageId })
         });
         
         if (!response.ok) {
           console.error('Failed to delete group message - HTTP error:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
           return false;
         }
         
         const data = await response.json();
+        
         if (data.success) {
           // Refresh messages using the appropriate fetch method
           if (selectedChannel) {

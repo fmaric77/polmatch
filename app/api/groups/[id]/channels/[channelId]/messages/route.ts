@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import * as CryptoJS from 'crypto-js';
+import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
@@ -265,16 +266,24 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const channelId = params.channelId;
 
     const body = await req.json();
-    const { message_id } = body;
+    const { messageId } = body;
 
-    if (!message_id) {
-      return NextResponse.json({ error: 'Missing message_id' }, { status: 400 });
+    if (!messageId) {
+      return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
+    }
+
+    // Convert messageId string to ObjectId
+    let objectId: ObjectId;
+    try {
+      objectId = new ObjectId(messageId);
+    } catch {
+      return NextResponse.json({ error: 'Invalid messageId format' }, { status: 400 });
     }
 
     // Verify user can delete this message (either sender or group owner/admin)
     const [message, membership] = await Promise.all([
       db.collection('group_messages').findOne({
-        message_id,
+        _id: objectId,
         group_id: groupId,
         channel_id: channelId
       }),
@@ -304,7 +313,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     }
 
     const result = await db.collection('group_messages').deleteOne({
-      message_id,
+      _id: objectId,
       group_id: groupId,
       channel_id: channelId
     });
@@ -314,8 +323,8 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       deleted: result.deletedCount > 0
     });
 
-  } catch (error) {
-    console.error('Error deleting channel message:', error);
+  } catch {
+    console.error('Error deleting channel message');
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
