@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../../../mongo-uri';
 import { cookies } from 'next/headers';
+import { getAuthenticatedUser, connectToDatabase } from '../../../../../../lib/mongodb-connection';
 
 interface RouteContext {
   params: Promise<{ id: string; channelId: string }>;
@@ -18,19 +17,12 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
-    const db = client.db('polmatch');
-
-    // Verify session
-    const session = await db.collection('sessions').findOne({ 
-      sessionToken: sessionToken 
-    });
-    
-    if (!session) {
-      await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    const auth = await getAuthenticatedUser(sessionToken);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { db } = await connectToDatabase();
 
     const params = await context.params;
     const groupId = params.id;
@@ -39,11 +31,10 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     // Check if user is a member of the group with admin privileges
     const membership = await db.collection('group_members').findOne({
       group_id: groupId,
-      user_id: session.user_id
+      user_id: auth.user.user_id
     });
 
     if (!membership) {
-      await client.close();
       return NextResponse.json({ 
         error: 'Not a member of this group' 
       }, { status: 403 });
@@ -51,7 +42,6 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     // Only owners can delete channels
     if (membership.role !== 'owner') {
-      await client.close();
       return NextResponse.json({ 
         error: 'Only group owners can delete channels' 
       }, { status: 403 });
@@ -64,7 +54,6 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     });
 
     if (!channel) {
-      await client.close();
       return NextResponse.json({ 
         error: 'Channel not found' 
       }, { status: 404 });
@@ -72,7 +61,6 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     // Prevent deletion of default channels
     if (channel.is_default) {
-      await client.close();
       return NextResponse.json({ 
         error: 'Cannot delete the default channel' 
       }, { status: 400 });
@@ -89,8 +77,6 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       channel_id: channelId,
       group_id: groupId
     });
-
-    await client.close();
 
     if (deletedChannel.deletedCount === 0) {
       return NextResponse.json({ 

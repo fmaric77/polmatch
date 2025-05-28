@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useEffect } from 'react';
-import UnifiedMessages from '@/components/UnifiedMessages';
+import UnifiedMessagesRefactored from '@/components/UnifiedMessagesRefactored';
 import Script from 'next/script';
 
 export default function UnifiedMessagesPage() {
@@ -17,7 +17,7 @@ export default function UnifiedMessagesPage() {
           <div className="text-xl">Loading messages...</div>
         </div>
       }>
-        <UnifiedMessages />
+        <UnifiedMessagesRefactored />
       </Suspense>
     </div>
   );

@@ -194,21 +194,29 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       return NextResponse.json({ error: 'Message not found' }, { status: 404 });
     }
 
-    // Check if user is sender or group admin
-    const canDelete = message.sender_id === auth.userId;
+    // Check if user is sender or group admin/owner
+    let canDelete = message.sender_id === auth.userId;
     
     if (!canDelete) {
-      // Check if user is group admin
-      const group = await db.collection('groups').findOne({
+      // Check if user is group admin or owner
+      const membership = await db.collection('group_members').findOne({
         group_id: groupId,
-        creator_id: auth.userId
-      }, { projection: { _id: 1 } });
+        user_id: auth.userId
+      });
       
-      if (!group) {
-        return NextResponse.json({ error: 'Not authorized to delete this message' }, { status: 403 });
+      if (membership && (membership.role === 'owner' || membership.role === 'admin')) {
+        canDelete = true;
       }
     }
+    
+    if (!canDelete) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Not authorized to delete this message' 
+      }, { status: 403 });
+    }
 
+    // Delete the message (works for both channel and general group messages)
     const result = await db.collection('group_messages').deleteOne({
       message_id,
       group_id: groupId
@@ -216,10 +224,14 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     return NextResponse.json({ 
       success: true, 
-      deleted: result.deletedCount > 0
+      deleted: result.deletedCount > 0,
+      deletedMessages: result.deletedCount
     });
   } catch (error) {
     console.error('Group messages DELETE error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
 }
