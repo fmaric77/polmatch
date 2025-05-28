@@ -159,7 +159,7 @@ const UnifiedMessages: React.FC = () => {
       conversations.fetchConversations();
       groupManagement.fetchInvitations();
     }
-  }, [currentUser]); // Only depend on currentUser, not the hook objects
+  }, [currentUser, conversations, groupManagement]); // Added missing dependencies
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
@@ -202,7 +202,7 @@ const UnifiedMessages: React.FC = () => {
     if (selectedConversation && selectedConversationType === 'group' && selectedChannel) {
       messages.fetchChannelMessages(selectedConversation, selectedChannel);
     }
-  }, [selectedChannel, selectedConversation, selectedConversationType]); // Removed messages dependency to prevent loops
+  }, [selectedChannel, selectedConversation, selectedConversationType, messages]); // Added missing messages dependency
 
   // Send message handler
   const handleSendMessage = useCallback(async () => {
