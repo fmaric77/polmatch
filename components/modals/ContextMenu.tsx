@@ -60,7 +60,7 @@ interface ContextMenuProps {
   };
   groupManagement: {
     removeGroupMember: (groupId: string, userId: string) => Promise<boolean>;
-    deleteChannel: (groupId: string, channelId: string) => Promise<boolean>;
+    deleteChannel: (groupId: string, channelId: string) => Promise<{ success: boolean; error?: string; message?: string; deletedMessages?: number }>;
     groupMembers?: Array<{
       user_id: string;
       role: string;
@@ -68,8 +68,13 @@ interface ContextMenuProps {
     fetchChannels?: (groupId: string) => void;
     groupChannels?: Array<{
       channel_id: string;
+      group_id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      created_by: string;
       is_default: boolean;
-      [key: string]: unknown;
+      position: number;
     }>;
   };
   messages: {
