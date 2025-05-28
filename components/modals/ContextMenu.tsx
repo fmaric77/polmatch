@@ -3,7 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faTrash,
   faUserMinus,
-  faCopy
+  faCopy,
+  faSignOutAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
@@ -50,14 +51,26 @@ interface ContextMenuProps {
       unread_count?: number;
       members_count?: number;
       user_id?: string;
+      creator_id?: string;
+      user_role?: string;
     }>;
     fetchConversations: () => void;
-    archiveConversation: (id: string) => Promise<boolean>;
+    deleteConversation: (id: string) => Promise<boolean>;
     leaveGroup: (id: string) => Promise<boolean>;
   };
   groupManagement: {
     removeGroupMember: (groupId: string, userId: string) => Promise<boolean>;
     deleteChannel: (groupId: string, channelId: string) => Promise<boolean>;
+    groupMembers?: Array<{
+      user_id: string;
+      role: string;
+    }>;
+    fetchChannels?: (groupId: string) => void;
+    groupChannels?: Array<{
+      channel_id: string;
+      is_default: boolean;
+      [key: string]: unknown;
+    }>;
   };
   messages: {
     deleteMessage: (messageId: string) => Promise<boolean>;
@@ -67,6 +80,8 @@ interface ContextMenuProps {
     username: string;
     is_admin?: boolean;
   } | null;
+  selectedChannel?: string;
+  setSelectedChannel?: (channelId: string) => void;
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -75,7 +90,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   conversations,
   groupManagement,
   messages,
-  currentUser
+  currentUser,
+  selectedChannel,
+  setSelectedChannel
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -189,7 +206,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         return memberItems;
       }
       case 'channel': {
-        const isAdmin = currentUser?.is_admin;
+        const channel = contextMenu.extra as { group_id: string; is_default: boolean; [key: string]: unknown };
+        const isOwner = currentUser && groupManagement.groupMembers?.find(m => m.user_id === currentUser.user_id)?.role === 'owner';
 
         const channelItems: ContextMenuItem[] = [
           {
@@ -197,14 +215,86 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             label: 'Delete Channel',
             icon: faTrash,
             color: 'text-red-500',
-            disabled: !isAdmin,
-            onClick: () => {
-              groupManagement.deleteChannel(conversations.conversations.find(conv => conv.id === contextMenu.id)?.id || '', contextMenu.id);
+            disabled: !isOwner || channel.is_default,
+            onClick: async () => {
+              try {
+                const result = await groupManagement.deleteChannel(channel.group_id, contextMenu.id);
+                if (result.success) {
+                  // If this was the selected channel, switch to the default channel
+                  if (selectedChannel === contextMenu.id && setSelectedChannel && groupManagement.groupChannels) {
+                    const defaultChannel = groupManagement.groupChannels.find(ch => ch.is_default);
+                    if (defaultChannel) {
+                      setSelectedChannel(defaultChannel.channel_id);
+                    }
+                  }
+                  // Refresh the channels list
+                  if (groupManagement.fetchChannels) {
+                    groupManagement.fetchChannels(channel.group_id);
+                  }
+                } else {
+                  console.error('Failed to delete channel:', result.error);
+                }
+              } catch (error) {
+                console.error('Error deleting channel:', error);
+              }
             }
           }
         ];
 
         return channelItems;
+      }
+      case 'conversation': {
+        const conversation = conversations.conversations.find(conv => conv.id === contextMenu.id);
+        
+        if (conversation?.type === 'group') {
+          // For groups, check if user is owner/admin or just a member
+          const isOwnerOrAdmin = conversation.creator_id === currentUser?.user_id || 
+                                conversation.user_role === 'owner' || 
+                                conversation.user_role === 'admin';
+          
+          const conversationItems: ContextMenuItem[] = [];
+          
+          if (isOwnerOrAdmin) {
+            // Owners and admins can delete the group
+            conversationItems.push({
+              id: 'delete-group',
+              label: 'Delete Group',
+              icon: faTrash,
+              color: 'text-red-500',
+              onClick: () => {
+                conversations.deleteConversation(contextMenu.id);
+              }
+            });
+          } else {
+            // Regular members can only leave the group
+            conversationItems.push({
+              id: 'leave-group',
+              label: 'Leave Group',
+              icon: faSignOutAlt,
+              color: 'text-orange-500',
+              onClick: () => {
+                conversations.leaveGroup(contextMenu.id);
+              }
+            });
+          }
+          
+          return conversationItems;
+        } else {
+          // For direct messages, show delete option
+          const conversationItems: ContextMenuItem[] = [
+            {
+              id: 'delete-conversation',
+              label: 'Delete Conversation',
+              icon: faTrash,
+              color: 'text-red-500',
+              onClick: () => {
+                conversations.deleteConversation(contextMenu.id);
+              }
+            }
+          ];
+          
+          return conversationItems;
+        }
       }
       default:
         return [];

@@ -37,6 +37,7 @@ export async function GET() {
           group_id: '$group_details.group_id',
           name: '$group_details.name',
           description: '$group_details.description',
+          creator_id: '$group_details.creator_id',
           is_private: '$group_details.is_private',
           topic: '$group_details.topic',
           created_at: '$group_details.created_at',

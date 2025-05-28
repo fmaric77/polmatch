@@ -55,6 +55,8 @@ interface Conversation {
   unread_count?: number;
   members_count?: number;
   user_id?: string;
+  creator_id?: string;
+  user_role?: string;
 }
 
 interface Channel {
@@ -378,12 +380,49 @@ const UnifiedMessages: React.FC = () => {
           conversations={{
             conversations: conversations.conversations,
             fetchConversations: conversations.fetchConversations,
-            archiveConversation: async () => false,
-            leaveGroup: async () => false
+            deleteConversation: async (id: string): Promise<boolean> => {
+              const conversation = conversations.conversations.find(c => c.id === id);
+              if (conversation) {
+                await conversations.deleteConversation(conversation);
+                return true;
+              }
+              return false;
+            },
+            leaveGroup: async (id: string): Promise<boolean> => {
+              try {
+                const res = await fetch('/api/groups/leave', {
+                  method: 'DELETE',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ group_id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  // Refresh conversations list
+                  conversations.fetchConversations();
+                  // If we're currently viewing this group, clear the selection
+                  if (selectedConversation === id) {
+                    setSelectedConversation('');
+                    setSelectedConversationType('direct');
+                  }
+                  return true;
+                }
+                return false;
+              } catch (error) {
+                console.error('Error leaving group:', error);
+                return false;
+              }
+            }
           }}
-          groupManagement={groupManagement}
+          groupManagement={{
+            ...groupManagement,
+            groupMembers: groupManagement.groupMembers,
+            fetchChannels: groupManagement.fetchChannels,
+            groupChannels: groupManagement.groupChannels
+          }}
           messages={{ deleteMessage: messages.deleteMessage }}
           currentUser={currentUser}
+          selectedChannel={selectedChannel}
+          setSelectedChannel={setSelectedChannel}
         />
       )}
 

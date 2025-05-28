@@ -17,6 +17,8 @@ interface Conversation {
   unread_count?: number;
   members_count?: number;
   user_id?: string;
+  creator_id?: string;
+  user_role?: string;
 }
 
 interface NewDMModalProps {
@@ -49,28 +51,12 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
     setError('');
 
     try {
-      // First check if conversation already exists
-      const checkRes = await fetch(`/api/conversations/direct/${selectedUser.user_id}`);
-      const checkData = await checkRes.json();
-
-      if (checkData.exists) {
-        // Conversation exists, just select it
-        const conversation: Conversation = {
-          id: selectedUser.user_id,
-          name: selectedUser.username,
-          type: 'direct'
-        };
-        onSuccess(conversation);
-        return;
-      }
-
-      // Create new conversation by sending a message
-      const res = await fetch('/api/chat/private', {
+      // Create or find the conversation using the private conversations API
+      const res = await fetch('/api/private-conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          receiver_id: selectedUser.user_id,
-          content: '👋 Started a conversation'
+          other_user_id: selectedUser.user_id
         })
       });
 
@@ -84,7 +70,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
         };
         onSuccess(conversation);
       } else {
-        setError(data.error || 'Failed to start conversation');
+        setError(data.error || data.message || 'Failed to start conversation');
       }
     } catch (err) {
       console.error('Error starting conversation:', err);

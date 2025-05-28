@@ -15,6 +15,8 @@ interface Conversation {
   unread_count?: number;
   members_count?: number;
   user_id?: string;
+  creator_id?: string;
+  user_role?: string;
 }
 
 interface PrivateConversationFromAPI {
@@ -96,6 +98,8 @@ export const useConversations = (currentUser: { user_id: string; username: strin
             is_private: group.is_private,
             last_activity: group.last_activity,
             members_count: group.members_count,
+            creator_id: group.creator_id,
+            user_role: group.user_role,
             unread_count: 0
           });
         });

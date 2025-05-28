@@ -22,6 +22,8 @@ interface Conversation {
   unread_count?: number;
   members_count?: number;
   user_id?: string;
+  creator_id?: string;
+  user_role?: string;
 }
 
 interface ConversationsListProps {

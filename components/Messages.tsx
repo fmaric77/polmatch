@@ -277,7 +277,7 @@ const Messages = () => {
             <div className="bg-black border border-white p-6 rounded max-w-md w-full">
               <h2 className="text-2xl font-bold mb-4 text-white">Start New Conversation</h2>
               <ul>
-                {users.filter(u => u.user_id !== currentUser?.user_id && !conversations.some(c => c.user_id === u.user_id)).map(u => (
+                {users.filter(u => u.user_id !== currentUser?.user_id).map(u => (
                   <li key={u.user_id}>
                     <button
                       className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200 flex items-center space-x-3"
