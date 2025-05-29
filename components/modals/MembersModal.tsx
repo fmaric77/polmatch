@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faUsers, faCrown, faUserShield, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faUsers, faCrown, faUserShield, faUser, faUserPlus, faUserMinus, faUserTimes, faBan } from '@fortawesome/free-solid-svg-icons';
 
 interface GroupMember {
   user_id: string;
@@ -11,15 +11,25 @@ interface GroupMember {
 
 interface MembersModalProps {
   groupMembers: GroupMember[];
-  onMemberContextMenu: (e: React.MouseEvent, member: GroupMember) => void;
   canManageMembers: boolean;
+  currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
+  selectedConversation: string;
+  onPromoteToAdmin: (groupId: string, userId: string) => Promise<void>;
+  onDemoteToMember: (groupId: string, userId: string) => Promise<void>;
+  onKickMember: (groupId: string, userId: string) => Promise<void>;
+  onBanMember: (groupId: string, userId: string) => Promise<void>;
   onClose: () => void;
 }
 
 const MembersModal: React.FC<MembersModalProps> = ({
   groupMembers,
-  onMemberContextMenu,
   canManageMembers,
+  currentUser,
+  selectedConversation,
+  onPromoteToAdmin,
+  onDemoteToMember,
+  onKickMember,
+  onBanMember,
   onClose
 }) => {
   const getRoleIcon = (role: string): React.ReactElement => {
@@ -50,6 +60,59 @@ const MembersModal: React.FC<MembersModalProps> = ({
       return date.toLocaleDateString();
     } catch {
       return 'Unknown';
+    }
+  };
+
+  const canManageMember = (member: GroupMember): boolean => {
+    if (!canManageMembers || !currentUser) return false;
+    if (member.user_id === currentUser.user_id) return false; // Can't manage yourself
+    if (member.role === 'owner') return false; // Can't manage owner
+    
+    // Only owners and admins can manage members
+    if (currentUser.is_admin) return true;
+    
+    // Check if current user is owner/admin of this group based on their role in groupMembers
+    const currentUserMember = groupMembers.find(m => m.user_id === currentUser.user_id);
+    return currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
+  };
+
+  const handlePromoteToAdmin = async (member: GroupMember): Promise<void> => {
+    if (window.confirm(`Promote ${member.username} to admin?`)) {
+      try {
+        await onPromoteToAdmin(selectedConversation, member.user_id);
+      } catch (error) {
+        console.error('Failed to promote member:', error);
+      }
+    }
+  };
+
+  const handleDemoteToMember = async (member: GroupMember): Promise<void> => {
+    if (window.confirm(`Demote ${member.username} to regular member?`)) {
+      try {
+        await onDemoteToMember(selectedConversation, member.user_id);
+      } catch (error) {
+        console.error('Failed to demote member:', error);
+      }
+    }
+  };
+
+  const handleKickMember = async (member: GroupMember): Promise<void> => {
+    if (window.confirm(`Kick ${member.username} from the group?`)) {
+      try {
+        await onKickMember(selectedConversation, member.user_id);
+      } catch (error) {
+        console.error('Failed to kick member:', error);
+      }
+    }
+  };
+
+  const handleBanMember = async (member: GroupMember): Promise<void> => {
+    if (window.confirm(`Ban ${member.username} from the group? This action cannot be undone.`)) {
+      try {
+        await onBanMember(selectedConversation, member.user_id);
+      } catch (error) {
+        console.error('Failed to ban member:', error);
+      }
     }
   };
 
@@ -93,10 +156,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
               {sortedMembers.map((member) => (
                 <div
                   key={member.user_id}
-                  className={`p-3 rounded border border-gray-700 hover:border-gray-500 transition-colors ${
-                    canManageMembers && member.role !== 'owner' ? 'cursor-context-menu' : ''
-                  }`}
-                  onContextMenu={(e) => canManageMembers && member.role !== 'owner' ? onMemberContextMenu(e, member) : undefined}
+                  className="p-3 rounded border border-gray-700 hover:border-gray-500 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -110,8 +170,46 @@ const MembersModal: React.FC<MembersModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <div className="text-gray-400 text-sm">
-                      Joined {formatJoinDate(member.join_date)}
+                    <div className="flex items-center space-x-2">
+                      <div className="text-gray-400 text-sm mr-2">
+                        Joined {formatJoinDate(member.join_date)}
+                      </div>
+                      {canManageMember(member) && (
+                        <div className="flex space-x-1">
+                          {member.role === 'member' && (
+                            <button
+                              onClick={() => handlePromoteToAdmin(member)}
+                              className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                              title="Promote to Admin"
+                            >
+                              <FontAwesomeIcon icon={faUserPlus} size="sm" />
+                            </button>
+                          )}
+                          {member.role === 'admin' && (
+                            <button
+                              onClick={() => handleDemoteToMember(member)}
+                              className="p-1 text-yellow-400 hover:text-yellow-300 transition-colors"
+                              title="Demote to Member"
+                            >
+                              <FontAwesomeIcon icon={faUserMinus} size="sm" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleKickMember(member)}
+                            className="p-1 text-orange-400 hover:text-orange-300 transition-colors"
+                            title="Kick Member"
+                          >
+                            <FontAwesomeIcon icon={faUserTimes} size="sm" />
+                          </button>
+                          <button
+                            onClick={() => handleBanMember(member)}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            title="Ban Member"
+                          >
+                            <FontAwesomeIcon icon={faBan} size="sm" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -119,12 +217,6 @@ const MembersModal: React.FC<MembersModalProps> = ({
             </div>
           )}
         </div>
-
-        {canManageMembers && (
-          <div className="mt-4 text-gray-400 text-xs text-center">
-            Right-click on members to manage them
-          </div>
-        )}
 
         <div className="flex justify-end mt-4">
           <button

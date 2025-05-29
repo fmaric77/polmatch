@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../../mongo-uri';
+import { connectToDatabase } from '@/lib/mongodb-connection';
 import { cookies } from 'next/headers';
 
-const client = new MongoClient(MONGODB_URI);
-
-// Respond to a group invitation (accept or decline)
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
@@ -15,8 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    await client.connect();
-    const db = client.db('polmatch');
+    const { db } = await connectToDatabase();
     
     // Verify session
     const session = await db.collection('sessions').findOne({ sessionToken });
@@ -43,16 +38,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'Invitation not found or already responded' }, { status: 404 });
     }
 
-    // Update invitation status
-    await db.collection('group_invitations').updateOne(
-      { invitation_id },
-      { 
-        $set: { 
-          status: action === 'accept' ? 'accepted' : 'declined',
-          responded_at: new Date().toISOString()
-        }
-      }
-    );
+    // Remove the invitation so it no longer blocks re-invitation
+    await db.collection('group_invitations').deleteOne({ invitation_id });
 
     // If accepted, add user to group
     if (action === 'accept') {
@@ -110,7 +97,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch (error) {
     console.error('Error responding to invitation:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

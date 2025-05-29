@@ -7,7 +7,9 @@ import {
   faUserPlus,
   faCheck,
   faCheckDouble,
-  faBars
+  faBars,
+  faBan,
+  faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
@@ -80,8 +82,10 @@ interface ChatAreaProps {
   isMobile: boolean;
   isConversationsSidebarHidden: boolean;
   setIsConversationsSidebarHidden: (hidden: boolean) => void;
+  setIsSidebarVisible: (visible: boolean) => void;
   onMembersClick: () => void;
   onInviteClick: () => void;
+  onBannedUsersClick: () => void;
   onCreateChannelClick: () => void;
   onChannelContextMenu: (e: React.MouseEvent, channel: Channel) => void;
   canManageMembers: boolean;
@@ -105,8 +109,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   isMobile,
   isConversationsSidebarHidden,
   setIsConversationsSidebarHidden,
+  setIsSidebarVisible,
   onMembersClick,
   onInviteClick,
+  onBannedUsersClick,
   onCreateChannelClick,
   onChannelContextMenu,
   canManageMembers
@@ -131,6 +137,49 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   if (!selectedConversation) {
     return (
       <div className="flex-1 flex flex-col bg-black text-white">
+        {/* Navigation Header - Always show navigation controls */}
+        <div className="p-4 border-b border-white flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {/* Mobile Toggle Buttons */}
+            {isMobile && (
+              <div className="flex items-center space-x-2">
+                {/* Main Navigation Toggle */}
+                <button
+                  onClick={() => setIsSidebarVisible(true)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  title="Show Navigation"
+                >
+                  <FontAwesomeIcon icon={faBars} />
+                </button>
+                
+                {/* Conversations Toggle (only show if conversations are hidden) */}
+                {isConversationsSidebarHidden && (
+                  <button
+                    onClick={() => setIsConversationsSidebarHidden(false)}
+                    className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded transition-colors"
+                    title="Show Conversations"
+                  >
+                    <FontAwesomeIcon icon={faEnvelope} />
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* Desktop Conversations Toggle - Always show if conversations are hidden */}
+            {!isMobile && isConversationsSidebarHidden && (
+              <button
+                onClick={() => setIsConversationsSidebarHidden(false)}
+                className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded transition-colors"
+                title="Show Conversations"
+              >
+                <FontAwesomeIcon icon={faEnvelope} />
+              </button>
+            )}
+            
+            <h2 className="text-lg font-bold">Messages</h2>
+          </div>
+        </div>
+        
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl mb-4">Welcome to PolMatch Messages</h2>
@@ -153,14 +202,39 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Chat Header */}
       <div className="p-4 border-b border-white flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          {/* Mobile Toggle Button */}
-          {isMobile && isConversationsSidebarHidden && (
+          {/* Mobile Toggle Buttons */}
+          {isMobile && (
+            <div className="flex items-center space-x-2">
+              {/* Main Navigation Toggle */}
+              <button
+                onClick={() => setIsSidebarVisible(true)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                title="Show Navigation"
+              >
+                <FontAwesomeIcon icon={faBars} />
+              </button>
+              
+              {/* Conversations Toggle (only show if conversations are hidden) */}
+              {isConversationsSidebarHidden && (
+                <button
+                  onClick={() => setIsConversationsSidebarHidden(false)}
+                  className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded transition-colors"
+                  title="Show Conversations"
+                >
+                  <FontAwesomeIcon icon={faEnvelope} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Desktop Conversations Toggle - Always show if conversations are hidden */}
+          {!isMobile && isConversationsSidebarHidden && (
             <button
               onClick={() => setIsConversationsSidebarHidden(false)}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded transition-colors"
               title="Show Conversations"
             >
-              <FontAwesomeIcon icon={faBars} />
+              <FontAwesomeIcon icon={faEnvelope} />
             </button>
           )}
 
@@ -207,13 +281,22 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <FontAwesomeIcon icon={faUsers} />
             </button>
             {canManageMembers && (
-              <button
-                onClick={onInviteClick}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-                title="Invite Users"
-              >
-                <FontAwesomeIcon icon={faUserPlus} />
-              </button>
+              <>
+                <button
+                  onClick={onInviteClick}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  title="Invite Users"
+                >
+                  <FontAwesomeIcon icon={faUserPlus} />
+                </button>
+                <button
+                  onClick={onBannedUsersClick}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  title="Banned Users"
+                >
+                  <FontAwesomeIcon icon={faBan} />
+                </button>
+              </>
             )}
           </div>
         )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck, faX, faUsers, faRefresh } from '@fortawesome/free-solid-svg-icons';
 
@@ -15,6 +15,7 @@ interface InvitationsModalProps {
   onClose: () => void;
   onRespond: (invitationId: string, response: 'accept' | 'decline') => Promise<boolean>;
   onRefresh: () => void;
+  onAcceptGroup?: (groupId: string) => void;
 }
 
 const InvitationsModal: React.FC<InvitationsModalProps> = ({
@@ -22,7 +23,12 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
   onClose,
   onRespond,
   onRefresh
+  , onAcceptGroup
 }) => {
+  // Fetch invitations when modal opens
+  useEffect(() => {
+    onRefresh();
+  }, []);
   const [responding, setResponding] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
 
@@ -32,11 +38,22 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
 
     try {
       const success = await onRespond(invitationId, response);
-      if (!success) {
+      if (success) {
+        // Refresh the invitations list after successful response
+        onRefresh();
+        // If accepted, notify parent to update group list
+        if (response === 'accept' && onAcceptGroup) {
+          const accepted = invitations.find(inv => inv.invitation_id === invitationId);
+          if (accepted) {
+            onAcceptGroup(accepted.group_id);
+          }
+        }
+      } else {
         setError(`Failed to ${response} invitation. Please try again.`);
       }
-    } catch {
-      setError('Failed to accept invitation');
+    } catch (err) {
+      console.error('Error responding to invitation:', err);
+      setError(`Failed to ${response} invitation. Please try again.`);
     } finally {
       setResponding(prev => {
         const updated = new Set(prev);

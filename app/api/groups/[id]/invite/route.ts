@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../../mongo-uri';
+import { connectToDatabase } from '@/lib/mongodb-connection';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
-const client = new MongoClient(MONGODB_URI);
-
-// Send invitation to join a group (public or private)
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
@@ -16,8 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    await client.connect();
-    const db = client.db('polmatch');
+    const { db } = await connectToDatabase();
     
     // Verify session
     const session = await db.collection('sessions').findOne({ sessionToken });
@@ -70,11 +65,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'User is already a member' }, { status: 400 });
     }
 
-    // Check if invitation already exists
+    // Check if invitation already exists (any status)
     const existingInvitation = await db.collection('group_invitations').findOne({ 
       group_id, 
-      invited_user_id,
-      status: 'pending'
+      invited_user_id
     });
     if (existingInvitation) {
       return NextResponse.json({ success: false, message: 'Invitation already sent' }, { status: 400 });
@@ -101,10 +95,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       invitation_id: invitation.invitation_id
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
+    // Handle duplicate key errors gracefully
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      return NextResponse.json({ success: false, message: 'Invitation already sent' }, { status: 400 });
+    }
     console.error('Error sending group invitation:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

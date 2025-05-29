@@ -10,6 +10,7 @@ import ChatArea from './ChatArea';
 import CreateGroupModal from './modals/CreateGroupModal';
 import NewDMModal from './modals/NewDMModal';
 import MembersModal from './modals/MembersModal';
+import BannedUsersModal from './modals/BannedUsersModal';
 import InviteModal from './modals/InviteModal';
 import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
@@ -68,13 +69,6 @@ interface Channel {
   created_by: string;
   is_default: boolean;
   position: number;
-}
-
-interface GroupMember {
-  user_id: string;
-  username: string;
-  role: string;
-  join_date: string;
 }
 
 const UnifiedMessages: React.FC = () => {
@@ -184,6 +178,13 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [messages, groupManagement]);
 
+  // Memoized callback for fetching available users to prevent infinite re-renders
+  const handleFetchAvailableUsers = useCallback(() => {
+    if (selectedConversation) {
+      groupManagement.fetchAvailableUsers(selectedConversation);
+    }
+  }, [selectedConversation, groupManagement.fetchAvailableUsers]);
+
   // Auto-select conversation from URL params
   useEffect(() => {
     const dmUserId = searchParams.get('user');
@@ -236,19 +237,6 @@ const UnifiedMessages: React.FC = () => {
     });
   };
 
-  const handleMemberContextMenu = (e: React.MouseEvent, member: GroupMember) => {
-    e.preventDefault();
-    if (!groupManagement.canManageMember(member)) return;
-    
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      type: 'member',
-      id: member.user_id,
-      extra: member
-    });
-  };
-
   const handleChannelContextMenu = (e: React.MouseEvent, channel: Channel) => {
     e.preventDefault();
     const currentUserMember = groupManagement.groupMembers.find(m => m.user_id === currentUser?.user_id);
@@ -295,6 +283,16 @@ const UnifiedMessages: React.FC = () => {
   const canManageMembers: boolean = selectedConversationType === 'group'
     ? groupManagement.canManageMembers(selectedConversation)
     : false;
+
+  // Callback when a user accepts a group invitation: refresh conversations & members
+  const handleGroupAccepted = useCallback((groupId: string) => {
+    // Refresh conversation list to include the new group
+    conversations.fetchConversations();
+    // If currently viewing the group, refresh its members
+    if (selectedConversation === groupId) {
+      groupManagement.fetchGroupMembers(groupId);
+    }
+  }, [conversations.fetchConversations, selectedConversation, groupManagement.fetchGroupMembers]);
 
   if (loading) {
     return (
@@ -365,8 +363,13 @@ const UnifiedMessages: React.FC = () => {
         isMobile={isMobile}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
+        setIsSidebarVisible={setIsSidebarVisible}
         onMembersClick={() => modals.openModal('showMembersModal')}
         onInviteClick={() => modals.openModal('showInviteModal')}
+        onBannedUsersClick={() => {
+          groupManagement.fetchBannedUsers(selectedConversation);
+          modals.openModal('showBannedUsersModal');
+        }}
         onCreateChannelClick={() => modals.openModal('showCreateChannelModal')}
         onChannelContextMenu={handleChannelContextMenu}
         canManageMembers={canManageMembers}
@@ -464,8 +467,37 @@ const UnifiedMessages: React.FC = () => {
       {modals.modals.showMembersModal && (
         <MembersModal
           groupMembers={groupManagement.groupMembers}
-          onMemberContextMenu={handleMemberContextMenu}
           canManageMembers={canManageMembers}
+          currentUser={currentUser}
+          selectedConversation={selectedConversation}
+          onPromoteToAdmin={async (groupId: string, userId: string) => {
+            const success = await groupManagement.promoteToAdmin(groupId, userId);
+            if (success) {
+              // Refresh member list after successful promotion
+              await groupManagement.fetchGroupMembers(groupId);
+            }
+          }}
+          onDemoteToMember={async (groupId: string, userId: string) => {
+            const success = await groupManagement.demoteToMember(groupId, userId);
+            if (success) {
+              // Refresh member list after successful demotion
+              await groupManagement.fetchGroupMembers(groupId);
+            }
+          }}
+          onKickMember={async (groupId: string, userId: string) => {
+            const success = await groupManagement.removeGroupMember(groupId, userId);
+            if (success) {
+              // Refresh member list after successful removal
+              await groupManagement.fetchGroupMembers(groupId);
+            }
+          }}
+          onBanMember={async (groupId: string, userId: string) => {
+            const success = await groupManagement.banMember(groupId, userId);
+            if (success) {
+              // Refresh member list after successful ban
+              await groupManagement.fetchGroupMembers(groupId);
+            }
+          }}
           onClose={() => modals.closeModal('showMembersModal')}
         />
       )}
@@ -475,7 +507,7 @@ const UnifiedMessages: React.FC = () => {
           availableUsers={groupManagement.availableUsers}
           onClose={() => modals.closeModal('showInviteModal')}
           onInvite={(userId) => groupManagement.inviteUser(selectedConversation, userId)}
-          onFetchUsers={() => groupManagement.fetchAvailableUsers(selectedConversation)}
+          onFetchUsers={handleFetchAvailableUsers}
         />
       )}
 
@@ -485,6 +517,23 @@ const UnifiedMessages: React.FC = () => {
           onClose={() => modals.closeModal('showInvitationsModal')}
           onRespond={groupManagement.respondToInvitation}
           onRefresh={groupManagement.fetchInvitations}
+          onAcceptGroup={handleGroupAccepted} // notify on acceptance
+        />
+      )}
+
+      {modals.modals.showBannedUsersModal && (
+        <BannedUsersModal
+          bannedUsers={groupManagement.bannedUsers}
+          canManageMembers={canManageMembers}
+          selectedConversation={selectedConversation}
+          onUnbanMember={async (groupId: string, userId: string) => {
+            const success = await groupManagement.unbanMember(groupId, userId);
+            if (success) {
+              // Refresh banned users list after successful unban
+              await groupManagement.fetchBannedUsers(groupId);
+            }
+          }}
+          onClose={() => modals.closeModal('showBannedUsersModal')}
         />
       )}
     </div>
