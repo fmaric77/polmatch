@@ -186,7 +186,9 @@ const Groups = () => {
     fetchMessages();
     fetchMembers();
     fetchInvitations();
-    fetchAvailableUsers();
+    // Only fetch available users when a group is selected and for invite functionality
+    // Not on every group change to prevent excessive API calls
+    
     // Live update: poll every 3 seconds
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (selectedGroup) {
@@ -195,7 +197,7 @@ const Groups = () => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [selectedGroup, currentUser, fetchMembers, fetchInvitations, fetchAvailableUsers, fetchMessages]);
+  }, [selectedGroup, currentUser, fetchMembers, fetchInvitations, fetchMessages]);
 
   // Scroll to bottom on new messages
   useEffect(() => {

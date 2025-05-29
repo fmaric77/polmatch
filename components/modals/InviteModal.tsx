@@ -27,10 +27,10 @@ const InviteModal: React.FC<InviteModalProps> = ({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch available users when modal opens
+  // Fetch available users when modal opens (only once)
   useEffect(() => {
     onFetchUsers();
-  }, [onFetchUsers]);
+  }, []); // Empty dependency array to run only once when modal opens
 
   const filteredUsers = availableUsers.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase())

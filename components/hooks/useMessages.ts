@@ -186,11 +186,38 @@ export const useMessages = (
       if (data.success) {
         lastMessageTimestampRef.current = '';
         
-        // Refresh messages
-        if (selectedConversationType === 'group' && selectedChannel) {
-          await fetchChannelMessages(selectedConversation, selectedChannel);
-        } else {
-          await fetchMessages(selectedConversation, selectedConversationType);
+        // Add the message optimistically to avoid loading screen
+        if (data.message) {
+          setMessages(prevMessages => {
+            const newMessage = data.message;
+            
+            // For group messages, ensure we have the required fields
+            if (selectedConversationType === 'group') {
+              newMessage.sender_username = currentUser.username;
+              newMessage.current_user_read = true;
+              newMessage.read_count = 1;
+              newMessage.total_members = 1;
+              newMessage.read_by_others = false;
+            }
+            
+            // For direct messages, ensure we have the required fields
+            if (selectedConversationType === 'direct') {
+              // Direct messages use 'read' instead of 'is_read' in some cases
+              if (newMessage.is_read !== undefined) {
+                newMessage.read = newMessage.is_read;
+              }
+              // Ensure we have a proper _id for direct messages
+              if (!newMessage._id && newMessage.message_id) {
+                newMessage._id = newMessage.message_id;
+              }
+            }
+            
+            // Sort messages by timestamp to maintain order
+            const updatedMessages = [...prevMessages, newMessage];
+            return updatedMessages.sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+          });
         }
         
         return true;
@@ -202,7 +229,7 @@ export const useMessages = (
       console.error('Failed to send message:', err);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, fetchChannelMessages, fetchMessages]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser]);
 
   // Auto-refresh effect - DISABLED to prevent excessive API calls
   useEffect(() => {
