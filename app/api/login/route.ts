@@ -162,6 +162,19 @@ export async function POST(request: Request) {
 
     const { db } = await connectToDatabase();
 
+    // Check if IP is banned before processing login
+    const ipBan = await db.collection('ban').findOne({ ip_address });
+    if (ipBan) {
+      // Clear any existing sessions from this banned IP
+      await db.collection('sessions').deleteMany({ ip_address });
+      
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Access denied. Your IP address has been banned.',
+        code: 'IP_BANNED'
+      }, { status: 403 });
+    }
+
     // Clean up old attempts periodically (1% chance per request)
     if (Math.random() < 0.01) {
       cleanupOldAttempts(db);

@@ -27,6 +27,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Check if IP exists in ban collection
       const ban = await db.collection('ban').findOne({ ip_address });
       
+      if (ban !== null) {
+        // If IP is banned, also clear any existing sessions from this IP
+        const sessionDeleteResult = await db.collection('sessions').deleteMany({
+          ip_address: ip_address
+        });
+        
+        if (sessionDeleteResult.deletedCount > 0) {
+          console.log(`Cleared ${sessionDeleteResult.deletedCount} active sessions from banned IP: ${ip_address}`);
+        }
+      }
+      
       return NextResponse.json({ 
         banned: ban !== null,
         ban_date: ban?.ban_date || null 
