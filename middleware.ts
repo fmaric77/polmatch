@@ -67,30 +67,52 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // Get client IP address
   const clientIP = getClientIP(request);
-  
+
   // Check if IP is banned
-  try {
-    const isBanned = await isIPBanned(clientIP, request);
-    
-    if (isBanned) {
-      // Return a 403 Forbidden response for banned IPs
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Access Denied',
-          message: 'Your IP address has been banned from accessing this service.',
-          code: 'IP_BANNED'
-        }),
-        {
-          status: 403,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
-  } catch (error) {
-    console.error('Middleware error:', error);
-    // Continue to next() on error to avoid blocking legitimate users
+  const isBanned = await isIPBanned(clientIP, request);
+
+  if (isBanned) {
+    // Return a custom HTML page with skull emoji and autoplay audio
+    return new NextResponse(
+      `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>💀</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+          }
+          .skull {
+            font-size: 8rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 16px #fff;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="skull">💀</div>
+        <audio src="/sounds/ww.mp3" autoplay loop></audio>
+      </body>
+      </html>
+      `,
+      {
+        status: 403,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      }
+    );
   }
 
   return NextResponse.next();
