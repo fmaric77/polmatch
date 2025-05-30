@@ -45,14 +45,22 @@ async function isIPBanned(ip_address: string, request: NextRequest): Promise<boo
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  // Skip middleware for API routes, static files, and Next.js internals
   const pathname = request.nextUrl.pathname;
   
+  // Skip middleware for static files and Next.js internals
   if (
-    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname.includes('.')
+    (pathname.includes('.') && !pathname.startsWith('/api/'))
+  ) {
+    return NextResponse.next();
+  }
+  
+  // Skip only specific internal API routes that are needed for the ban check itself
+  if (
+    pathname === '/api/internal/check-ip-ban' ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/_next/')
   ) {
     return NextResponse.next();
   }
@@ -92,13 +100,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * Match all request paths except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - Files with extensions (images, css, js, etc.)
+     * - api/internal/check-ip-ban (our internal ban check API)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/internal/check-ip-ban).*)',
   ],
 };
