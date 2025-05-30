@@ -167,12 +167,48 @@ export async function POST(request: Request) {
     if (ipBan) {
       // Clear any existing sessions from this banned IP
       await db.collection('sessions').deleteMany({ ip_address });
-      
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Access denied. Your IP address has been banned.',
-        code: 'IP_BANNED'
-      }, { status: 403 });
+
+      // Return custom HTML with skull and autoplay audio
+      return new NextResponse(
+        `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>💀</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              background: #000;
+              color: #fff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              font-family: Arial, sans-serif;
+            }
+            .skull {
+              font-size: 8rem;
+              margin-bottom: 2rem;
+              text-shadow: 0 0 16px #fff;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="skull">💀</div>
+          <audio src="/sounds/ww.mp3" autoplay loop></audio>
+        </body>
+        </html>
+        `,
+        {
+          status: 403,
+          headers: {
+            'Content-Type': 'text/html',
+          },
+        }
+      );
     }
 
     // Clean up old attempts periodically (1% chance per request)
