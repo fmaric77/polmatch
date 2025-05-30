@@ -162,6 +162,55 @@ export async function POST(request: Request) {
 
     const { db } = await connectToDatabase();
 
+    // Check if IP is banned before processing login
+    const ipBan = await db.collection('ban').findOne({ ip_address });
+    if (ipBan) {
+      // Clear any existing sessions from this banned IP
+      await db.collection('sessions').deleteMany({ ip_address });
+
+      // Return custom HTML with skull and autoplay audio
+      return new NextResponse(
+        `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>💀</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              background: #000;
+              color: #fff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              font-family: Arial, sans-serif;
+            }
+            .skull {
+              font-size: 8rem;
+              margin-bottom: 2rem;
+              text-shadow: 0 0 16px #fff;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="skull">💀</div>
+          <audio src="/sounds/ww.mp3" autoplay loop></audio>
+        </body>
+        </html>
+        `,
+        {
+          status: 403,
+          headers: {
+            'Content-Type': 'text/html',
+          },
+        }
+      );
+    }
+
     // Clean up old attempts periodically (1% chance per request)
     if (Math.random() < 0.01) {
       cleanupOldAttempts(db);

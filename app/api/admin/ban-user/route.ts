@@ -32,9 +32,21 @@ export async function POST(request: Request) {
       admin_id,
       ban_date: new Date().toISOString(),
     });
+    
+    // Clear all sessions from the banned IP address
+    const sessionDeleteResult = await db.collection('sessions').deleteMany({
+      ip_address: userToBan.ip_address
+    });
+    
+    console.log(`Cleared ${sessionDeleteResult.deletedCount} sessions from banned IP: ${userToBan.ip_address}`);
+    
     // Delete user
     await db.collection('users').deleteOne({ user_id });
-    return NextResponse.json({ success: true });
+    
+    return NextResponse.json({ 
+      success: true, 
+      sessions_cleared: sessionDeleteResult.deletedCount 
+    });
   } catch (err) {
     return NextResponse.json({ success: false, message: String(err) }, { status: 500 });
   } finally {
