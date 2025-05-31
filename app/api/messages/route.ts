@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import CryptoJS from 'crypto-js';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../../../lib/mongodb-connection';
-import { notifyNewMessage, notifyNewConversation } from '../sse/route';
+import { notifyNewMessage, notifyNewConversation } from '../../../lib/sse-notifications';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
+import type { NewMessageData, NewConversationData } from '../hooks/useWebSocket';
 
 interface SSEContextType {
   isConnected: boolean;
@@ -23,8 +24,8 @@ export function useSSE(): SSEContextType {
 
 interface SSEProviderProps {
   children: ReactNode;
-  onNewMessage?: (data: any) => void;
-  onNewConversation?: (data: any) => void;
+  onNewMessage?: (data: NewMessageData) => void;
+  onNewConversation?: (data: NewConversationData) => void;
   onConnectionEstablished?: () => void;
 }
 

@@ -5,7 +5,7 @@ interface SSEMessage {
   data: unknown;
 }
 
-interface NewMessageData {
+export interface NewMessageData {
   message_id: string;
   sender_id: string;
   receiver_id: string;
@@ -14,7 +14,7 @@ interface NewMessageData {
   conversation_participants: string[];
 }
 
-interface NewConversationData {
+export interface NewConversationData {
   conversation_id: string;
   participants: string[];
   other_user: {

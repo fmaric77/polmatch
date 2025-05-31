@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 const uri = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
 
@@ -7,7 +7,26 @@ function getSortedParticipants(userId1: string, userId2: string): string[] {
   return [userId1, userId2].sort();
 }
 
-async function migrateMessagesToPrivateConversations() {
+interface PrivateMessageDocument {
+  _id: ObjectId;
+  sender_id: string;
+  receiver_id: string;
+  timestamp: string;
+  content?: string;
+  encrypted_content?: string;
+  read?: boolean;
+  attachments?: string[];
+  [key: string]: unknown;
+}
+
+interface PrivateConversationDocument {
+  _id: ObjectId;
+  participant_ids: string[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+async function migrateMessagesToPrivateConversations(): Promise<void> {
   const client = new MongoClient(uri);
   
   try {
@@ -17,11 +36,11 @@ async function migrateMessagesToPrivateConversations() {
     console.log('Starting migration to private conversations system...');
     
     // Step 1: Get all existing messages
-    const existingMessages = await db.collection('pm').find({}).toArray();
+    const existingMessages = await db.collection('pm').find({}).toArray() as PrivateMessageDocument[];
     console.log(`Found ${existingMessages.length} existing messages`);
     
     // Step 2: Group messages by conversation pairs
-    const conversationPairs = new Map<string, any[]>();
+    const conversationPairs = new Map<string, PrivateMessageDocument[]>();
     const conversationMetadata = new Map<string, { 
       participants: string[], 
       firstMessage: Date, 
@@ -58,7 +77,7 @@ async function migrateMessagesToPrivateConversations() {
     console.log(`Found ${conversationPairs.size} unique conversations`);
     
     // Step 3: Create private_conversations documents
-    const privateConversations = new Map<string, any>();
+    const privateConversations = new Map<string, PrivateConversationDocument>();
     
     for (const [conversationKey, metadata] of conversationMetadata.entries()) {
       const privateConversationDoc = {
@@ -81,6 +100,11 @@ async function migrateMessagesToPrivateConversations() {
     
     for (const [conversationKey, messages] of conversationPairs.entries()) {
       const privateConversation = privateConversations.get(conversationKey);
+      
+      if (!privateConversation) {
+        console.error(`Private conversation not found for key: ${conversationKey}`);
+        continue;
+      }
       
       for (const message of messages) {
         await db.collection('pm').updateOne(

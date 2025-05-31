@@ -10,24 +10,6 @@ interface WebSocketMessage {
   data: unknown;
 }
 
-interface NewMessageData {
-  message_id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  timestamp: string;
-  conversation_participants: string[];
-}
-
-interface NewConversationData {
-  conversation_id: string;
-  participants: string[];
-  other_user: {
-    user_id: string;
-    username: string;
-  };
-}
-
 // WebSocket server instance
 let wss: WebSocketServer | null = null;
 
@@ -99,68 +81,6 @@ if (!wss) {
       data: { userId }
     }));
   });
-}
-
-// Utility functions to send real-time updates
-export function notifyNewMessage(messageData: NewMessageData): void {
-  console.log('Notifying new message:', messageData);
-  
-  // Notify all participants in the conversation
-  messageData.conversation_participants.forEach(userId => {
-    const userConnections = activeConnections.get(userId);
-    if (userConnections) {
-      const messageToSend: WebSocketMessage = {
-        type: 'NEW_MESSAGE',
-        data: messageData
-      };
-      
-      userConnections.forEach(ws => {
-        if (ws.readyState === ws.OPEN) {
-          ws.send(JSON.stringify(messageToSend));
-        }
-      });
-    }
-  });
-}
-
-export function notifyNewConversation(conversationData: NewConversationData): void {
-  console.log('Notifying new conversation:', conversationData);
-  
-  // Notify all participants about the new conversation
-  conversationData.participants.forEach(userId => {
-    const userConnections = activeConnections.get(userId);
-    if (userConnections) {
-      const messageToSend: WebSocketMessage = {
-        type: 'NEW_CONVERSATION',
-        data: conversationData
-      };
-      
-      userConnections.forEach(ws => {
-        if (ws.readyState === ws.OPEN) {
-          ws.send(JSON.stringify(messageToSend));
-        }
-      });
-    }
-  });
-}
-
-export function notifyMessageRead(senderId: string, receiverId: string, messageIds: string[]): void {
-  console.log('Notifying message read:', { senderId, receiverId, messageIds });
-  
-  // Notify the sender that their messages have been read
-  const senderConnections = activeConnections.get(senderId);
-  if (senderConnections) {
-    const messageToSend: WebSocketMessage = {
-      type: 'MESSAGE_READ',
-      data: { senderId, receiverId, messageIds }
-    };
-    
-    senderConnections.forEach(ws => {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify(messageToSend));
-      }
-    });
-  }
 }
 
 // HTTP endpoint for getting connection status (optional)
