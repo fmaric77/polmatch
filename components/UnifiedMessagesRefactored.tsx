@@ -4,6 +4,7 @@ import { useConversations } from './hooks/useConversations';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
+import { useWebSocket } from './hooks/useWebSocket';
 import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
@@ -113,23 +114,156 @@ const UnifiedMessages: React.FC = () => {
     groupManagement.groupChannels
   );
 
+  // Session token for SSE
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Debug session token changes
+  useEffect(() => {
+    console.log('🔧 Session token changed:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
+  }, [sessionToken]);
+
+  // Real-time messaging integration
+  const { isConnected, connectionError } = useWebSocket(sessionToken, {
+    onNewMessage: (data: any) => {
+      console.log('Received new message via SSE:', data);
+      
+      // Skip if this user is the sender (they already have the message from the send API)
+      if (data.sender_id === currentUser?.user_id) {
+        console.log('Skipping SSE message from self:', data.message_id);
+        return;
+      }
+      
+      // Handle direct messages
+      if (selectedConversation && selectedConversationType === 'direct' && 
+          ((data.sender_id === selectedConversation && data.receiver_id === currentUser?.user_id) ||
+           (data.sender_id === currentUser?.user_id && data.receiver_id === selectedConversation))) {
+        
+        const newMessage: PrivateMessage = {
+          _id: data.message_id,
+          sender_id: data.sender_id,
+          receiver_id: data.receiver_id,
+          content: data.content,
+          timestamp: data.timestamp,
+          read: false,
+          attachments: data.attachments || []
+        };
+        
+        messages.setMessages(prevMessages => {
+          console.log('Adding SSE direct message. Current count:', prevMessages.length);
+          
+          // Comprehensive duplicate check using both _id and message_id
+          const messageExists = prevMessages.some(msg => {
+            const msgId = ('_id' in msg) ? msg._id : ('message_id' in msg) ? (msg as any).message_id : null;
+            return msgId === newMessage._id || msgId === data.message_id;
+          });
+          
+          if (messageExists) {
+            console.log('Direct message already exists, skipping:', data.message_id);
+            return prevMessages;
+          }
+          
+          console.log('Adding new direct message via SSE:', data.message_id);
+          const updatedMessages = [...prevMessages, newMessage];
+          return updatedMessages.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+        });
+      }
+      
+      // Handle group messages
+      if (selectedConversation && selectedConversationType === 'group' && 
+          data.group_id === selectedConversation && 
+          (!selectedChannel || data.channel_id === selectedChannel)) {
+        
+        const newMessage: GroupMessage = {
+          message_id: data.message_id,
+          group_id: data.group_id,
+          channel_id: data.channel_id || '',
+          sender_id: data.sender_id,
+          content: data.content,
+          timestamp: data.timestamp,
+          attachments: data.attachments || [],
+          sender_username: data.sender_username || 'Unknown',
+          current_user_read: data.sender_id === currentUser?.user_id,
+          total_members: data.total_members || 0,
+          read_count: data.read_count || 0,
+          read_by_others: data.read_by_others || false
+        };
+        
+        messages.setMessages(prevMessages => {
+          console.log('Adding SSE group message. Current count:', prevMessages.length);
+          
+          // Comprehensive duplicate check using both _id and message_id
+          const messageExists = prevMessages.some(msg => {
+            const msgId = ('_id' in msg) ? (msg as any)._id : ('message_id' in msg) ? (msg as any).message_id : null;
+            return msgId === newMessage.message_id || msgId === data.message_id;
+          });
+          
+          if (messageExists) {
+            console.log('Group message already exists, skipping:', data.message_id);
+            return prevMessages;
+          }
+          
+          console.log('Adding new group message via SSE:', data.message_id);
+          const updatedMessages = [...prevMessages, newMessage];
+          return updatedMessages.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+        });
+      }
+      
+      // Refresh conversations list to update last message/unread count
+      conversations.fetchConversations();
+    },
+    
+    onNewConversation: (data: any) => {
+      console.log('Received new conversation via SSE:', data);
+      
+      // If this involves the current user, refresh conversations
+      if (currentUser && data.participants.includes(currentUser.user_id)) {
+        conversations.fetchConversations();
+      }
+    },
+    
+    onConnectionEstablished: () => {
+      console.log('SSE connection established successfully');
+    }
+  });
+
+  // Debug SSE connection status
+  useEffect(() => {
+    console.log('🔧 SSE connection status:', { isConnected, connectionError, sessionToken: sessionToken ? 'present' : 'null' });
+  }, [isConnected, connectionError, sessionToken]);
+
   const searchParams = useSearchParams();
 
-  // Fetch current user
+  // Fetch current user and session token
   useEffect(() => {
+    console.log('🔧 Fetching session data...');
     fetch('/api/session')
       .then(res => res.json())
       .then(data => {
+        console.log('🔧 Session response:', data);
         if (data.valid && data.user) {
           setCurrentUser({ 
             user_id: data.user.user_id, 
             username: data.user.username, 
             is_admin: data.user.is_admin 
           });
+          // Set session token for SSE authentication
+          if (data.sessionToken) {
+            console.log('🔧 Setting session token:', data.sessionToken.substring(0, 10) + '...');
+            setSessionToken(data.sessionToken);
+          } else {
+            console.error('🔧 No session token in response!');
+          }
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(err => {
+        console.error('🔧 Session fetch error:', err);
+        setLoading(false);
+      });
   }, []);
 
   // Fetch users list
@@ -307,6 +441,13 @@ const UnifiedMessages: React.FC = () => {
 
   return (
     <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
+      {/* SSE Connection Status Debug Indicator */}
+      <div className="absolute top-4 right-4 z-50 bg-black border border-white rounded p-2 text-xs">
+        <div>SSE: {isConnected ? '🟢 Connected' : '🔴 Disconnected'}</div>
+        <div>Token: {sessionToken ? '🟢 Present' : '🔴 Missing'}</div>
+        {connectionError && <div className="text-red-400">Error: {connectionError}</div>}
+        {currentUser && <div>User: {currentUser.username}</div>}
+      </div>
       {/* Mobile overlay */}
       {isMobile && isSidebarVisible && (
         <div 

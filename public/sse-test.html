@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE Test</title>
+</head>
+<body>
+    <h1>SSE Connection Test</h1>
+    <div id="status">Disconnected</div>
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        
+        function addLog(message) {
+            console.log(message);
+            log.innerHTML += '<div>' + new Date().toISOString() + ': ' + message + '</div>';
+        }
+        
+        // First get session token
+        fetch('/api/session')
+            .then(res => res.json())
+            .then(data => {
+                addLog('Session response: ' + JSON.stringify(data));
+                
+                if (!data.valid) {
+                    addLog('No valid session found. Please login first.');
+                    return;
+                }
+                
+                // Get session token from cookies
+                const cookies = document.cookie.split(';');
+                addLog('All cookies: ' + JSON.stringify(cookies));
+                const sessionCookie = cookies.find(cookie => cookie.trim().startsWith('session='));
+                
+                if (!sessionCookie) {
+                    addLog('No session cookie found!');
+                    return;
+                }
+                
+                const token = sessionCookie.split('=')[1];
+                addLog('Session token extracted: ' + token.substring(0, 10) + '...');
+                
+                // Now try SSE connection
+                const sseUrl = `/api/sse?sessionToken=${encodeURIComponent(token)}`;
+                addLog('Connecting to SSE: ' + sseUrl);
+                
+                const eventSource = new EventSource(sseUrl);
+                
+                eventSource.onopen = function(event) {
+                    addLog('SSE connection opened');
+                    status.textContent = 'Connected';
+                    status.style.color = 'green';
+                };
+                
+                eventSource.onmessage = function(event) {
+                    addLog('SSE message received: ' + event.data);
+                    try {
+                        const message = JSON.parse(event.data);
+                        addLog('Parsed message type: ' + message.type);
+                    } catch (e) {
+                        addLog('Failed to parse message: ' + e.message);
+                    }
+                };
+                
+                eventSource.onerror = function(event) {
+                    addLog('SSE error occurred');
+                    addLog('ReadyState: ' + eventSource.readyState);
+                    addLog('URL: ' + eventSource.url);
+                    status.textContent = 'Error';
+                    status.style.color = 'red';
+                };
+            })
+            .catch(error => {
+                addLog('Error getting session: ' + error.message);
+            });
+    </script>
+</body>
+</html>

@@ -12,10 +12,12 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.1",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@types/ws": "^8.18.1",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "crypto-js": "^4.2.0",
     "d3-geo": "^3.1.1",
+    "eventsource": "^4.0.0",
     "leaflet": "^1.9.4",
     "mongodb": "^6.16.0",
     "next": "15.0.3",
@@ -30,7 +32,8 @@
     "react-simple-maps": "^3.0.0",
     "three": "^0.176.0",
     "topojson-client": "^3.1.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",

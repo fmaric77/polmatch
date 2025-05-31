@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import CryptoJS from 'crypto-js';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../../../lib/mongodb-connection';
+import { notifyNewMessage, notifyNewConversation } from '../sse/route';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -173,8 +174,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const now = new Date();
     const sortedParticipants = getSortedParticipants(auth.userId, receiver_id);
     
+    // Check if this is a new conversation
+    const existingConversation = await db.collection('private_conversations').findOne({
+      participant_ids: sortedParticipants
+    });
+    const isNewConversation = !existingConversation;
+    
     // Find or create private conversation using upsert
-    await db.collection('private_conversations').findOneAndUpdate(
+    const conversationResult = await db.collection('private_conversations').findOneAndUpdate(
       { participant_ids: sortedParticipants },
       { 
         $set: { updated_at: now },
@@ -198,7 +205,42 @@ export async function POST(request: Request): Promise<NextResponse> {
       attachments: attachments || [],
     };
     
-    await db.collection('pm').insertOne(message);
+    const insertResult = await db.collection('pm').insertOne(message);
+    
+    // Get sender and receiver usernames for notifications
+    const [senderUser, receiverUser] = await Promise.all([
+      db.collection('users').findOne({ user_id: auth.userId }, { projection: { username: 1 } }),
+      db.collection('users').findOne({ user_id: receiver_id }, { projection: { username: 1 } })
+    ]);
+    
+    // Send real-time notifications
+    try {
+      // Notify about the new message
+      notifyNewMessage({
+        message_id: insertResult.insertedId.toString(),
+        sender_id: auth.userId,
+        receiver_id,
+        content,
+        timestamp: now.toISOString(),
+        conversation_participants: sortedParticipants
+      });
+      
+      // If this is a new conversation, notify about that too
+      if (isNewConversation && senderUser && receiverUser && conversationResult?.value) {
+        // Notify receiver about new conversation
+        notifyNewConversation({
+          conversation_id: conversationResult.value._id.toString(),
+          participants: sortedParticipants,
+          other_user: {
+            user_id: auth.userId,
+            username: senderUser.username
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending real-time notifications:', error);
+      // Don't fail the request if notification fails
+    }
     
     return NextResponse.json({ success: true, message: { ...message, content, encrypted_content: undefined } });
   } catch (err) {
