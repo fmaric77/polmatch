@@ -18,6 +18,7 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json({ 
       valid: true, 
+      sessionToken: sessionToken, // Include session token for SSE connection
       user: {
         user_id: auth.user.user_id,
         username: auth.user.username,

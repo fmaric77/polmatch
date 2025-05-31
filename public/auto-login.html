@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto Login and Redirect</title>
+</head>
+<body>
+    <h1>Logging in and redirecting...</h1>
+    <div id="status"></div>
+    
+    <script>
+        async function loginAndRedirect() {
+            const status = document.getElementById('status');
+            
+            try {
+                status.innerHTML = 'Logging in...';
+                
+                // Login
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'sokol@example.com',
+                        password: 'mango'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.innerHTML = 'Login successful! Redirecting to messages...';
+                    
+                    // Wait a moment for the cookie to be set
+                    setTimeout(() => {
+                        window.location.href = '/chat';
+                    }, 1000);
+                } else {
+                    status.innerHTML = 'Login failed: ' + result.message;
+                }
+                
+            } catch (error) {
+                status.innerHTML = 'Error: ' + error.message;
+            }
+        }
+        
+        // Auto-login when page loads
+        loginAndRedirect();
+    </script>
+</body>
+</html>

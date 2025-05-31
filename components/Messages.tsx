@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ProfileAvatar from './ProfileAvatar';
+import { useWebSocket } from './hooks/useWebSocket';
 //d
 interface Message {
   _id?: string;
@@ -39,16 +40,81 @@ const Messages = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [autoDeleteDays, setAutoDeleteDays] = useState('');
   const [conversations, setConversations] = useState<User[]>([]);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch current user info
+  // Debug session token changes
+  useEffect(() => {
+    console.log('Session token changed:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
+  }, [sessionToken]);
+
+  // WebSocket integration for real-time updates
+  const { isConnected, connectionError } = useWebSocket(sessionToken, {
+    onNewMessage: (data) => {
+      console.log('Received new message via SSE:', data);
+      
+      // If this message is for the current conversation, add it to messages
+      if (selectedUser && 
+          ((data.sender_id === selectedUser && data.receiver_id === currentUser?.user_id) ||
+           (data.sender_id === currentUser?.user_id && data.receiver_id === selectedUser))) {
+        
+        const newMessage: Message = {
+          _id: data.message_id,
+          sender_id: data.sender_id,
+          receiver_id: data.receiver_id,
+          content: data.content,
+          timestamp: data.timestamp,
+          read: false,
+          attachments: []
+        };
+        
+        setMessages(prevMessages => {
+          // Check if message already exists to prevent duplicates
+          const messageExists = prevMessages.some(msg => msg._id === newMessage._id);
+          if (messageExists) return prevMessages;
+          
+          // Add new message and sort by timestamp
+          const updatedMessages = [...prevMessages, newMessage];
+          return updatedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        });
+      }
+      
+      // Refresh conversations list to update last message/unread count
+      setRefresh(r => r + 1);
+    },
+    
+    onNewConversation: (data) => {
+      console.log('Received new conversation via SSE:', data);
+      
+      // If this involves the current user, refresh conversations
+      if (currentUser && data.participants.includes(currentUser.user_id)) {
+        setRefresh(r => r + 1);
+      }
+    },
+    
+    onConnectionEstablished: () => {
+      console.log('SSE connection established');
+    }
+  });
+
+  // Fetch current user info and session token
   useEffect(() => {
     fetch('/api/session')
       .then(res => res.json())
       .then(data => {
-        if (data.valid && data.user) setCurrentUser({ user_id: data.user.user_id, username: data.user.username });
+        console.log('Session API response:', data);
+        if (data.valid && data.user && data.sessionToken) {
+          setCurrentUser({ user_id: data.user.user_id, username: data.user.username });
+          setSessionToken(data.sessionToken);
+          console.log('Session token received from API:', data.sessionToken.substring(0, 10) + '...');
+        } else {
+          console.error('Invalid session, no user data, or no session token:', data);
+        }
+      })
+      .catch(error => {
+        console.error('Failed to fetch session:', error);
       });
   }, []);
 
@@ -114,11 +180,7 @@ const Messages = () => {
 
   useEffect(() => {
     fetchMessages();
-    // Live update: poll every 2 seconds
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (selectedUser) {
-      intervalRef.current = setInterval(fetchMessages, 2000);
-    }
+    // Real-time updates now handled by WebSocket, no need for polling
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -128,6 +190,7 @@ const Messages = () => {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser || !newMessage) return;
+    
     const res = await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,10 +199,8 @@ const Messages = () => {
     const data = await res.json();
     if (data.success) {
       setNewMessage('');
-      setRefresh(r => r + 1); // This will trigger a re-fetch of conversations
-      // The optimistic update below was removed as it could lead to displaying
-      // conversations not yet confirmed or visible in the database.
-      // The refresh mechanism above is now the sole way conversations list is updated after sending a message.
+      // WebSocket will handle real-time updates for both sender and receiver
+      // No need for manual refresh as WebSocket notifications will trigger updates
     }
   };
 
@@ -257,6 +318,24 @@ const Messages = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">Chats</h2>
           <button onClick={handleNewUserMessage} className="p-2 bg-white text-black rounded hover:bg-gray-200 text-sm">New Message</button>
+        </div>
+        
+        {/* Connection status indicator */}
+        <div className="mb-4 text-sm">
+          <div className={`inline-flex items-center px-2 py-1 rounded text-xs ${
+            isConnected ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+          }`}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-300' : 'bg-red-300'}`}></div>
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </div>
+          {connectionError && (
+            <div className="text-red-400 text-xs mt-1">
+              Error: {connectionError}
+            </div>
+          )}
+          <div className="text-gray-400 text-xs mt-1">
+            Token: {sessionToken ? sessionToken.substring(0, 8) + '...' : 'None'}
+          </div>
         </div>
         <ul>
           {conversations.map(u => (
