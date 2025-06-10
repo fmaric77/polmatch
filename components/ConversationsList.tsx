@@ -38,6 +38,14 @@ interface ConversationsListProps {
   isConversationsSidebarHidden: boolean;
   setIsConversationsSidebarHidden: (hidden: boolean) => void;
   setIsSidebarVisible: (visible: boolean) => void;
+  // SSE status props
+  isConnected: boolean;
+  connectionError: string | null;
+  sessionToken: string | null;
+  currentUser: { user_id: string; username: string } | null;
+  // Profile switcher props
+  activeProfileType: 'basic' | 'love' | 'business';
+  setActiveProfileType: (type: 'basic' | 'love' | 'business') => void;
 }
 
 const ConversationsList: React.FC<ConversationsListProps> = ({
@@ -51,7 +59,15 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   isMobile,
   isConversationsSidebarHidden,
   setIsConversationsSidebarHidden,
-  setIsSidebarVisible
+  setIsSidebarVisible,
+  // SSE status props
+  isConnected,
+  connectionError,
+  sessionToken,
+  currentUser,
+  // Profile switcher props
+  activeProfileType,
+  setActiveProfileType
 }) => {
   const filteredConversations = conversations
     .filter(conversation => {
@@ -110,6 +126,45 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Profile Type Switcher - only show for direct messages */}
+          {selectedCategory === 'direct' && (
+            <div className="mb-3">
+              <div className="flex gap-1 p-1 bg-gray-800 rounded">
+                {(['basic', 'love', 'business'] as const).map((profileType) => (
+                  <button
+                    key={profileType}
+                    onClick={() => setActiveProfileType(profileType)}
+                    className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      activeProfileType === profileType
+                        ? 'bg-white text-black'
+                        : 'bg-transparent text-white hover:bg-white/20'
+                    }`}
+                  >
+                    {profileType.charAt(0).toUpperCase() + profileType.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SSE Connection Status */}
+          <div className="mb-3 p-2 bg-gray-800/50 rounded text-xs">
+            <div className="flex items-center justify-between">
+              <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
+                {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+              </span>
+              <span className={sessionToken ? 'text-green-400' : 'text-red-400'}>
+                {sessionToken ? '🟢 Token' : '🔴 No Token'}
+              </span>
+            </div>
+            {connectionError && (
+              <div className="text-red-400 mt-1 text-xs">Error: {connectionError}</div>
+            )}
+            {currentUser && (
+              <div className="text-gray-400 mt-1 text-xs">User: {currentUser.username}</div>
+            )}
           </div>
           
           {/* Search Bar */}

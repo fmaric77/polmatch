@@ -1,0 +1,169 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { connectToDatabase } from '../../../lib/mongodb-connection';
+
+interface CatalogueItem {
+  catalogued_user_id: string;
+  category: string;
+  added_at: string;
+}
+
+interface User {
+  user_id: string;
+  username: string;
+  display_name?: string;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { db } = await connectToDatabase();
+    
+    // Get user session
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const session = await db.collection('sessions').findOne({ sessionToken });
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+    }
+
+    // Fetch user's catalogue items
+    const catalogueItems = await db.collection('user_catalogues')
+      .find({ owner_user_id: session.user_id })
+      .sort({ added_at: -1 })
+      .toArray();
+
+    // Get user details for each catalogued user
+    const userIds = catalogueItems.map((item: any) => item.catalogued_user_id);
+    const users = await db.collection('users')
+      .find({ user_id: { $in: userIds } })
+      .project({ user_id: 1, username: 1, display_name: 1 })
+      .toArray();
+
+    // Combine catalogue data with user details
+    const enrichedItems = catalogueItems.map((item: any) => {
+      const user = users.find((u: any) => u.user_id === item.catalogued_user_id);
+      return {
+        user_id: item.catalogued_user_id,
+        username: user?.username || '',
+        display_name: user?.display_name || '',
+        category: item.category,
+        added_at: item.added_at
+      };
+    }).filter((item: any) => item.username); // Filter out items where user no longer exists
+
+    return NextResponse.json({
+      success: true,
+      items: enrichedItems
+    });
+
+  } catch (error) {
+    console.error('Error fetching catalogue:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch catalogue' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { db } = await connectToDatabase();
+    const body = await request.json();
+    const { user_id, category } = body;
+
+    if (!user_id || !category) {
+      return NextResponse.json(
+        { success: false, error: 'user_id and category are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!['love', 'basic', 'business'].includes(category)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid category. Must be love, basic, or business' },
+        { status: 400 }
+      );
+    }
+
+    // Get user session
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const session = await db.collection('sessions').findOne({ sessionToken });
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+    }
+
+    // Check if user is trying to add themselves
+    if (session.user_id === user_id) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot add yourself to catalogue' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const targetUser = await db.collection('users').findOne({ user_id });
+    if (!targetUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is already in catalogue
+    const existingEntry = await db.collection('user_catalogues').findOne({
+      owner_user_id: session.user_id,
+      catalogued_user_id: user_id
+    });
+
+    if (existingEntry) {
+      // Update category if user already exists
+      await db.collection('user_catalogues').updateOne(
+        {
+          owner_user_id: session.user_id,
+          catalogued_user_id: user_id
+        },
+        {
+          $set: {
+            category: category,
+            updated_at: new Date().toISOString()
+          }
+        }
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: `User moved to ${category} catalogue`
+      });
+    } else {
+      // Add new entry
+      await db.collection('user_catalogues').insertOne({
+        owner_user_id: session.user_id,
+        catalogued_user_id: user_id,
+        category: category,
+        added_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `User added to ${category} catalogue`
+      });
+    }
+
+  } catch (error) {
+    console.error('Error adding to catalogue:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to add to catalogue' },
+      { status: 500 }
+    );
+  }
+}

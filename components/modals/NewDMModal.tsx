@@ -25,12 +25,14 @@ interface NewDMModalProps {
   users: User[];
   onClose: () => void;
   onSuccess: (conversation: Conversation) => void;
+  profileType?: 'basic' | 'love' | 'business';
 }
 
 const NewDMModal: React.FC<NewDMModalProps> = ({
   users,
   onClose,
-  onSuccess
+  onSuccess,
+  profileType
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -51,23 +53,28 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
     setError('');
 
     try {
-      // Create or find the conversation using the private conversations API
-      const res = await fetch('/api/private-conversations', {
+      // Use profile-specific API if profileType is provided
+      const apiUrl = profileType ? '/api/private-conversations/profile' : '/api/private-conversations';
+      const requestBody = profileType 
+        ? { other_user_id: selectedUser.user_id, profile_type: profileType }
+        : { other_user_id: selectedUser.user_id };
+
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          other_user_id: selectedUser.user_id
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await res.json();
 
       if (data.success) {
-        const conversation: Conversation = {
-          id: selectedUser.user_id,
-          name: selectedUser.username,
-          type: 'direct'
-        };
+        const conversation: Conversation = profileType && data.conversation
+          ? data.conversation
+          : {
+              id: selectedUser.user_id,
+              name: selectedUser.username,
+              type: 'direct'
+            };
         onSuccess(conversation);
       } else {
         setError(data.error || data.message || 'Failed to start conversation');
@@ -91,7 +98,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white flex items-center">
             <FontAwesomeIcon icon={faUser} className="mr-2" />
-            New Direct Message
+            New {profileType ? `${profileType.charAt(0).toUpperCase() + profileType.slice(1)} ` : ''}Direct Message
           </h2>
           <button
             onClick={onClose}

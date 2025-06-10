@@ -54,7 +54,7 @@ async function sendToUser(userId: string, data: string): Promise<void> {
 
 // Notify about a new message
 export async function notifyNewMessage(data: NewMessageData): Promise<void> {
-  const sseData = formatSSEData('new_message', data);
+  const sseData = formatSSEData('NEW_MESSAGE', data);
   
   // Send to receiver
   if (data.receiver_id) {
@@ -67,7 +67,7 @@ export async function notifyNewMessage(data: NewMessageData): Promise<void> {
 
 // Notify about a new conversation
 export async function notifyNewConversation(data: NewConversationData): Promise<void> {
-  const sseData = formatSSEData('new_conversation', data);
+  const sseData = formatSSEData('NEW_CONVERSATION', data);
   
   // Send to all participants
   for (const participantId of data.participants) {
@@ -84,7 +84,7 @@ export interface MessageReadData {
 }
 
 export async function notifyMessageRead(data: MessageReadData): Promise<void> {
-  const sseData = formatSSEData('message_read', data);
+  const sseData = formatSSEData('MESSAGE_READ', data);
   
   // Send to all participants
   for (const participantId of data.participants) {

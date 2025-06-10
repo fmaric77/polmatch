@@ -10,7 +10,8 @@ import {
   faEnvelope,
   faSignOutAlt,
   faKey,
-  faTimes
+  faTimes,
+  faBookmark
 } from '@fortawesome/free-solid-svg-icons';
 
 interface SidebarNavigationProps {
@@ -68,6 +69,15 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           title="Search Users"
         >
           <FontAwesomeIcon icon={faSearch} />
+        </div>
+        
+        {/* Catalogue Navigation */}
+        <div 
+          className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          onClick={() => window.location.href = '/catalogue'}
+          title="Catalogue"
+        >
+          <FontAwesomeIcon icon={faBookmark} />
         </div>
         
         {/* First Separator */}

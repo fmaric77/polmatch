@@ -49,9 +49,11 @@ interface ProfileModalProps {
   username: string;
   isOpen: boolean;
   onClose: () => void;
+  defaultActiveTab?: 'basic' | 'love' | 'business';
+  restrictToProfileType?: boolean; // New prop to restrict modal to only show one profile type
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, onClose, defaultActiveTab, restrictToProfileType = false }) => {
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -66,10 +68,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, o
       
       if (data.success) {
         setProfileData(data);
-        // Set active tab to first available profile
-        if (data.profiles.basic) setActiveTab('basic');
-        else if (data.profiles.love) setActiveTab('love');
-        else if (data.profiles.business) setActiveTab('business');
+        // Set active tab based on defaultActiveTab prop or first available profile
+        if (defaultActiveTab && data.profiles[defaultActiveTab]) {
+          setActiveTab(defaultActiveTab);
+        } else if (data.profiles.basic) {
+          setActiveTab('basic');
+        } else if (data.profiles.love) {
+          setActiveTab('love');
+        } else if (data.profiles.business) {
+          setActiveTab('business');
+        }
       } else {
         setError(data.message || 'Failed to load profile');
       }
@@ -78,7 +86,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, o
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, defaultActiveTab]);
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -137,7 +145,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, o
             <>
               {/* Profile Tabs */}
               <div className="flex border-b border-white">
-                {['basic', 'love', 'business'].map((tab) => {
+                {(restrictToProfileType && defaultActiveTab ? [defaultActiveTab] : ['basic', 'love', 'business']).map((tab) => {
                   const tabKey = tab as 'basic' | 'love' | 'business';
                   const hasProfile = profileData.profiles[tabKey];
                   

@@ -7,6 +7,43 @@ const client = new MongoClient(MONGODB_URI);
 // Cache for IP lookups to avoid repeated API calls
 const ipLocationCache = new Map<string, string>();
 
+// Map IP geolocation country names to GeoJSON country names
+const countryNameMapping: { [key: string]: string } = {
+  'United States': 'United States of America',
+  'USA': 'United States of America',
+  'US': 'United States of America',
+  'Russia': 'Russia',
+  'Russian Federation': 'Russia',
+  'UK': 'United Kingdom',
+  'United Kingdom': 'United Kingdom',
+  'South Korea': 'South Korea',
+  'North Korea': 'North Korea',
+  'Myanmar': 'Myanmar',
+  'Burma': 'Myanmar',
+  'Czech Republic': 'Czech Republic',
+  'Czechia': 'Czech Republic',
+  'Macedonia': 'North Macedonia',
+  'North Macedonia': 'North Macedonia',
+  'Congo': 'Democratic Republic of the Congo',
+  'DR Congo': 'Democratic Republic of the Congo',
+  'Democratic Republic of the Congo': 'Democratic Republic of the Congo',
+  'Republic of the Congo': 'Republic of the Congo',
+  'Congo Republic': 'Republic of the Congo',
+  'Ivory Coast': "Côte d'Ivoire",
+  "Côte d'Ivoire": "Côte d'Ivoire",
+  'East Timor': 'Timor-Leste',
+  'Timor-Leste': 'Timor-Leste',
+  'Vatican City': 'Vatican',
+  'Vatican': 'Vatican',
+  'Swaziland': 'Eswatini',
+  'Eswatini': 'Eswatini'
+};
+
+// Function to normalize country name to match GeoJSON data
+function normalizeCountryName(countryName: string): string {
+  return countryNameMapping[countryName] || countryName;
+}
+
 // Function to get country from IP using a free geolocation service
 async function getCountryFromIP(ip: string): Promise<string> {
   // Check cache first
@@ -35,9 +72,10 @@ async function getCountryFromIP(ip: string): Promise<string> {
     const data = await response.json();
     
     if (data.status === 'success' && data.country) {
-      console.log(`IP ${ip} resolved to country: ${data.country}`);
-      ipLocationCache.set(ip, data.country);
-      return data.country;
+      const normalizedCountry = normalizeCountryName(data.country);
+      console.log(`IP ${ip} resolved to country: ${data.country} -> normalized: ${normalizedCountry}`);
+      ipLocationCache.set(ip, normalizedCountry);
+      return normalizedCountry;
     } else {
       console.warn(`Failed to resolve IP ${ip}:`, data);
       ipLocationCache.set(ip, 'Unknown');

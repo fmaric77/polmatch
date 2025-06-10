@@ -15,10 +15,22 @@ interface FriendRequest {
   created_at: string;
 }
 
+type ProfileType = 'basic' | 'love' | 'business';
+
 export default function Friends() {
+  // Profile separation state
+  const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
+  
+  // Profile-specific friends and requests
+  const [profileFriends, setProfileFriends] = useState<FriendRequest[]>([]);
+  const [profileIncoming, setProfileIncoming] = useState<FriendRequest[]>([]);
+  const [profileOutgoing, setProfileOutgoing] = useState<FriendRequest[]>([]);
+  
+  // Legacy global state (for backwards compatibility)
   const [friends, setFriends] = useState<FriendRequest[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
+  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,7 +45,12 @@ export default function Friends() {
   useEffect(() => {
     fetchFriends();
     fetchUsers();
+    fetchProfileFriends();
   }, []);
+
+  useEffect(() => {
+    fetchProfileFriends();
+  }, [activeProfileType]);
 
   async function fetchFriends() {
     setLoading(true);
@@ -60,6 +77,33 @@ export default function Friends() {
     }
   }
 
+  async function fetchProfileFriends() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/friends/profile?profile_type=${activeProfileType}`, { 
+        credentials: 'include' 
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || `Server error: ${res.status}`);
+      }
+      if (!data.success) {
+        throw new Error(data.message || 'Unknown error');
+      }
+      setMyId(data.user_id);
+      setProfileFriends(data.friends);
+      setProfileIncoming(data.incoming);
+      setProfileOutgoing(data.outgoing);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error('fetchProfileFriends error:', error);
+      setError(error.message || 'Failed to fetch profile friends');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchUsers() {
     try {
       const res = await fetch('/api/users/list', { credentials: 'include' });
@@ -73,15 +117,15 @@ export default function Friends() {
   async function sendRequest(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/request', {
+      const res = await fetch('/api/friends/profile', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friend_id })
+        body: JSON.stringify({ friend_id, profile_type: activeProfileType })
       });
       const data = await res.json();
       setActionMessage(data.message);
-      fetchFriends();
+      fetchProfileFriends();
     } catch {
       setActionMessage('Failed to send request');
     }
@@ -90,15 +134,15 @@ export default function Friends() {
   async function respondRequest(requester_id: string, action: 'accept' | 'reject') {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/respond', {
+      const res = await fetch('/api/friends/profile/respond', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requester_id, action })
+        body: JSON.stringify({ requester_id, action, profile_type: activeProfileType })
       });
       const data = await res.json();
       setActionMessage(data.message);
-      fetchFriends();
+      fetchProfileFriends();
     } catch {
       setActionMessage('Failed to respond');
     }
@@ -107,15 +151,15 @@ export default function Friends() {
   async function removeFriend(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/remove', {
+      const res = await fetch('/api/friends/profile/remove', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friend_id })
+        body: JSON.stringify({ friend_id, profile_type: activeProfileType })
       });
       const data = await res.json();
       setActionMessage(data.message);
-      fetchFriends();
+      fetchProfileFriends();
     } catch {
       setActionMessage('Failed to remove friend');
     }
@@ -133,17 +177,45 @@ export default function Friends() {
     setSelectedUsername('');
   }
 
-  // Users not already friends or pending
+  // Users not already friends or pending for current profile type
   const availableUsers = users.filter(u =>
     u.user_id !== myId &&
-    !friends.some(f => f.user_id === u.user_id || f.friend_id === u.user_id) &&
-    !outgoing.some(f => f.friend_id === u.user_id) &&
-    !incoming.some(f => f.user_id === u.user_id)
+    !profileFriends.some(f => f.user_id === u.user_id || f.friend_id === u.user_id) &&
+    !profileOutgoing.some(f => f.friend_id === u.user_id) &&
+    !profileIncoming.some(f => f.user_id === u.user_id)
   );
+
+  const getProfileTypeLabel = (type: ProfileType): string => {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-black text-white rounded-lg border border-white mt-8">
       <h2 className="text-2xl font-bold mb-4">Friends & Requests</h2>
+      
+      {/* Profile Type Selection */}
+      <div className="mb-6">
+        <h3 className="font-semibold mb-3">Profile Type</h3>
+        <div className="flex space-x-2">
+          {(['basic', 'love', 'business'] as ProfileType[]).map((type) => (
+            <button
+              key={type}
+              onClick={() => setActiveProfileType(type)}
+              className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                activeProfileType === type
+                  ? 'bg-white text-black border-white'
+                  : 'bg-black text-white border-white hover:bg-white/10'
+              }`}
+            >
+              {getProfileTypeLabel(type)}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-gray-400 mt-2">
+          Manage friends for your {getProfileTypeLabel(activeProfileType)} profile
+        </p>
+      </div>
+      
       {actionMessage && <div className="mb-4 text-center text-green-400">{actionMessage}</div>}
       {loading ? (
         <div>Loading...</div>
@@ -152,12 +224,12 @@ export default function Friends() {
       ) : (
         <>
           <div className="mb-6">
-            <h3 className="font-semibold mb-2">Your Friends</h3>
-            {friends.length === 0 ? (
-              <div className="text-gray-400">No friends yet.</div>
+            <h3 className="font-semibold mb-2">Your {getProfileTypeLabel(activeProfileType)} Friends</h3>
+            {profileFriends.length === 0 ? (
+              <div className="text-gray-400">No {activeProfileType} friends yet.</div>
             ) : (
               <ul className="space-y-2">
-                {friends.map(f => {
+                {profileFriends.map(f => {
                   // Determine the ID of the friend (the one that's not myId)
                   const friendId = f.user_id === myId ? f.friend_id : f.user_id;
                   const friendUser = users.find(u => u.user_id === friendId);
@@ -172,7 +244,12 @@ export default function Friends() {
                           {friendUser?.display_name || friendUser?.username || friendUser?.user_id}
                         </button>
                       </div>
-                      <button onClick={() => removeFriend(friendId)} className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Remove</button>
+                      <button 
+                        onClick={() => removeFriend(friendId)} 
+                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                      >
+                        Remove {getProfileTypeLabel(activeProfileType)} Friend
+                      </button>
                     </li>
                   );
                 })}
@@ -180,12 +257,12 @@ export default function Friends() {
             )}
           </div>
           <div className="mb-6">
-            <h3 className="font-semibold mb-2">Incoming Friend Requests</h3>
-            {incoming.length === 0 ? (
-              <div className="text-gray-400">No incoming requests.</div>
+            <h3 className="font-semibold mb-2">Incoming {getProfileTypeLabel(activeProfileType)} Friend Requests</h3>
+            {profileIncoming.length === 0 ? (
+              <div className="text-gray-400">No incoming {activeProfileType} requests.</div>
             ) : (
               <ul className="space-y-2">
-                {incoming.map(req => {
+                {profileIncoming.map(req => {
                   const fromUser = users.find(u => u.user_id === req.user_id);
                   return (
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
@@ -199,8 +276,18 @@ export default function Friends() {
                         </button>
                       </div>
                       <span>
-                        <button onClick={() => respondRequest(req.user_id, 'accept')} className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 mr-2">Accept</button>
-                        <button onClick={() => respondRequest(req.user_id, 'reject')} className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">Reject</button>
+                        <button 
+                          onClick={() => respondRequest(req.user_id, 'accept')} 
+                          className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 mr-2"
+                        >
+                          Accept ({getProfileTypeLabel(activeProfileType)})
+                        </button>
+                        <button 
+                          onClick={() => respondRequest(req.user_id, 'reject')} 
+                          className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700"
+                        >
+                          Reject
+                        </button>
                       </span>
                     </li>
                   );
@@ -209,12 +296,12 @@ export default function Friends() {
             )}
           </div>
           <div className="mb-6">
-            <h3 className="font-semibold mb-2">Outgoing Friend Requests</h3>
-            {outgoing.length === 0 ? (
-              <div className="text-gray-400">No outgoing requests.</div>
+            <h3 className="font-semibold mb-2">Outgoing {getProfileTypeLabel(activeProfileType)} Friend Requests</h3>
+            {profileOutgoing.length === 0 ? (
+              <div className="text-gray-400">No outgoing {activeProfileType} requests.</div>
             ) : (
               <ul className="space-y-2">
-                {outgoing.map(req => {
+                {profileOutgoing.map(req => {
                   const toUser = users.find(u => u.user_id === req.friend_id);
                   return (
                     <li key={req.user_id + req.friend_id} className="flex justify-between items-center border-b border-gray-700 pb-2">
@@ -227,7 +314,7 @@ export default function Friends() {
                           {toUser?.display_name || toUser?.username || toUser?.user_id}
                         </button>
                       </div>
-                      <span className="text-yellow-400 text-xs">Pending</span>
+                      <span className="text-yellow-400 text-xs">Pending ({getProfileTypeLabel(activeProfileType)})</span>
                     </li>
                   );
                 })}
@@ -235,9 +322,9 @@ export default function Friends() {
             )}
           </div>
           <div>
-            <h3 className="font-semibold mb-2">Add New Friend</h3>
+            <h3 className="font-semibold mb-2">Add New {getProfileTypeLabel(activeProfileType)} Friend</h3>
             {availableUsers.length === 0 ? (
-              <div className="text-gray-400">No users available to add.</div>
+              <div className="text-gray-400">No users available to add as {activeProfileType} friends.</div>
             ) : (
               <ul className="space-y-2">
                 {availableUsers.map(u => (
@@ -251,7 +338,12 @@ export default function Friends() {
                         {u.display_name || u.username || u.user_id}
                       </button>
                     </div>
-                    <button onClick={() => sendRequest(u.user_id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Send Request</button>
+                    <button 
+                      onClick={() => sendRequest(u.user_id)} 
+                      className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                    >
+                      Add {getProfileTypeLabel(activeProfileType)} Friend
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -266,6 +358,8 @@ export default function Friends() {
         username={selectedUsername}
         isOpen={isProfileModalOpen}
         onClose={closeProfileModal}
+        defaultActiveTab={activeProfileType}
+        restrictToProfileType={true}
       />
     </div>
   );

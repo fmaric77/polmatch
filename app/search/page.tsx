@@ -39,6 +39,12 @@ export default function SearchUsersPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Friend[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(false);
+  
+  // Profile separation state
+  const [activeProfileType, setActiveProfileType] = useState<'basic' | 'love' | 'business'>('basic');
+  const [profileFriends, setProfileFriends] = useState<Friend[]>([]);
+  const [profilePendingRequests, setProfilePendingRequests] = useState<Friend[]>([]);
 
   // Fetch current user ID and validate session
   useEffect(() => {
@@ -57,9 +63,9 @@ export default function SearchUsersPage() {
   useEffect(() => {
     fetchUsers();
     if (currentUserId) {
-      fetchFriends();
+      fetchProfileFriends();
     }
-  }, [currentUserId]);
+  }, [currentUserId, activeProfileType]);
 
   useEffect(() => {
     setFiltered(
@@ -72,10 +78,12 @@ export default function SearchUsersPage() {
 
   async function fetchUsers() {
     try {
-      const res = await fetch('/api/users/list');
+      const res = await fetch(`/api/users/profile-search?profile_type=${activeProfileType}`);
       const data = await res.json();
       if (data.success) setUsers(data.users);
-    } catch {}
+    } catch {
+      console.error('Failed to fetch users');
+    }
   }
 
   async function fetchFriends() {
@@ -89,9 +97,22 @@ export default function SearchUsersPage() {
     } catch {}
   }
 
+  async function fetchProfileFriends() {
+    try {
+      const res = await fetch(`/api/friends/profile?profile_type=${activeProfileType}`);
+      const data = await res.json();
+      if (data.success) {
+        setProfileFriends(data.friends);
+        setProfilePendingRequests([...data.incoming, ...data.outgoing]);
+      }
+    } catch {
+      console.error('Failed to fetch profile friends');
+    }
+  }
+
   function isFriend(userId: string): boolean {
     if (!currentUserId) return false;
-    return friends.some(friend => 
+    return profileFriends.some(friend => 
       (friend.user_id === currentUserId && friend.friend_id === userId) ||
       (friend.user_id === userId && friend.friend_id === currentUserId)
     );
@@ -99,7 +120,7 @@ export default function SearchUsersPage() {
 
   function hasPendingRequest(userId: string): boolean {
     if (!currentUserId) return false;
-    return pendingRequests.some(request =>
+    return profilePendingRequests.some(request =>
       (request.user_id === currentUserId && request.friend_id === userId) ||
       (request.user_id === userId && request.friend_id === currentUserId)
     );
@@ -108,15 +129,15 @@ export default function SearchUsersPage() {
   async function sendFriendRequest(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/request', {
+      const res = await fetch('/api/friends/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friend_id })
+        body: JSON.stringify({ friend_id, profile_type: activeProfileType })
       });
       const data = await res.json();
       setActionMessage(data.message);
       if (data.success) {
-        fetchFriends(); // Refresh friends list
+        fetchProfileFriends(); // Refresh profile-specific friends list
       }
     } catch {
       setActionMessage('Failed to send request');
@@ -144,12 +165,14 @@ export default function SearchUsersPage() {
   async function handleDirectMessage(user: User) {
     setActionMessage('Starting conversation...');
     try {
-      // Create conversation in database first
-      const res = await fetch('/api/private-conversations', {
+      // Create profile-specific conversation
+      const res = await fetch('/api/messages/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          other_user_id: user.user_id
+          receiver_id: user.user_id,
+          content: 'Hello!',
+          profile_type: activeProfileType
         })
       });
       
@@ -158,7 +181,7 @@ export default function SearchUsersPage() {
         setActionMessage('Conversation created! Redirecting...');
         // Small delay to ensure database consistency before navigation
         setTimeout(() => {
-          window.location.href = `/chat?user=${user.user_id}`;
+          window.location.href = `/chat?user=${user.user_id}&profile=${activeProfileType}`;
         }, 500);
       } else {
         setActionMessage('Failed to start conversation: ' + (data.message || 'Unknown error'));
@@ -233,6 +256,35 @@ export default function SearchUsersPage() {
     setSelectedGroupId('');
   }
 
+  async function handleAddToCatalogue(user: User): Promise<void> {
+    setCatalogueLoading(true);
+    setActionMessage('');
+
+    try {
+      const res = await fetch('/api/catalogue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: user.user_id, 
+          category: activeProfileType,
+          profile_type: activeProfileType
+        })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setActionMessage(data.message);
+      } else {
+        setActionMessage(data.error || 'Failed to add to catalogue');
+      }
+    } catch {
+      setActionMessage('Failed to add to catalogue');
+    } finally {
+      setCatalogueLoading(false);
+    }
+  }
+
   function handleViewProfile(user: User): void {
     setSelectedUser(user);
     setIsProfileModalOpen(true);
@@ -248,6 +300,35 @@ export default function SearchUsersPage() {
         <div className="w-full max-w-4xl mx-auto mt-4 md:mt-12 p-4 md:p-8">
           <div className="bg-black/80 border border-white rounded-lg shadow-lg p-4 md:p-8">
             <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Search Users</h2>
+            
+            {/* Profile Type Selection */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3 text-white">Select Profile Type:</h3>
+              <div className="flex space-x-2">
+                {[
+                  { value: 'basic', label: 'Basic', color: 'bg-blue-600 hover:bg-blue-700' },
+                  { value: 'love', label: 'Love', color: 'bg-pink-600 hover:bg-pink-700' },
+                  { value: 'business', label: 'Business', color: 'bg-green-600 hover:bg-green-700' }
+                ].map(profileType => (
+                  <button
+                    key={profileType.value}
+                    onClick={() => setActiveProfileType(profileType.value as 'basic' | 'love' | 'business')}
+                    className={`px-4 py-2 rounded text-white font-medium transition-colors ${
+                      activeProfileType === profileType.value 
+                        ? profileType.color.replace('hover:', '') + ' ring-2 ring-white'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                  >
+                    {profileType.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-gray-400 text-sm mt-2">
+                You are searching as your <span className="capitalize font-semibold">{activeProfileType}</span> profile. 
+                Friend requests and messages will be sent from this profile type.
+              </p>
+            </div>
+            
             <input
               type="text"
               value={search}
@@ -299,20 +380,27 @@ export default function SearchUsersPage() {
                           onClick={() => sendFriendRequest(user.user_id)} 
                           className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded text-xs md:text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
                         >
-                          Add Friend
+                          Add {activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)} Friend
                         </button>
                       )}
                       <button 
                         onClick={() => handleDirectMessage(user)} 
                         className="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white rounded text-xs md:text-sm hover:bg-green-700 transition-colors whitespace-nowrap"
                       >
-                        Message
+                        Message ({activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)})
                       </button>
                       <button 
                         onClick={() => handleInviteToGroup(user)} 
                         className="flex-1 sm:flex-none px-3 py-2 bg-purple-600 text-white rounded text-xs md:text-sm hover:bg-purple-700 transition-colors whitespace-nowrap"
                       >
                         Invite
+                      </button>
+                      <button 
+                        onClick={() => handleAddToCatalogue(user)} 
+                        disabled={catalogueLoading}
+                        className="flex-1 sm:flex-none px-3 py-2 bg-yellow-600 text-white rounded text-xs md:text-sm hover:bg-yellow-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {catalogueLoading ? 'Adding...' : `Catalogue (${activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)})`}
                       </button>
                     </div>
                   </div>
@@ -339,6 +427,8 @@ export default function SearchUsersPage() {
             username={selectedUser.display_name || selectedUser.username}
             isOpen={isProfileModalOpen}
             onClose={closeProfileModal}
+            defaultActiveTab={activeProfileType}
+            restrictToProfileType={true}
           />
         )}
 

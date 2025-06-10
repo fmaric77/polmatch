@@ -1,0 +1,51 @@
+CATALOGUE IMPLEMENTATION PROGRESS
+
+REQUIREMENTS:
+1. Add a catalogue button to the menu sidebar
+2. Create a catalogue page showing stored user profiles
+3. Page should have 3 buttons for different catalogues: love, basic, business
+4. Add "Add to Catalogue" button to search users page
+5. Store user profiles in different categories
+
+PROGRESS:
+
+Step 1: Exploring workspace structure ✓
+- Found sidebar components: SidebarNavigation.tsx, NavigationSidebar.tsx, Header.tsx, Navigation.tsx
+- Found search users page: app/search/page.tsx
+- Understood routing structure: app/[page]/page.tsx
+- Found profile system with basic, love, business types already exists
+
+Step 2: Planning implementation ✓
+- Add catalogue button to SidebarNavigation.tsx
+- Create app/catalogue/page.tsx for the catalogue display
+- Add API endpoint app/api/catalogue/route.ts for CRUD operations
+- Add "Add to Catalogue" button to search page
+- Create database collection for user catalogues
+
+Step 3: Implementing sidebar catalogue button ✓
+- Added catalogue icon and button to SidebarNavigation.tsx
+- Added catalogue button to Navigation.tsx component
+
+Step 4: Created catalogue page and API ✓
+- Created app/catalogue/page.tsx with 3-category interface
+- Created API endpoints for CRUD operations:
+  - GET /api/catalogue - fetch user's catalogue items
+  - POST /api/catalogue - add user to catalogue with category
+  - POST /api/catalogue/remove - remove user from catalogue
+- Database schema: user_catalogues collection with owner_user_id, catalogued_user_id, category, timestamps
+
+Step 5: Added catalogue functionality to search page ✓
+- Added "Add to Catalogue" button with yellow styling
+- Created modal for category selection (love, basic, business)
+- Integrated with existing search page functionality
+
+TODO:
+[x] Find and examine sidebar component
+[x] Find and examine search users page
+[x] Understand current routing structure
+[x] Add catalogue button to sidebar
+[x] Create catalogue page component
+[x] Add catalogue API endpoints
+[x] Add database schema for catalogues
+[x] Add "Add to Catalogue" button to search page
+[ ] Test implementation

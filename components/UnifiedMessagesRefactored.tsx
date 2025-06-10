@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useConversations } from './hooks/useConversations';
+import { useProfileConversations, useProfileMessages } from './hooks/useProfileMessaging';
+import type { ProfileMessage } from './hooks/useProfileMessaging';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
@@ -88,11 +90,16 @@ interface Channel {
   position: number;
 }
 
+type ProfileType = 'basic' | 'love' | 'business';
+
 const UnifiedMessages: React.FC = () => {
   // Core state
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Profile separation state
+  const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
   
   // Navigation state
   const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups'>('direct');
@@ -120,6 +127,8 @@ const UnifiedMessages: React.FC = () => {
 
   // Custom hooks
   const conversations = useConversations(currentUser);
+  const profileConversations = useProfileConversations(activeProfileType);
+  const profileMessages = useProfileMessages(activeProfileType);
   const groupManagement = useGroupManagement(currentUser);
   const modals = useModalStates();
   const messages = useMessages(
@@ -149,41 +158,75 @@ const UnifiedMessages: React.FC = () => {
         return;
       }
       
-      // Handle direct messages
+      // Handle direct messages - check if we're in profile mode
       if (selectedConversation && selectedConversationType === 'direct' && 
           ((data.sender_id === selectedConversation && data.receiver_id === currentUser?.user_id) ||
            (data.sender_id === currentUser?.user_id && data.receiver_id === selectedConversation))) {
         
-        const newMessage: PrivateMessage = {
-          _id: data.message_id,
-          sender_id: data.sender_id,
-          receiver_id: data.receiver_id,
-          content: data.content,
-          timestamp: data.timestamp,
-          read: false,
-          attachments: (data as { attachments?: string[] }).attachments || []
-        };
-        
-        messages.setMessages(prevMessages => {
-          console.log('Adding SSE direct message. Current count:', prevMessages.length);
+        // If we're viewing profile conversations, use profile messages
+        if (selectedCategory === 'direct') {
+          // Add the message directly to profile messages state for instant display
+          const newProfileMessage: ProfileMessage = {
+            _id: data.message_id,
+            sender_id: data.sender_id,
+            receiver_id: data.receiver_id,
+            content: data.content,
+            timestamp: data.timestamp,
+            read: false,
+            attachments: (data as { attachments?: string[] }).attachments || [],
+            profile_type: activeProfileType
+          };
           
-          // Comprehensive duplicate check using both _id and message_id
-          const messageExists = prevMessages.some(msg => {
-            const msgId = ('_id' in msg) ? msg._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
-            return msgId === newMessage._id || msgId === data.message_id;
+          profileMessages.setMessages(prevMessages => {
+            // Check for duplicates
+            const messageExists = prevMessages.some(msg => msg._id === data.message_id);
+            if (messageExists) {
+              return prevMessages;
+            }
+            
+            const updatedMessages = [...prevMessages, newProfileMessage];
+            return updatedMessages.sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
           });
           
-          if (messageExists) {
-            console.log('Direct message already exists, skipping:', data.message_id);
-            return prevMessages;
+          // Also refresh to ensure consistency
+          if (selectedConversation) {
+            profileMessages.fetchMessages(selectedConversation);
           }
+        } else {
+          // Use regular message handling for legacy conversations
+          const newMessage: PrivateMessage = {
+            _id: data.message_id,
+            sender_id: data.sender_id,
+            receiver_id: data.receiver_id,
+            content: data.content,
+            timestamp: data.timestamp,
+            read: false,
+            attachments: (data as { attachments?: string[] }).attachments || []
+          };
           
-          console.log('Adding new direct message via SSE:', data.message_id);
-          const updatedMessages = [...prevMessages, newMessage];
-          return updatedMessages.sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
-        });
+          messages.setMessages(prevMessages => {
+            console.log('Adding SSE direct message. Current count:', prevMessages.length);
+            
+            // Comprehensive duplicate check using both _id and message_id
+            const messageExists = prevMessages.some(msg => {
+              const msgId = ('_id' in msg) ? msg._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
+              return msgId === newMessage._id || msgId === data.message_id;
+            });
+            
+            if (messageExists) {
+              console.log('Direct message already exists, skipping:', data.message_id);
+              return prevMessages;
+            }
+            
+            console.log('Adding new direct message via SSE:', data.message_id);
+            const updatedMessages = [...prevMessages, newMessage];
+            return updatedMessages.sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+          });
+        }
       }
       
       // Handle group messages
@@ -228,6 +271,7 @@ const UnifiedMessages: React.FC = () => {
       
       // Refresh conversations list to update last message/unread count
       conversations.fetchConversations();
+      profileConversations.fetchConversations();
     },
     
     onNewConversation: (data: NewConversationData) => {
@@ -236,6 +280,7 @@ const UnifiedMessages: React.FC = () => {
       // If this involves the current user, refresh conversations
       if (currentUser && data.participants.includes(currentUser.user_id)) {
         conversations.fetchConversations();
+        profileConversations.fetchConversations();
       }
     },
     
@@ -300,8 +345,16 @@ const UnifiedMessages: React.FC = () => {
     if (currentUser) {
       conversations.fetchConversations();
       groupManagement.fetchInvitations();
+      profileConversations.fetchConversations();
     }
   }, [currentUser]); // Only depend on currentUser to prevent infinite loops
+
+  // Fetch profile conversations when profile type changes
+  useEffect(() => {
+    if (currentUser) {
+      profileConversations.fetchConversations();
+    }
+  }, [activeProfileType, currentUser]);
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
@@ -320,8 +373,12 @@ const UnifiedMessages: React.FC = () => {
         messages.setContextSwitchLoading(false);
       });
     } else {
-      // For direct messages, fetch immediately
-      messages.fetchMessages(conversation.id, conversation.type);
+      // For direct messages, fetch using appropriate hook
+      if (selectedCategory === 'direct') {
+        profileMessages.fetchMessages(conversation.id);
+      } else {
+        messages.fetchMessages(conversation.id, conversation.type);
+      }
       messages.setContextSwitchLoading(false);
     }
   }, [messages, groupManagement]);
@@ -355,11 +412,19 @@ const UnifiedMessages: React.FC = () => {
 
   // Send message handler
   const handleSendMessage = useCallback(async () => {
-    const success = await messages.sendMessage(newMessage);
+    let success = false;
+    
+    // Use profile messages for direct conversations, regular messages for groups
+    if (selectedConversationType === 'direct' && selectedCategory === 'direct') {
+      success = await profileMessages.sendMessage(selectedConversation, newMessage);
+    } else {
+      success = await messages.sendMessage(newMessage);
+    }
+    
     if (success) {
       setNewMessage('');
     }
-  }, [messages, newMessage]);
+  }, [selectedConversationType, selectedCategory, profileMessages, messages, newMessage]);
 
   // Context menu handlers
   const handleConversationContextMenu = (e: React.MouseEvent, conversation: Conversation) => {
@@ -455,13 +520,6 @@ const UnifiedMessages: React.FC = () => {
 
   return (
     <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
-      {/* SSE Connection Status Debug Indicator */}
-      <div className="absolute top-4 right-4 z-50 bg-black border border-white rounded p-2 text-xs">
-        <div>SSE: {isConnected ? '🟢 Connected' : '🔴 Disconnected'}</div>
-        <div>Token: {sessionToken ? '🟢 Present' : '🔴 Missing'}</div>
-        {connectionError && <div className="text-red-400">Error: {connectionError}</div>}
-        {currentUser && <div>User: {currentUser.username}</div>}
-      </div>
       {/* Mobile overlay */}
       {isMobile && isSidebarVisible && (
         <div 
@@ -486,7 +544,19 @@ const UnifiedMessages: React.FC = () => {
 
       {/* Conversations list */}
       <ConversationsList
-        conversations={conversations.conversations}
+        conversations={
+          selectedCategory === 'direct' 
+            ? profileConversations.conversations.map(pc => ({
+                id: pc.other_user.user_id,
+                name: pc.other_user.username,
+                type: 'direct' as const,
+                last_message: pc.latest_message?.content,
+                last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
+                unread_count: 0,
+                user_id: pc.other_user.user_id,
+              }))
+            : conversations.conversations
+        }
         selectedCategory={selectedCategory}
         selectedConversation={selectedConversation}
         searchQuery={searchQuery}
@@ -497,6 +567,14 @@ const UnifiedMessages: React.FC = () => {
         isConversationsSidebarHidden={isConversationsSidebarHidden}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
         setIsSidebarVisible={setIsSidebarVisible}
+        // SSE status props
+        isConnected={isConnected}
+        connectionError={connectionError}
+        sessionToken={sessionToken}
+        currentUser={currentUser}
+        // Profile switcher props
+        activeProfileType={activeProfileType}
+        setActiveProfileType={setActiveProfileType}
       />
 
       {/* Chat area */}
@@ -507,7 +585,11 @@ const UnifiedMessages: React.FC = () => {
         setSelectedChannel={setSelectedChannel}
         selectedConversationData={selectedConversationData}
         groupChannels={groupManagement.groupChannels}
-        messages={messages.messages}
+        messages={
+          selectedConversationType === 'direct' && selectedCategory === 'direct'
+            ? profileMessages.messages
+            : messages.messages
+        }
         newMessage={newMessage}
         setNewMessage={setNewMessage}
         onSendMessage={handleSendMessage}
@@ -599,10 +681,13 @@ const UnifiedMessages: React.FC = () => {
       {modals.modals.showNewDMModal && (
         <NewDMModal
           users={users}
+          profileType={selectedCategory === 'direct' ? activeProfileType : undefined}
           onClose={() => modals.closeModal('showNewDMModal')}
           onSuccess={(conversation) => {
             selectConversation(conversation);
+            // Refresh both conversation types
             conversations.fetchConversations();
+            profileConversations.fetchConversations();
             modals.closeModal('showNewDMModal');
           }}
         />
