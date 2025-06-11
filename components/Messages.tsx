@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useTypingIndicator } from './hooks/useTypingIndicator';
+import TypingIndicator from './TypingIndicator';
 //d
 interface Message {
   _id?: string;
@@ -16,6 +18,7 @@ interface Message {
 interface User {
   user_id: string;
   username: string;
+  display_name?: string;
 }
 
 interface Conversation {
@@ -44,6 +47,14 @@ const Messages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Typing indicator hook
+  const typingIndicator = useTypingIndicator({
+    currentUser,
+    selectedConversation: selectedUser,
+    selectedConversationType: 'direct',
+    sessionToken
+  });
 
   // Debug session token changes
   useEffect(() => {
@@ -96,6 +107,16 @@ const Messages = () => {
     
     onConnectionEstablished: () => {
       console.log('SSE connection established');
+    },
+    
+    onTypingStart: (data) => {
+      console.log('Received typing start via SSE:', data);
+      typingIndicator.handleTypingReceived(data);
+    },
+    
+    onTypingStop: (data) => {
+      console.log('Received typing stop via SSE:', data);
+      typingIndicator.handleStoppedTyping(data);
     }
   });
 
@@ -345,7 +366,7 @@ const Messages = () => {
                 onClick={() => setSelectedUser(u.user_id)}
               >
                 <ProfileAvatar userId={u.user_id} size={32} />
-                <span>{u.username}</span>
+                <span>{u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`}</span>
               </button>
             </li>
           ))}
@@ -361,10 +382,9 @@ const Messages = () => {
                     <button
                       className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200 flex items-center space-x-3"
                       onClick={() => handleSelectNewUser(u.user_id)}
-                    >
-                      <ProfileAvatar userId={u.user_id} size={32} />
-                      <span>{u.username}</span>
-                    </button>
+                    >                <ProfileAvatar userId={u.user_id} size={32} />
+                <span>{u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`}</span>
+              </button>
                   </li>
                 ))}
               </ul>
@@ -381,7 +401,7 @@ const Messages = () => {
             {selectedUser ? (
               <>
                 <ProfileAvatar userId={selectedUser} size={32} />
-                <span>{users.find(u => u.user_id === selectedUser)?.username || `User ID: ${selectedUser}`}</span>
+                <span>{users.find(u => u.user_id === selectedUser)?.display_name || `AGENT-${selectedUser.substring(0, 8).toUpperCase()}`}</span>
               </>
             ) : (
               'Select a chat'
@@ -502,6 +522,9 @@ const Messages = () => {
                 ))
               )}
               <div ref={messagesEndRef} />
+              
+              {/* Typing Indicator */}
+              <TypingIndicator typingUsers={typingIndicator.typingUsers} className="px-4 py-2" />
             </div>
           ) : (
             <div className="text-gray-400 text-center mt-8">Select a user to start chatting.</div>
@@ -513,7 +536,10 @@ const Messages = () => {
             <input
               type="text"
               value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
+              onChange={e => {
+                setNewMessage(e.target.value);
+                typingIndicator.emitTyping(); // Emit typing indicator when user types
+              }}
               className="flex-1 p-2 bg-black text-white border border-white rounded focus:outline-none"
               placeholder="Type your message..."
               required

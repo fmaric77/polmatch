@@ -231,7 +231,7 @@ export default function SearchUsersPage() {
       const data = await res.json();
       
       if (data.success) {
-        setActionMessage(`Invitation sent to ${selectedUser.display_name || selectedUser.username}!`);
+        setActionMessage(`Invitation sent to ${selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}!`);
         setShowInviteModal(false);
         setSelectedUser(null);
         setSelectedGroupId('');
@@ -256,7 +256,7 @@ export default function SearchUsersPage() {
     setSelectedGroupId('');
   }
 
-  async function handleAddToCatalogue(user: User): Promise<void> {
+  async function addToCatalogue(userId: string) {
     setCatalogueLoading(true);
     setActionMessage('');
 
@@ -265,7 +265,7 @@ export default function SearchUsersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          user_id: user.user_id, 
+          user_id: userId, 
           category: activeProfileType,
           profile_type: activeProfileType
         })
@@ -274,12 +274,12 @@ export default function SearchUsersPage() {
       const data = await res.json();
       
       if (data.success) {
-        setActionMessage(data.message);
+        setActionMessage('Subject added to classified files');
       } else {
-        setActionMessage(data.error || 'Failed to add to catalogue');
+        setActionMessage(data.error || 'Failed to add subject to files');
       }
     } catch {
-      setActionMessage('Failed to add to catalogue');
+      setActionMessage('Failed to add subject to files');
     } finally {
       setCatalogueLoading(false);
     }
@@ -293,130 +293,238 @@ export default function SearchUsersPage() {
   // Exclude current user from results
   const availableUsers = filtered.filter(u => u.user_id !== currentUserId);
 
+  // Category labels matching catalogue style
+  const categoryLabels = {
+    basic: 'GENERAL',
+    love: 'PERSONAL', 
+    business: 'CORPORATE'
+  };
+
+  const categoryColors = {
+    basic: 'bg-gray-900 hover:bg-gray-800 border-gray-700',
+    love: 'bg-red-900 hover:bg-red-800 border-red-700',
+    business: 'bg-green-900 hover:bg-green-800 border-green-700'
+  };
+
   return (
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="search" />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="w-full max-w-4xl mx-auto mt-4 md:mt-12 p-4 md:p-8">
-          <div className="bg-black/80 border border-white rounded-lg shadow-lg p-4 md:p-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Search Users</h2>
-            
-            {/* Profile Type Selection */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-white">Select Profile Type:</h3>
-              <div className="flex space-x-2">
-                {[
-                  { value: 'basic', label: 'Basic', color: 'bg-blue-600 hover:bg-blue-700' },
-                  { value: 'love', label: 'Love', color: 'bg-pink-600 hover:bg-pink-700' },
-                  { value: 'business', label: 'Business', color: 'bg-green-600 hover:bg-green-700' }
-                ].map(profileType => (
-                  <button
-                    key={profileType.value}
-                    onClick={() => setActiveProfileType(profileType.value as 'basic' | 'love' | 'business')}
-                    className={`px-4 py-2 rounded text-white font-medium transition-colors ${
-                      activeProfileType === profileType.value 
-                        ? profileType.color.replace('hover:', '') + ' ring-2 ring-white'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }`}
-                  >
-                    {profileType.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-gray-400 text-sm mt-2">
-                You are searching as your <span className="capitalize font-semibold">{activeProfileType}</span> profile. 
-                Friend requests and messages will be sent from this profile type.
-              </p>
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
+          {/* FBI-Style Header */}
+          <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
+            <div className="border-b-2 border-white bg-white text-black p-3 md:p-4 text-center">
+              <div className="font-mono text-xs mb-1">CLASSIFIED</div>
+              <h1 className="text-lg md:text-2xl font-bold tracking-widest">SUBJECT SEARCH DATABASE</h1>
+              <div className="font-mono text-xs mt-1">AUTHORIZED PERSONNEL ONLY</div>
             </div>
-            
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by username or display name..."
-              className="w-full p-3 mb-4 md:mb-6 bg-black text-white border border-white rounded focus:outline-none text-sm md:text-base"
-            />
-            {actionMessage && (
-              <div className="mb-4 text-center text-green-400 text-sm md:text-base px-2">
-                {actionMessage}
+            <div className="p-3 md:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">
+                <div>
+                  <div className="text-gray-400">ACTIVE SEARCH</div>
+                  <div className="text-lg md:text-xl font-bold">{search ? 'RUNNING' : 'STANDBY'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">RESULTS FOUND</div>
+                  <div className="text-lg md:text-xl font-bold">{availableUsers.length.toString().padStart(3, '0')}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">ACCESS LEVEL</div>
+                  <div className="text-lg md:text-xl font-bold text-red-400">RESTRICTED</div>
+                </div>
+              </div>
+              
+              {/* Profile Type Selection */}
+              <div className="flex flex-col sm:flex-row justify-center gap-2 mb-4">
+                <div className="text-sm font-mono text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">SEARCH PROFILE:</div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {(Object.keys(categoryLabels) as Array<'basic' | 'love' | 'business'>).map(profileType => (
+                    <button
+                      key={profileType}
+                      onClick={() => setActiveProfileType(profileType)}
+                      className={`px-3 md:px-4 py-2 border-2 font-mono text-xs md:text-sm tracking-wider transition-all ${
+                        activeProfileType === profileType 
+                          ? `${categoryColors[profileType]} text-white`
+                          : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {categoryLabels[profileType]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search Input */}
+              <div className="mb-4">
+                <div className="text-xs font-mono text-gray-400 mb-2 text-center">ENTER SEARCH PARAMETERS:</div>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="SUBJECT USERNAME OR DISPLAY NAME..."
+                  className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
+                />
+              </div>
+
+              {actionMessage && (
+                <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
+                  ⚠ {actionMessage.toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results Container */}
+          <div className="bg-black border-2 border-white rounded-none shadow-2xl">
+            {availableUsers.length === 0 && search && (
+              <div className="text-center py-8 md:py-12 px-4">
+                <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
+                  NO SUBJECTS FOUND MATCHING "{search.toUpperCase()}"
+                </div>
+                <div className="text-xs md:text-sm text-gray-500 font-mono">
+                  REFINE SEARCH PARAMETERS OR CHECK SECURITY CLEARANCE
+                </div>
               </div>
             )}
-            <div className="space-y-4">
-              {availableUsers.map(user => (
-                <div key={user.user_id} className="border-b border-gray-700 pb-4 last:border-b-0">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                    {/* User Info */}
-                    <div className="flex items-center space-x-3 min-w-0 flex-shrink">
-                      <ProfileAvatar userId={user.user_id} size={40} />
-                      <span className="text-sm md:text-base truncate font-medium">
-                        {user.display_name || user.username || user.user_id}
-                      </span>
+            {availableUsers.length === 0 && !search && (
+              <div className="text-center py-8 md:py-12 px-4">
+                <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
+                  SEARCH DATABASE READY
+                </div>
+                <div className="text-xs md:text-sm text-gray-500 font-mono">
+                  ENTER SUBJECT IDENTIFIERS TO BEGIN SEARCH
+                </div>
+              </div>
+            )}
+            {availableUsers.length > 0 && (
+              <div className="p-3 md:p-6">
+                <div className="grid gap-3 md:gap-4">
+                  {availableUsers.map((user, index) => (
+                    <div key={user.user_id} className="border border-gray-600 bg-gray-900/50 relative">
+                      {/* File Header */}
+                      <div className="bg-white text-black p-2 font-mono text-xs">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                            <span className="font-bold">SEARCH RESULT #{(index + 1).toString().padStart(3, '0')}</span>
+                            <span className="hidden sm:inline">PROFILE: {categoryLabels[activeProfileType]}</span>
+                          </div>
+                          <div className="text-xs">
+                            STATUS: {isFriend(user.user_id) ? 'CONNECTED' : hasPendingRequest(user.user_id) ? 'PENDING' : 'UNCONNECTED'}
+                          </div>
+                        </div>
+                        <div className="sm:hidden text-xs mt-1">
+                          PROFILE: {categoryLabels[activeProfileType]}
+                        </div>
+                      </div>
+                      
+                      {/* File Content */}
+                      <div className="p-3 md:p-4">
+                        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                          {/* Subject Info */}
+                          <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
+                            {/* Photo Section */}
+                            <div className="border-2 border-white bg-gray-800 p-2 self-center sm:self-start">
+                              <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
+                              <ProfileAvatar userId={user.user_id} size={64} className="border border-gray-600" />
+                              <div className="text-xs font-mono text-gray-400 mt-1 text-center">ID: {user.user_id.substring(0, 8).toUpperCase()}</div>
+                            </div>
+                            
+                            {/* Subject Details */}
+                            <div className="flex-1 font-mono">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-2 text-sm">
+                                <div>
+                                  <span className="text-gray-400">SUBJECT NAME:</span>
+                                  <div className="text-white font-bold tracking-wider">
+                                    {(user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">RELATIONSHIP:</span>
+                                  <div className={`font-bold ${
+                                    isFriend(user.user_id) ? 'text-green-400' : 
+                                    hasPendingRequest(user.user_id) ? 'text-yellow-400' : 'text-red-400'
+                                  }`}>
+                                    {isFriend(user.user_id) ? 'ALLIED' : 
+                                     hasPendingRequest(user.user_id) ? 'PENDING' : 'UNKNOWN'}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Redacted Information Bar */}
+                              <div className="mt-3 p-2 bg-black border border-gray-600">
+                                <div className="text-xs text-gray-500 font-mono">
+                                  ADDITIONAL DATA: <span className="bg-black text-black border-b border-gray-600">█████████████████████</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex flex-row lg:flex-col gap-2 lg:space-y-2 lg:space-x-0 flex-wrap lg:flex-nowrap lg:ml-4 lg:min-w-[140px]">
+                            <button 
+                              onClick={() => handleViewProfile(user)} 
+                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
+                            >
+                              VIEW DOSSIER
+                            </button>
+                            
+                            {isFriend(user.user_id) ? (
+                              <button 
+                                onClick={() => removeFriend(user.user_id)} 
+                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+                              >
+                                TERMINATE LINK
+                              </button>
+                            ) : hasPendingRequest(user.user_id) ? (
+                              <button 
+                                disabled 
+                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-yellow-800 text-yellow-200 font-mono text-xs border-2 border-yellow-600 cursor-not-allowed tracking-wider"
+                              >
+                                REQUEST PENDING
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => sendFriendRequest(user.user_id)} 
+                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-green-900 text-white font-mono text-xs border-2 border-green-700 hover:bg-green-800 transition-colors tracking-wider"
+                              >
+                                ESTABLISH LINK
+                              </button>
+                            )}
+                            
+                            <button 
+                              onClick={() => handleDirectMessage(user)} 
+                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-blue-900 text-white font-mono text-xs border-2 border-blue-700 hover:bg-blue-800 transition-colors tracking-wider"
+                            >
+                              SECURE CHANNEL
+                            </button>
+                            
+                            <button 
+                              onClick={() => handleInviteToGroup(user)} 
+                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-purple-900 text-white font-mono text-xs border-2 border-purple-700 hover:bg-purple-800 transition-colors tracking-wider"
+                            >
+                              GROUP RECRUIT
+                            </button>
+                            
+                            <button
+                              onClick={() => addToCatalogue(user.user_id)}
+                              disabled={catalogueLoading}
+                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-orange-900 text-white font-mono text-xs border-2 border-orange-700 hover:bg-orange-800 transition-colors tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {catalogueLoading ? 'FILING...' : 'ADD TO FILES'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Security Footer */}
+                      <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700">
+                        ⚠ CLASSIFIED SEARCH RESULT - AUTHORIZED VIEWING ONLY ⚠
+                      </div>
                     </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:gap-2">
-                      <button 
-                        onClick={() => handleViewProfile(user)} 
-                        className="flex-1 sm:flex-none px-3 py-2 bg-indigo-600 text-white rounded text-xs md:text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap"
-                      >
-                        View Profile
-                      </button>
-                      {isFriend(user.user_id) ? (
-                        <button 
-                          onClick={() => removeFriend(user.user_id)} 
-                          className="flex-1 sm:flex-none px-3 py-2 bg-red-600 text-white rounded text-xs md:text-sm hover:bg-red-700 transition-colors whitespace-nowrap"
-                        >
-                          Remove Friend
-                        </button>
-                      ) : hasPendingRequest(user.user_id) ? (
-                        <button 
-                          disabled
-                          className="flex-1 sm:flex-none px-3 py-2 bg-gray-600 text-white rounded text-xs md:text-sm cursor-not-allowed transition-colors whitespace-nowrap"
-                        >
-                          Request Pending
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => sendFriendRequest(user.user_id)} 
-                          className="flex-1 sm:flex-none px-3 py-2 bg-blue-600 text-white rounded text-xs md:text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
-                        >
-                          Add {activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)} Friend
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => handleDirectMessage(user)} 
-                        className="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white rounded text-xs md:text-sm hover:bg-green-700 transition-colors whitespace-nowrap"
-                      >
-                        Message ({activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)})
-                      </button>
-                      <button 
-                        onClick={() => handleInviteToGroup(user)} 
-                        className="flex-1 sm:flex-none px-3 py-2 bg-purple-600 text-white rounded text-xs md:text-sm hover:bg-purple-700 transition-colors whitespace-nowrap"
-                      >
-                        Invite
-                      </button>
-                      <button 
-                        onClick={() => handleAddToCatalogue(user)} 
-                        disabled={catalogueLoading}
-                        className="flex-1 sm:flex-none px-3 py-2 bg-yellow-600 text-white rounded text-xs md:text-sm hover:bg-yellow-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {catalogueLoading ? 'Adding...' : `Catalogue (${activeProfileType.charAt(0).toUpperCase() + activeProfileType.slice(1)})`}
-                      </button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-              {availableUsers.length === 0 && search && (
-                <div className="text-center text-gray-400 py-8">
-                  <p className="text-sm md:text-base">No users found matching &quot;{search}&quot;</p>
-                </div>
-              )}
-              {availableUsers.length === 0 && !search && (
-                <div className="text-center text-gray-400 py-8">
-                  <p className="text-sm md:text-base">Start typing to search for users</p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -424,7 +532,7 @@ export default function SearchUsersPage() {
         {selectedUser && (
           <ProfileModal
             userId={selectedUser.user_id}
-            username={selectedUser.display_name || selectedUser.username}
+            username={selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}
             isOpen={isProfileModalOpen}
             onClose={closeProfileModal}
             defaultActiveTab={activeProfileType}
@@ -435,58 +543,68 @@ export default function SearchUsersPage() {
         {/* Group Invite Modal */}
         {showInviteModal && selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-black border border-white rounded-lg shadow-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-white">
-                Invite {selectedUser.display_name || selectedUser.username} to Group
-              </h2>
+            <div className="bg-black border-2 border-white rounded-none shadow-lg w-full max-w-md">
+              {/* Modal Header */}
+              <div className="border-b-2 border-white bg-white text-black p-3 text-center">
+                <div className="font-mono text-xs mb-1">CLASSIFIED OPERATION</div>
+                <h2 className="text-lg font-bold tracking-wider">GROUP RECRUITMENT</h2>
+                <div className="font-mono text-xs mt-1">SUBJECT: {(selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}</div>
+              </div>
               
-              {userGroups.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-400 mb-4">
-                    You don&apos;t have any groups where you can invite users.
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    You need to be an admin or owner of a group to send invitations.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Select a group:
-                    </label>
-                    <select
-                      value={selectedGroupId}
-                      onChange={(e) => setSelectedGroupId(e.target.value)}
-                      className="w-full bg-black text-white border border-white rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-white"
-                    >
-                      <option value="">Choose a group...</option>
-                      {userGroups.map(group => (
-                        <option key={group.group_id} value={group.group_id}>
-                          {group.name} {group.is_private ? '(Private)' : '(Public)'}
-                        </option>
-                      ))}
-                    </select>
+              <div className="p-6">
+                {userGroups.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div className="font-mono text-gray-400 mb-4">
+                      NO AUTHORIZED GROUPS AVAILABLE
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">
+                      ADMINISTRATOR OR OWNER STATUS REQUIRED FOR RECRUITMENT
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              <div className="flex space-x-2 mt-6">
-                {userGroups.length > 0 && (
-                  <button
-                    onClick={sendGroupInvitation}
-                    disabled={!selectedGroupId || inviteLoading}
-                    className="flex-1 bg-white text-black py-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {inviteLoading ? 'Sending...' : 'Send Invitation'}
-                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-mono text-gray-400 mb-2 tracking-wider">
+                        SELECT TARGET GROUP:
+                      </label>
+                      <select
+                        value={selectedGroupId}
+                        onChange={(e) => setSelectedGroupId(e.target.value)}
+                        className="w-full bg-black text-white border-2 border-white font-mono text-sm px-3 py-2 focus:outline-none focus:border-red-400"
+                      >
+                        <option value="">CHOOSE OPERATION...</option>
+                        {userGroups.map(group => (
+                          <option key={group.group_id} value={group.group_id}>
+                            {group.name.toUpperCase()} {group.is_private ? '[CLASSIFIED]' : '[PUBLIC]'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 )}
-                <button
-                  onClick={closeInviteModal}
-                  className="flex-1 bg-gray-600 text-white py-2 rounded hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
+                
+                <div className="flex space-x-2 mt-6">
+                  {userGroups.length > 0 && (
+                    <button
+                      onClick={sendGroupInvitation}
+                      disabled={!selectedGroupId || inviteLoading}
+                      className="flex-1 bg-white text-black py-2 font-mono text-xs tracking-wider hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {inviteLoading ? 'TRANSMITTING...' : 'EXECUTE RECRUITMENT'}
+                    </button>
+                  )}
+                  <button
+                    onClick={closeInviteModal}
+                    className="flex-1 bg-red-900 text-white py-2 font-mono text-xs tracking-wider border border-red-700 hover:bg-red-800 transition-colors"
+                  >
+                    ABORT MISSION
+                  </button>
+                </div>
+              </div>
+              
+              {/* Security Footer */}
+              <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700">
+                ⚠ CLASSIFIED RECRUITMENT OPERATION ⚠
               </div>
             </div>
           </div>

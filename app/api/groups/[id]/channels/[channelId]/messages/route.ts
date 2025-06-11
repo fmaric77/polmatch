@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as CryptoJS from 'crypto-js';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
+import { notifyNewGroupMessage } from '../../../../../../../lib/sse-notifications';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -231,6 +232,18 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     };
 
     await db.collection('group_messages').insertOne(message);
+
+    // Send SSE notification to all group members
+    await notifyNewGroupMessage({
+      message_id: messageId,
+      group_id: groupId,
+      channel_id: channelId,
+      sender_id: auth.userId,
+      content: content, // Use unencrypted content for notification
+      timestamp: message.timestamp,
+      attachments: attachments || [],
+      sender_username: auth.username // Use username from auth if available
+    });
 
     return NextResponse.json({ 
       success: true, 

@@ -249,8 +249,9 @@ export default function ProfilePage() {
             type={question.question_type}
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
             required={question.is_required}
+            placeholder="[ENTER CLASSIFICATION DATA]"
           />
         );
       
@@ -260,8 +261,9 @@ export default function ProfilePage() {
             type="number"
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
             required={question.is_required}
+            placeholder="[NUMERICAL INPUT REQUIRED]"
           />
         );
       
@@ -271,8 +273,9 @@ export default function ProfilePage() {
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
             rows={4}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
             required={question.is_required}
+            placeholder="[DETAILED INFORMATION REQUIRED]"
           />
         );
       
@@ -281,10 +284,10 @@ export default function ProfilePage() {
           <select
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
             required={question.is_required}
           >
-            <option value="">Select an option...</option>
+            <option value="">[SELECT CLASSIFICATION]</option>
             {question.options.map((option, idx) => (
               <option key={idx} value={option}>{option}</option>
             ))}
@@ -295,14 +298,14 @@ export default function ProfilePage() {
         return (
           <div className="space-y-2">
             {question.options.map((option, idx) => (
-              <label key={idx} className="flex items-center">
+              <label key={idx} className="flex items-center font-mono">
                 <input
                   type="radio"
                   name={question.question_id}
                   value={option}
                   checked={value === option}
                   onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-                  className="mr-2"
+                  className="mr-3"
                   required={question.is_required}
                 />
                 {option}
@@ -315,7 +318,7 @@ export default function ProfilePage() {
         return (
           <div className="space-y-2">
             {question.options.map((option, idx) => (
-              <label key={idx} className="flex items-center">
+              <label key={idx} className="flex items-center font-mono">
                 <input
                   type="checkbox"
                   value={option}
@@ -330,7 +333,7 @@ export default function ProfilePage() {
                     }
                     handleAnswerChange(question.question_id, selectedOptions.join(','));
                   }}
-                  className="mr-2"
+                  className="mr-3"
                 />
                 {option}
               </label>
@@ -344,8 +347,9 @@ export default function ProfilePage() {
             type="text"
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-blue-400"
+            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
             required={question.is_required}
+            placeholder="[ENTER CLASSIFICATION DATA]"
           />
         );
     }
@@ -356,53 +360,53 @@ export default function ProfilePage() {
     return (
       <div className="flex h-screen bg-black text-white">
         <Navigation currentPage="profile" />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="w-full max-w-4xl mx-auto mt-12 p-6">
+        <main className="flex-1 flex flex-col overflow-y-auto">
+          <div className="w-full max-w-4xl mx-auto mt-12 p-6 pb-16">
             <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold">{activeQuestionnaire.title}</h1>
-                  <p className="text-gray-300">{activeQuestionnaire.description}</p>
+                  <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">[CLASSIFIED FORM: {activeQuestionnaire.title}]</h1>
+                  <p className="text-gray-300 font-mono text-sm mt-2">DOSSIER COMPLETION PROTOCOL: {activeQuestionnaire.description}</p>
                 </div>
                 <button
                   onClick={() => setActiveQuestionnaire(null)}
-                  className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
                 >
-                  ← Back to Profile
+                  ← ABORT FORM
                 </button>
               </div>
 
               <form onSubmit={(e) => { e.preventDefault(); submitQuestionnaire(); }} className="space-y-6">
                 {activeQuestionnaire.questions?.map((question, index) => (
-                  <div key={question.question_id} className="border border-gray-600 rounded-lg p-4">
-                    <label className="block text-sm font-medium mb-3">
-                      {index + 1}. {question.question_text}
-                      {question.is_required && <span className="text-red-400 ml-1">*</span>}
+                  <div key={question.question_id} className="border border-white/30 rounded-lg p-4 bg-black/40">
+                    <label className="block text-sm font-mono font-medium mb-3 uppercase tracking-wider">
+                      FIELD {String(index + 1).padStart(3, '0')}: {question.question_text}
+                      {question.is_required && <span className="text-red-400 ml-1">[REQUIRED]</span>}
                     </label>
                     {renderQuestion(question)}
                   </div>
                 ))}
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-6 border-t border-white/30">
                   <button
                     type="button"
                     onClick={() => setActiveQuestionnaire(null)}
-                    className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                    className="px-6 py-3 bg-black text-white border border-white font-mono rounded hover:bg-white/10 transition-colors uppercase tracking-wider"
                   >
-                    Cancel
+                    TERMINATE SESSION
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors disabled:opacity-50 uppercase tracking-wider"
                   >
-                    {submitting ? 'Submitting...' : 'Submit Questionnaire'}
+                    {submitting ? 'PROCESSING...' : 'COMMIT TO DATABASE'}
                   </button>
                 </div>
 
                 {submitMessage && (
-                  <div className={`text-center mt-4 ${submitMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
-                    {submitMessage}
+                  <div className={`text-center mt-4 font-mono uppercase tracking-wider ${submitMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
+                    {submitMessage.includes('success') ? '[FORM SUBMISSION SUCCESSFUL]' : '[FORM SUBMISSION FAILED]'}
                   </div>
                 )}
               </form>
@@ -411,45 +415,53 @@ export default function ProfilePage() {
         </main>
       </div>
     );
-  }
-
-  return (
+  }  return (
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="profile" />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="w-full max-w-6xl mx-auto mt-12 p-6">
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="w-full max-w-6xl mx-auto mt-12 p-6 pb-16">
           <div className="bg-black/80 border border-white rounded-lg shadow-lg">
+            {/* FBI Header */}
+            <div className="border-b border-white/30 p-8">
+              <h1 className="text-4xl font-bold font-mono text-center uppercase tracking-wider mb-2">
+                [CLASSIFIED AGENT MANAGEMENT SYSTEM]
+              </h1>
+              <p className="text-center text-gray-300 font-mono text-sm uppercase tracking-wider">
+                PERSONNEL FILE ADMINISTRATION / DOSSIER MANAGEMENT / CONTACT REGISTRY
+              </p>
+            </div>
+
             {/* Tab Navigation */}
-            <div className="flex border-b border-gray-600">
+            <div className="flex border-b border-white/30">
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex-1 px-6 py-4 text-center transition-colors ${
+                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
                   activeTab === 'settings'
-                    ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-white text-black border-b-2 border-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }`}
               >
-                Profile Settings
+                DOSSIER SETTINGS
               </button>
               <button
                 onClick={() => setActiveTab('questionnaires')}
-                className={`flex-1 px-6 py-4 text-center transition-colors ${
+                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
                   activeTab === 'questionnaires'
-                    ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-white text-black border-b-2 border-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }`}
               >
-                Questionnaires
+                CLASSIFICATION FORMS
               </button>
               <button
                 onClick={() => setActiveTab('friends')}
-                className={`flex-1 px-6 py-4 text-center transition-colors ${
+                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
                   activeTab === 'friends'
-                    ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-white text-black border-b-2 border-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }`}
               >
-                Friends
+                CONTACT REGISTRY
               </button>
             </div>
 
@@ -459,216 +471,255 @@ export default function ProfilePage() {
 
               {activeTab === 'settings' && (
                 <div>
-                  <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
+                  <h1 className="text-2xl font-bold font-mono mb-6 uppercase tracking-wider">[AGENT DOSSIER CONFIGURATION]</h1>
                   
                   {/* Profile Type Tabs */}
                   <div className="flex gap-4 mb-6">
                     <button 
-                      className={`px-4 py-2 rounded ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`} 
+                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('basic')}
                     >
-                      Basic
+                      GENERAL
                     </button>
                     <button 
-                      className={`px-4 py-2 rounded ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`} 
+                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('love')}
                     >
-                      Love
+                      PERSONAL
                     </button>
                     <button 
-                      className={`px-4 py-2 rounded ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`} 
+                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('business')}
                     >
-                      Business
+                      CORPORATE
                     </button>
                   </div>
 
                   {profileLoading ? (
-                    <div className="text-center py-8">Loading profiles...</div>
+                    <div className="text-center py-8 font-mono uppercase tracking-wider">[LOADING DOSSIER DATA...]</div>
                   ) : (
                     <>
                       {activeProfileTab === 'basic' && (basicProfile || userId) && (
-                        <form onSubmit={e => { 
-                          e.preventDefault(); 
-                          if (!basicProfile && userId) setBasicProfile(getDefaultProfile('basic', userId)); 
-                          handleProfileSave('basic'); 
-                        }} className="flex flex-col gap-4 max-w-md">
-                          <input 
-                            type="text" 
-                            name="display_name" 
-                            placeholder="Display Name" 
-                            value={basicProfile?.display_name || ''} 
-                            onChange={e => handleProfileChange('basic', 'display_name', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <textarea 
-                            name="bio" 
-                            placeholder="Bio" 
-                            value={basicProfile?.bio || ''} 
-                            onChange={e => handleProfileChange('basic', 'bio', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <input 
-                            type="text" 
-                            name="profile_picture_url" 
-                            placeholder="Profile Picture URL" 
-                            value={basicProfile?.profile_picture_url || ''} 
-                            onChange={e => handleProfileChange('basic', 'profile_picture_url', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          {userId && (
-                            <div className="flex items-center space-x-3 mt-2">
-                              <span className="text-white text-sm">Preview:</span>
-                              <ProfileAvatar userId={userId} size={48} />
+                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                          <h2 className="text-xl font-mono font-bold mb-4 uppercase tracking-wider">[GENERAL CLASSIFICATION FILE]</h2>
+                          <form onSubmit={e => { 
+                            e.preventDefault(); 
+                            if (!basicProfile && userId) setBasicProfile(getDefaultProfile('basic', userId)); 
+                            handleProfileSave('basic'); 
+                          }} className="flex flex-col gap-4 max-w-md">
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">AGENT DESIGNATION</label>
+                              <input 
+                                type="text" 
+                                name="display_name" 
+                                placeholder="[ENTER CODENAME]" 
+                                value={basicProfile?.display_name || ''} 
+                                onChange={e => handleProfileChange('basic', 'display_name', e.target.value)}
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
                             </div>
-                          )}
-                          <div className="space-y-2">
-                            <label className="text-white text-sm font-medium">Profile Visibility</label>
-                            <select 
-                              name="visibility" 
-                              value={basicProfile?.visibility || 'public'} 
-                              onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
-                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">BIOGRAPHICAL DATA</label>
+                              <textarea 
+                                name="bio" 
+                                placeholder="[CLASSIFIED BACKGROUND INFORMATION]" 
+                                value={basicProfile?.bio || ''} 
+                                onChange={e => handleProfileChange('basic', 'bio', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                rows={4}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">PHOTOGRAPH URL</label>
+                              <input 
+                                type="text" 
+                                name="profile_picture_url" 
+                                placeholder="[SECURE IMAGE LOCATION]" 
+                                value={basicProfile?.profile_picture_url || ''} 
+                                onChange={e => handleProfileChange('basic', 'profile_picture_url', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
+                            </div>
+                            {userId && (
+                              <div className="flex items-center space-x-3 mt-2 p-3 bg-black/60 border border-white/20 rounded">
+                                <span className="text-white text-sm font-mono uppercase tracking-wider">FILE PREVIEW:</span>
+                                <ProfileAvatar userId={userId} size={48} />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">SECURITY CLEARANCE LEVEL</label>
+                              <select 
+                                name="visibility" 
+                                value={basicProfile?.visibility || 'public'} 
+                                onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                              >
+                                <option value="public">PUBLIC - UNCLASSIFIED ACCESS</option>
+                                <option value="friends">RESTRICTED - CONTACT ACCESS ONLY</option>
+                                <option value="private">CLASSIFIED - AGENT ACCESS ONLY</option>
+                              </select>
+                              <p className="text-gray-400 text-xs font-mono">
+                                DETERMINES PERSONNEL FILE VISIBILITY AND FORM ACCESS AUTHORIZATION.
+                              </p>
+                            </div>
+                            <button 
+                              type="submit" 
+                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
                             >
-                              <option value="public">Public - Visible to everyone</option>
-                              <option value="friends">Friends Only - Visible only to your friends</option>
-                              <option value="private">Private - Visible only to you</option>
-                            </select>
-                            <p className="text-gray-400 text-xs">
-                              Choose who can see your basic profile information and questionnaire answers.
-                            </p>
-                          </div>
-                          <button 
-                            type="submit" 
-                            className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
-                          >
-                            {basicProfile ? 'Save' : 'Create'} Basic Profile
-                          </button>
-                        </form>
+                              {basicProfile ? 'UPDATE' : 'CREATE'} GENERAL FILE
+                            </button>
+                          </form>
+                        </div>
                       )}
 
                       {activeProfileTab === 'love' && (loveProfile || userId) && (
-                        <form onSubmit={e => { 
-                          e.preventDefault(); 
-                          if (!loveProfile && userId) setLoveProfile(getDefaultProfile('love', userId)); 
-                          handleProfileSave('love'); 
-                        }} className="flex flex-col gap-4 max-w-md">
-                          <input 
-                            type="text" 
-                            name="display_name" 
-                            placeholder="Display Name" 
-                            value={loveProfile?.display_name || ''} 
-                            onChange={e => handleProfileChange('love', 'display_name', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <textarea 
-                            name="bio" 
-                            placeholder="Bio" 
-                            value={loveProfile?.bio || ''} 
-                            onChange={e => handleProfileChange('love', 'bio', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <input 
-                            type="text" 
-                            name="profile_picture_url" 
-                            placeholder="Profile Picture URL" 
-                            value={loveProfile?.profile_picture_url || ''} 
-                            onChange={e => handleProfileChange('love', 'profile_picture_url', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          {userId && (
-                            <div className="flex items-center space-x-3 mt-2">
-                              <span className="text-white text-sm">Preview:</span>
-                              <ProfileAvatar userId={userId} size={48} />
+                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                          <h2 className="text-xl font-mono font-bold mb-4 uppercase tracking-wider">[PERSONAL CLASSIFICATION FILE]</h2>
+                          <form onSubmit={e => { 
+                            e.preventDefault(); 
+                            if (!loveProfile && userId) setLoveProfile(getDefaultProfile('love', userId)); 
+                            handleProfileSave('love'); 
+                          }} className="flex flex-col gap-4 max-w-md">
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">AGENT DESIGNATION</label>
+                              <input 
+                                type="text" 
+                                name="display_name" 
+                                placeholder="[ENTER PERSONAL CODENAME]" 
+                                value={loveProfile?.display_name || ''} 
+                                onChange={e => handleProfileChange('love', 'display_name', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
                             </div>
-                          )}
-                          <div className="space-y-2">
-                            <label className="text-white text-sm font-medium">Profile Visibility</label>
-                            <select 
-                              name="visibility" 
-                              value={loveProfile?.visibility || 'public'} 
-                              onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
-                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">PERSONAL PROFILE DATA</label>
+                              <textarea 
+                                name="bio" 
+                                placeholder="[PERSONAL BACKGROUND INFORMATION]" 
+                                value={loveProfile?.bio || ''} 
+                                onChange={e => handleProfileChange('love', 'bio', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                rows={4}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">PHOTOGRAPH URL</label>
+                              <input 
+                                type="text" 
+                                name="profile_picture_url" 
+                                placeholder="[SECURE IMAGE LOCATION]" 
+                                value={loveProfile?.profile_picture_url || ''} 
+                                onChange={e => handleProfileChange('love', 'profile_picture_url', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
+                            </div>
+                            {userId && (
+                              <div className="flex items-center space-x-3 mt-2 p-3 bg-black/60 border border-white/20 rounded">
+                                <span className="text-white text-sm font-mono uppercase tracking-wider">FILE PREVIEW:</span>
+                                <ProfileAvatar userId={userId} size={48} />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">SECURITY CLEARANCE LEVEL</label>
+                              <select 
+                                name="visibility" 
+                                value={loveProfile?.visibility || 'public'} 
+                                onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                              >
+                                <option value="public">PUBLIC - UNCLASSIFIED ACCESS</option>
+                                <option value="friends">RESTRICTED - CONTACT ACCESS ONLY</option>
+                                <option value="private">CLASSIFIED - AGENT ACCESS ONLY</option>
+                              </select>
+                              <p className="text-gray-400 text-xs font-mono">
+                                DETERMINES PERSONAL FILE VISIBILITY AND RELATIONSHIP FORM ACCESS.
+                              </p>
+                            </div>
+                            <button 
+                              type="submit" 
+                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
                             >
-                              <option value="public">Public - Visible to everyone</option>
-                              <option value="friends">Friends Only - Visible only to your friends</option>
-                              <option value="private">Private - Visible only to you</option>
-                            </select>
-                            <p className="text-gray-400 text-xs">
-                              Choose who can see your love profile information and relationship questionnaires.
-                            </p>
-                          </div>
-                          <button 
-                            type="submit" 
-                            className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
-                          >
-                            {loveProfile ? 'Save' : 'Create'} Love Profile
-                          </button>
-                        </form>
+                              {loveProfile ? 'UPDATE' : 'CREATE'} PERSONAL FILE
+                            </button>
+                          </form>
+                        </div>
                       )}
 
                       {activeProfileTab === 'business' && (businessProfile || userId) && (
-                        <form onSubmit={e => { 
-                          e.preventDefault(); 
-                          if (!businessProfile && userId) setBusinessProfile(getDefaultProfile('business', userId)); 
-                          handleProfileSave('business'); 
-                        }} className="flex flex-col gap-4 max-w-md">
-                          <input 
-                            type="text" 
-                            name="display_name" 
-                            placeholder="Display Name" 
-                            value={businessProfile?.display_name || ''} 
-                            onChange={e => handleProfileChange('business', 'display_name', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <textarea 
-                            name="bio" 
-                            placeholder="Bio" 
-                            value={businessProfile?.bio || ''} 
-                            onChange={e => handleProfileChange('business', 'bio', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          <input 
-                            type="text" 
-                            name="profile_picture_url" 
-                            placeholder="Profile Picture URL" 
-                            value={businessProfile?.profile_picture_url || ''} 
-                            onChange={e => handleProfileChange('business', 'profile_picture_url', e.target.value)} 
-                            className="p-2 bg-black text-white border border-white rounded focus:outline-none" 
-                          />
-                          {userId && (
-                            <div className="flex items-center space-x-3 mt-2">
-                              <span className="text-white text-sm">Preview:</span>
-                              <ProfileAvatar userId={userId} size={48} />
+                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                          <h2 className="text-xl font-mono font-bold mb-4 uppercase tracking-wider">[CORPORATE CLASSIFICATION FILE]</h2>
+                          <form onSubmit={e => { 
+                            e.preventDefault(); 
+                            if (!businessProfile && userId) setBusinessProfile(getDefaultProfile('business', userId)); 
+                            handleProfileSave('business'); 
+                          }} className="flex flex-col gap-4 max-w-md">
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">CORPORATE DESIGNATION</label>
+                              <input 
+                                type="text" 
+                                name="display_name" 
+                                placeholder="[ENTER PROFESSIONAL CODENAME]" 
+                                value={businessProfile?.display_name || ''} 
+                                onChange={e => handleProfileChange('business', 'display_name', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
                             </div>
-                          )}
-                          <div className="space-y-2">
-                            <label className="text-white text-sm font-medium">Profile Visibility</label>
-                            <select 
-                              name="visibility" 
-                              value={businessProfile?.visibility || 'public'} 
-                              onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
-                              className="p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">CORPORATE PROFILE DATA</label>
+                              <textarea 
+                                name="bio" 
+                                placeholder="[PROFESSIONAL BACKGROUND INFORMATION]" 
+                                value={businessProfile?.bio || ''} 
+                                onChange={e => handleProfileChange('business', 'bio', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                rows={4}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">PHOTOGRAPH URL</label>
+                              <input 
+                                type="text" 
+                                name="profile_picture_url" 
+                                placeholder="[SECURE IMAGE LOCATION]" 
+                                value={businessProfile?.profile_picture_url || ''} 
+                                onChange={e => handleProfileChange('business', 'profile_picture_url', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                              />
+                            </div>
+                            {userId && (
+                              <div className="flex items-center space-x-3 mt-2 p-3 bg-black/60 border border-white/20 rounded">
+                                <span className="text-white text-sm font-mono uppercase tracking-wider">FILE PREVIEW:</span>
+                                <ProfileAvatar userId={userId} size={48} />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">SECURITY CLEARANCE LEVEL</label>
+                              <select 
+                                name="visibility" 
+                                value={businessProfile?.visibility || 'public'} 
+                                onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
+                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                              >
+                                <option value="public">PUBLIC - UNCLASSIFIED ACCESS</option>
+                                <option value="friends">RESTRICTED - CONTACT ACCESS ONLY</option>
+                                <option value="private">CLASSIFIED - AGENT ACCESS ONLY</option>
+                              </select>
+                              <p className="text-gray-400 text-xs font-mono">
+                                DETERMINES CORPORATE FILE VISIBILITY AND PROFESSIONAL FORM ACCESS.
+                              </p>
+                            </div>
+                            <button 
+                              type="submit" 
+                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
                             >
-                              <option value="public">Public - Visible to everyone</option>
-                              <option value="friends">Friends Only - Visible only to your friends</option>
-                              <option value="private">Private - Visible only to you</option>
-                            </select>
-                            <p className="text-gray-400 text-xs">
-                              Choose who can see your business profile information and professional questionnaires.
-                            </p>
-                          </div>
-                          <button 
-                            type="submit" 
-                            className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
-                          >
-                            {businessProfile ? 'Save' : 'Create'} Business Profile
-                          </button>
-                        </form>
+                              {businessProfile ? 'UPDATE' : 'CREATE'} CORPORATE FILE
+                            </button>
+                          </form>
+                        </div>
                       )}
 
                       {profileMessage && (
-                        <div className="text-green-400 text-center mt-4">{profileMessage}</div>
+                        <div className="text-green-400 text-center mt-4 font-mono uppercase tracking-wider">[{profileMessage.toUpperCase()}]</div>
                       )}
                     </>
                   )}
@@ -677,66 +728,66 @@ export default function ProfilePage() {
 
               {activeTab === 'questionnaires' && (
                 <div>
-                  <h1 className="text-3xl font-bold mb-6 text-center">Questionnaires</h1>
+                  <h1 className="text-3xl font-bold font-mono mb-6 text-center uppercase tracking-wider">[CLASSIFICATION FORM DATABASE]</h1>
                   
                   {/* Profile Type Selector */}
                   <div className="flex justify-center mb-8">
-                    <div className="flex bg-gray-800 rounded-lg p-1">
+                    <div className="flex bg-black border border-white rounded-lg p-1">
                       {(['basic', 'business', 'love'] as const).map((type) => (
                         <button
                           key={type}
                           onClick={() => setSelectedProfileType(type)}
-                          className={`px-4 py-2 rounded-md transition-colors capitalize ${
+                          className={`px-4 py-2 rounded-md transition-colors font-mono uppercase tracking-wider ${
                             selectedProfileType === type
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                              ? 'bg-white text-black'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
                           }`}
                         >
-                          {type} Profile
+                          {type === 'basic' ? 'GENERAL' : type === 'business' ? 'CORPORATE' : 'PERSONAL'} FILE
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {questionnaireLoading ? (
-                    <div className="text-center py-8">Loading questionnaires...</div>
+                    <div className="text-center py-8 font-mono uppercase tracking-wider">[LOADING CLASSIFICATION FORMS...]</div>
                   ) : questionnaireError ? (
-                    <div className="text-center py-8 text-red-400">{questionnaireError}</div>
+                    <div className="text-center py-8 text-red-400 font-mono uppercase tracking-wider">[{questionnaireError.toUpperCase()}]</div>
                   ) : questionnaireGroups.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      No questionnaires available for {selectedProfileType} profile.
+                    <div className="text-center py-8 text-gray-400 font-mono uppercase tracking-wider">
+                      [NO CLASSIFICATION FORMS AVAILABLE FOR {selectedProfileType === 'basic' ? 'GENERAL' : selectedProfileType === 'business' ? 'CORPORATE' : 'PERSONAL'} FILE]
                     </div>
                   ) : (
                     <div className="space-y-6">
                       {questionnaireGroups.map((group) => (
-                        <div key={group.group_id} className="border border-white rounded-lg p-6">
-                          <h2 className="text-xl font-bold mb-2">{group.title}</h2>
-                          <p className="text-gray-300 mb-4">{group.description}</p>
+                        <div key={group.group_id} className="border border-white rounded-lg p-6 bg-black/40">
+                          <h2 className="text-xl font-bold font-mono mb-2 uppercase tracking-wider">[{group.title}]</h2>
+                          <p className="text-gray-300 font-mono mb-4 text-sm uppercase tracking-wider">CLASSIFICATION: {group.description}</p>
                           
                           <div className="space-y-3">
                             {group.questionnaires.map((questionnaire) => (
-                              <div key={questionnaire.questionnaire_id} className="flex justify-between items-center bg-gray-900 p-4 rounded-lg">
+                              <div key={questionnaire.questionnaire_id} className="flex justify-between items-center bg-black/60 border border-white/30 p-4 rounded-lg">
                                 <div>
-                                  <h3 className="font-semibold">{questionnaire.title}</h3>
-                                  <p className="text-sm text-gray-400">{questionnaire.description}</p>
+                                  <h3 className="font-semibold font-mono uppercase tracking-wider">{questionnaire.title}</h3>
+                                  <p className="text-sm text-gray-400 font-mono">{questionnaire.description}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   {questionnaire.completed ? (
                                     <div className="flex items-center gap-2">
-                                      <span className="text-green-400 text-sm">✓ Completed</span>
+                                      <span className="text-green-400 text-sm font-mono uppercase tracking-wider">[COMPLETED]</span>
                                       <button
                                         onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                                        className="px-3 py-1 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors text-sm uppercase tracking-wider"
                                       >
-                                        Review/Edit
+                                        REVIEW/EDIT
                                       </button>
                                     </div>
                                   ) : (
                                     <button
                                       onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                      className="px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
                                     >
-                                      Start
+                                      INITIATE FORM
                                     </button>
                                   )}
                                 </div>

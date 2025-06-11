@@ -54,11 +54,6 @@ const Header = () => {
         <Image src="/images/polstrat-dark.png" alt="Polstrat Logo" className="h-16 mb-8 drop-shadow-lg" width={128} height={48} />
         <nav className="w-full flex-1">
           <ul className="flex flex-col space-y-6 w-full px-4">
-            {username && (
-              <li className="text-white text-center mb-2">
-                <span className="font-semibold">Logged in as:</span> {username}
-              </li>
-            )}
             <li>
               <a href="/chat" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faEnvelope} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-blue-400 group-hover:text-blue-200 transition-colors" />

@@ -124,7 +124,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
       if (data.success) {
         const conversation: Conversation = {
           id: selectedUser.user_id,
-          name: `${selectedUser.display_name || selectedUser.username} (${getProfileLabel(senderProfileType)} ↔ ${getProfileLabel(receiverProfileType)})`,
+          name: `${selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`} (${getProfileLabel(senderProfileType)} ↔ ${getProfileLabel(receiverProfileType)})`,
           type: 'direct',
           user_id: selectedUser.user_id
         };
@@ -220,10 +220,10 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                             {getProfileIcon(receiverProfileType)}
                             <div>
                               <div className="font-medium">
-                                {user.display_name || user.username}
+                                {user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`}
                               </div>
                               {user.display_name && (
-                                <div className="text-xs opacity-70">@{user.username}</div>
+                                <div className="text-xs opacity-70">ID: {user.user_id.substring(0, 8).toUpperCase()}</div>
                               )}
                               {user.bio && (
                                 <div className="text-xs opacity-70 mt-1">{user.bio}</div>
@@ -238,16 +238,14 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                     ))
                   )}
                 </div>
+              </div>          {/* Selected User Display */}
+          {selectedUser && (
+            <div className="bg-gray-800 rounded p-2">
+              <div className="text-white text-sm">
+                Selected: <span className="font-medium">{selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}</span>
               </div>
-
-              {/* Selected User Display */}
-              {selectedUser && (
-                <div className="bg-gray-800 rounded p-2">
-                  <div className="text-white text-sm">
-                    Selected: <span className="font-medium">{selectedUser.display_name || selectedUser.username}</span>
-                  </div>
-                </div>
-              )}
+            </div>
+          )}
             </>
           )}
 

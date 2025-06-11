@@ -163,7 +163,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
               <div className="text-red-400 mt-1 text-xs">Error: {connectionError}</div>
             )}
             {currentUser && (
-              <div className="text-gray-400 mt-1 text-xs">User: {currentUser.username}</div>
+              <div className="text-gray-400 mt-1 text-xs">Agent: {currentUser.user_id.substring(0, 8).toUpperCase()}</div>
             )}
           </div>
           

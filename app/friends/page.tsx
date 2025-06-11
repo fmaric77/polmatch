@@ -6,15 +6,13 @@ import Friends from '@/components/Friends';
 
 export default function FriendsPage() {
   return (
-    <div className="w-screen h-screen min-h-screen min-w-full bg-black text-white overflow-hidden">
-      <div className="flex h-full">
-        <Navigation currentPage="friends" />
-        <div className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-4">
-            <Friends />
-          </div>
+    <div className="flex h-screen bg-black text-white">
+      <Navigation currentPage="friends" />
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
+          <Friends />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -19,6 +19,7 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  sender_display_name?: string;
   current_user_read: boolean;
   total_members: number;
   read_count: number;
@@ -37,7 +38,7 @@ interface Channel {
 }
 
 export const useMessages = (
-  currentUser: { user_id: string; username: string } | null,
+  currentUser: { user_id: string; username: string; display_name?: string } | null,
   selectedConversation: string,
   selectedConversationType: 'direct' | 'group',
   selectedChannel: string,
@@ -194,6 +195,7 @@ export const useMessages = (
             // For group messages, ensure we have the required fields
             if (selectedConversationType === 'group') {
               newMessage.sender_username = currentUser.username;
+              newMessage.sender_display_name = currentUser.display_name;
               newMessage.current_user_read = true;
               newMessage.read_count = 1;
               newMessage.total_members = 1;
@@ -289,7 +291,15 @@ export const useMessages = (
             body: JSON.stringify({ sender_id: selectedConversation }),
           }).then((res) => {
             if (res.ok) {
-              fetchMessages(selectedConversation, selectedConversationType);
+              // Update read status locally instead of refetching
+              setMessages(prevMessages => 
+                prevMessages.map(msg => {
+                  if ('receiver_id' in msg && msg.sender_id === selectedConversation && msg.receiver_id === currentUser.user_id) {
+                    return { ...msg, read: true };
+                  }
+                  return msg;
+                })
+              );
             } else {
               hasMarkedReadRef.current = false;
             }
@@ -310,7 +320,15 @@ export const useMessages = (
             headers: { 'Content-Type': 'application/json' },
           }).then((res) => {
             if (res.ok) {
-              fetchMessages(selectedConversation, selectedConversationType);
+              // Update read status locally instead of refetching
+              setMessages(prevMessages => 
+                prevMessages.map(msg => {
+                  if ('group_id' in msg && msg.sender_id !== currentUser.user_id) {
+                    return { ...msg, current_user_read: true };
+                  }
+                  return msg;
+                })
+              );
             } else {
               hasMarkedReadRef.current = false;
             }

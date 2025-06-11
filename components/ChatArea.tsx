@@ -13,6 +13,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
+import TypingIndicator from './TypingIndicator';
+import { TypingData } from './hooks/useTypingIndicator';
 
 interface PrivateMessage {
   _id?: string;
@@ -33,6 +35,7 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  sender_display_name?: string;
   current_user_read: boolean;
   total_members: number;
   read_count: number;
@@ -89,6 +92,10 @@ interface ChatAreaProps {
   onCreateChannelClick: () => void;
   onChannelContextMenu: (e: React.MouseEvent, channel: Channel) => void;
   canManageMembers: boolean;
+  // Typing indicator props
+  typingUsers: TypingData[];
+  onTyping: () => void;
+  sessionToken: string | null;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -115,7 +122,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onBannedUsersClick,
   onCreateChannelClick,
   onChannelContextMenu,
-  canManageMembers
+  canManageMembers,
+  typingUsers,
+  onTyping,
+  sessionToken
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -375,7 +385,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   {!isCurrentUser && showAvatar && (
                     <div className="mb-1">
                       <span className="text-sm font-medium text-blue-400">
-                        {(message as GroupMessage).sender_username || message.sender_id}
+                        {(message as GroupMessage).sender_display_name || (message as GroupMessage).sender_username || `AGENT-${message.sender_id.substring(0, 8).toUpperCase()}`}
                       </span>
                       <span className="text-xs text-gray-400 ml-2">
                         {new Date(message.timestamp).toLocaleTimeString()}
@@ -422,6 +432,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           })
         )}
         <div ref={messagesEndRef} />
+        
+        {/* Typing Indicator */}
+        <TypingIndicator typingUsers={typingUsers} className="px-4 py-2" />
       </div>
 
       {/* Message Input */}
@@ -429,7 +442,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="flex space-x-2">
           <textarea
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              onTyping(); // Emit typing indicator when user types
+            }}
             onKeyPress={handleKeyPress}
             placeholder={`Message ${selectedConversationData?.name || ''}...`}
             className="flex-1 bg-black text-white border border-white rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-white"

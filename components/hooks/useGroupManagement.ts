@@ -14,6 +14,7 @@ interface Channel {
 interface GroupMember {
   user_id: string;
   username: string;
+  display_name?: string;
   role: string;
   join_date: string;
 }
@@ -32,6 +33,7 @@ interface GroupInvitation {
 interface User {
   user_id: string;
   username: string;
+  display_name?: string;
 }
 
 export const useGroupManagement = (currentUser: { user_id: string; username: string } | null) => {

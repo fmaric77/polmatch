@@ -8,6 +8,7 @@ import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
+import { useTypingIndicator } from './hooks/useTypingIndicator';
 import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
@@ -23,6 +24,7 @@ import ContextMenu from './modals/ContextMenu';
 interface User {
   user_id: string;
   username: string;
+  display_name?: string;
 }
 
 type ProfileType = 'basic' | 'love' | 'business';
@@ -46,6 +48,7 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  sender_display_name?: string;
   current_user_read: boolean;
   total_members: number;
   read_count: number;
@@ -62,6 +65,7 @@ interface GroupMessageSSE {
   timestamp: string;
   attachments?: string[];
   sender_username?: string;
+  sender_display_name?: string;
   total_members?: number;
   read_count?: number;
   read_by_others?: boolean;
@@ -92,11 +96,9 @@ interface Channel {
   position: number;
 }
 
-type ProfileType = 'basic' | 'love' | 'business';
-
 const UnifiedMessages: React.FC = () => {
   // Core state
-  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; is_admin?: boolean } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; display_name?: string; is_admin?: boolean } | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -143,6 +145,15 @@ const UnifiedMessages: React.FC = () => {
 
   // Session token for SSE
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Typing indicator hook
+  const typingIndicator = useTypingIndicator({
+    currentUser,
+    selectedConversation,
+    selectedConversationType,
+    selectedChannel,
+    sessionToken
+  });
 
   // Debug session token changes
   useEffect(() => {
@@ -191,11 +202,6 @@ const UnifiedMessages: React.FC = () => {
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             );
           });
-          
-          // Also refresh to ensure consistency
-          if (selectedConversation) {
-            profileMessages.fetchMessages(selectedConversation);
-          }
         } else {
           // Use regular message handling for legacy conversations
           const newMessage: PrivateMessage = {
@@ -247,6 +253,7 @@ const UnifiedMessages: React.FC = () => {
             timestamp: groupData.timestamp,
             attachments: groupData.attachments || [],
             sender_username: groupData.sender_username || 'Unknown',
+            sender_display_name: groupData.sender_display_name,
             current_user_read: groupData.sender_id === currentUser?.user_id,
             total_members: groupData.total_members || 0,
             read_count: groupData.read_count || 0,
@@ -288,6 +295,16 @@ const UnifiedMessages: React.FC = () => {
     
     onConnectionEstablished: () => {
       console.log('SSE connection established successfully');
+    },
+    
+    onTypingStart: (data) => {
+      console.log('Received typing start via SSE:', data);
+      typingIndicator.handleTypingReceived(data);
+    },
+    
+    onTypingStop: (data) => {
+      console.log('Received typing stop via SSE:', data);
+      typingIndicator.handleStoppedTyping(data);
     }
   });
 
@@ -622,6 +639,9 @@ const UnifiedMessages: React.FC = () => {
         onCreateChannelClick={() => modals.openModal('showCreateChannelModal')}
         onChannelContextMenu={handleChannelContextMenu}
         canManageMembers={canManageMembers}
+        typingUsers={typingIndicator.typingUsers}
+        onTyping={typingIndicator.emitTyping}
+        sessionToken={sessionToken}
       />
 
       {/* Context Menu */}

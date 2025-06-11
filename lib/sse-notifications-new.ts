@@ -1,6 +1,5 @@
 // SSE Notification utilities for real-time messaging
 import { NewMessageData, NewConversationData } from '../components/hooks/useWebSocket';
-import { connectToDatabase } from './mongodb-connection';
 
 // Global map to store active SSE connections by user ID
 const sseConnections = new Map<string, WritableStreamDefaultWriter<Uint8Array>[]>();
@@ -153,66 +152,5 @@ export async function notifyTypingStop(data: TypingStopData): Promise<void> {
         await sendToUser(userId, sseData);
       }
     }
-  }
-}
-
-// Group message notification interface
-export interface GroupMessageData {
-  message_id: string;
-  group_id: string;
-  channel_id?: string;
-  sender_id: string;
-  content: string;
-  timestamp: string;
-  attachments?: string[];
-  sender_username?: string;
-}
-
-// Notify about a new group message
-export async function notifyNewGroupMessage(data: GroupMessageData): Promise<void> {
-  try {
-    // Get database connection
-    const { db } = await connectToDatabase();
-    
-    // Fetch all group members
-    const members = await db.collection('group_members').find({
-      group_id: data.group_id
-    }).toArray();
-    
-    // Get sender username if not provided
-    let senderUsername = data.sender_username;
-    if (!senderUsername) {
-      const sender = await db.collection('users').findOne(
-        { user_id: data.sender_id },
-        { projection: { username: 1 } }
-      );
-      senderUsername = sender?.username || 'Unknown';
-    }
-    
-    // Create SSE data with group-specific structure
-    const groupMessageSSE = {
-      message_id: data.message_id,
-      group_id: data.group_id,
-      channel_id: data.channel_id || '',
-      sender_id: data.sender_id,
-      content: data.content,
-      timestamp: data.timestamp,
-      attachments: data.attachments || [],
-      sender_username: senderUsername,
-      total_members: members.length,
-      read_count: 1, // Only sender has read it initially
-      read_by_others: false
-    };
-    
-    const sseData = formatSSEData('NEW_MESSAGE', groupMessageSSE);
-    
-    // Send to all group members
-    for (const member of members) {
-      await sendToUser(member.user_id, sseData);
-    }
-    
-    console.log(`Sent group message notification to ${members.length} members`);
-  } catch (error) {
-    console.error('Error sending group message notification:', error);
   }
 }

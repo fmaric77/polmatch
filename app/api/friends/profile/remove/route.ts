@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { connectToDatabase } from '../../../../lib/mongodb-connection';
+import { connectToDatabase } from '../../../../../lib/mongodb-connection';
 
 // POST: Remove a friend from a specific profile type
 export async function POST(request: NextRequest): Promise<NextResponse> {

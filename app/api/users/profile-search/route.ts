@@ -69,7 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return {
         user_id: user.user_id,
         username: user.username,
-        display_name: profile?.display_name || user.username,
+        display_name: profile?.display_name || null, // No fallback to username
         profile_type: profileType
       };
     });

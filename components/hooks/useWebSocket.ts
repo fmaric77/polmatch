@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { TypingData } from './useTypingIndicator';
 
 interface SSEMessage {
-  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED';
+  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP';
   data: unknown;
 }
 
@@ -34,6 +35,8 @@ interface UseWebSocketOptions {
   onNewConversation?: (data: NewConversationData) => void;
   onMessageRead?: (data: MessageReadData) => void;
   onConnectionEstablished?: () => void;
+  onTypingStart?: (data: TypingData) => void;
+  onTypingStop?: (data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => void;
 }
 
 export function useWebSocket(sessionToken: string | null, options: UseWebSocketOptions = {}) {
@@ -99,6 +102,14 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
             
             case 'MESSAGE_READ':
               optionsRef.current.onMessageRead?.(message.data as MessageReadData);
+              break;
+            
+            case 'TYPING_START':
+              optionsRef.current.onTypingStart?.(message.data as TypingData);
+              break;
+            
+            case 'TYPING_STOP':
+              optionsRef.current.onTypingStop?.(message.data as Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>);
               break;
             
             default:
