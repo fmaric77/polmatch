@@ -408,10 +408,15 @@ const Messages = () => {
                   if (window.confirm('Are you sure you want to delete all messages in this chat? This cannot be undone.')) {
                     console.log('Sending DELETE request with selectedUser:', selectedUser);
                     console.log('Current user:', currentUser);
-                    const res = await fetch('/api/messages', {
+                    const res = await fetch('/api/private-conversations', {
                       method: 'DELETE',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ other_user_id: selectedUser }),
+                      body: JSON.stringify({ 
+                        other_user_id: selectedUser,
+                        // Add default profile types - backend will handle all collections if no specific profile context
+                        sender_profile_type: 'basic',
+                        receiver_profile_type: 'basic'
+                      }),
                     });
                     const data = await res.json();
                     console.log('DELETE response:', data);

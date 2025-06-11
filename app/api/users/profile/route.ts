@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../mongo-uri';
-
-const client = new MongoClient(MONGODB_URI);
+import { connectToDatabase } from '../../../../lib/mongodb-connection';
 
 // Helper function to determine if a profile should be visible based on visibility settings
 function getVisibleProfile(profile: unknown, isFriends: boolean, isOwnProfile: boolean): unknown {
@@ -31,8 +28,7 @@ function getVisibleProfile(profile: unknown, isFriends: boolean, isOwnProfile: b
 // GET: Fetch all profiles and questionnaire answers for a specific user
 export async function GET(request: NextRequest) {
   try {
-    await client.connect();
-    const db = client.db('polmatch');
+    const { db } = await connectToDatabase();
     
     // Get user session for authentication
     const cookieStore = await cookies();
@@ -174,7 +170,5 @@ export async function GET(request: NextRequest) {
       success: false, 
       message: 'Internal server error' 
     }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

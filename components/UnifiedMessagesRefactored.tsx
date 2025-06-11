@@ -12,7 +12,7 @@ import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
 import CreateGroupModal from './modals/CreateGroupModal';
-import NewDMModal from './modals/NewDMModal';
+import StartConversationModal from './modals/StartConversationModal';
 import MembersModal from './modals/MembersModal';
 import BannedUsersModal from './modals/BannedUsersModal';
 import InviteModal from './modals/InviteModal';
@@ -24,6 +24,8 @@ interface User {
   user_id: string;
   username: string;
 }
+
+type ProfileType = 'basic' | 'love' | 'business';
 
 interface PrivateMessage {
   _id?: string;
@@ -126,7 +128,7 @@ const UnifiedMessages: React.FC = () => {
   } | null>(null);
 
   // Custom hooks
-  const conversations = useConversations(currentUser);
+  const conversations = useConversations(currentUser, activeProfileType);
   const profileConversations = useProfileConversations(activeProfileType);
   const profileMessages = useProfileMessages(activeProfileType);
   const groupManagement = useGroupManagement(currentUser);
@@ -356,6 +358,14 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [activeProfileType, currentUser]);
 
+  // Clear and refetch messages when profile type changes for selected conversation
+  useEffect(() => {
+    if (currentUser && selectedConversation && selectedConversationType === 'direct' && selectedCategory === 'direct') {
+      // Fetch messages for the new profile type (clearing is handled by the hook)
+      profileMessages.fetchMessages(selectedConversation);
+    }
+  }, [activeProfileType, selectedConversation, selectedConversationType, selectedCategory, currentUser]);
+
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
     messages.setContextSwitchLoading(conversation.type === 'group');
@@ -537,9 +547,11 @@ const UnifiedMessages: React.FC = () => {
         isMobile={isMobile}
         isSidebarVisible={isSidebarVisible}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
+        activeProfileType={activeProfileType}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
         onNewAction={() => selectedCategory === 'direct' ? modals.openModal('showNewDMModal') : modals.openModal('showCreateGroupModal')}
         onInvitationsClick={() => modals.openModal('showInvitationsModal')}
+        onProfileTypeChange={setActiveProfileType}
       />
 
       {/* Conversations list */}
@@ -621,12 +633,19 @@ const UnifiedMessages: React.FC = () => {
             conversations: conversations.conversations,
             fetchConversations: conversations.fetchConversations,
             deleteConversation: async (id: string): Promise<boolean> => {
-              const conversation = conversations.conversations.find(c => c.id === id);
-              if (conversation) {
-                await conversations.deleteConversation(conversation);
-                return true;
+              // Check if we're in profile mode and should use profile-specific deletion
+              if (selectedCategory === 'direct') {
+                // Use profile conversations delete which sends proper profile types
+                return await profileConversations.deleteConversation(id);
+              } else {
+                // Use regular conversations delete for legacy/mixed conversations
+                const conversation = conversations.conversations.find(c => c.id === id);
+                if (conversation) {
+                  await conversations.deleteConversation(conversation);
+                  return true;
+                }
+                return false;
               }
-              return false;
             },
             leaveGroup: async (id: string): Promise<boolean> => {
               try {
@@ -679,9 +698,8 @@ const UnifiedMessages: React.FC = () => {
       )}
 
       {modals.modals.showNewDMModal && (
-        <NewDMModal
-          users={users}
-          profileType={selectedCategory === 'direct' ? activeProfileType : undefined}
+        <StartConversationModal
+          isOpen={true}
           onClose={() => modals.closeModal('showNewDMModal')}
           onSuccess={(conversation) => {
             selectConversation(conversation);

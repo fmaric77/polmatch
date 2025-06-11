@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface ProfileMessage {
   _id?: string;
@@ -39,13 +39,17 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
 
   const fetchMessages = useCallback(async (otherUserId: string): Promise<void> => {
     try {
+      // Clear messages at the start of fetch to avoid showing stale data
+      setMessages([]);
       setLoading(true);
       setError('');
 
-      const response = await fetch(`/api/friends/profile/messages?user_id=${otherUserId}&profile_type=${profileType}`);
+      console.log(`Fetching ${profileType} messages for user:`, otherUserId);
+      const response = await fetch(`/api/messages?other_user_id=${otherUserId}&sender_profile_type=${profileType}&receiver_profile_type=${profileType}`);
       const data = await response.json();
 
       if (data.success) {
+        console.log(`Fetched ${data.messages?.length || 0} ${profileType} messages`);
         setMessages(data.messages || []);
       } else {
         setError(data.message || 'Failed to fetch messages');
@@ -62,13 +66,14 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
 
   const sendMessage = useCallback(async (receiverId: string, content: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/friends/profile/messages', {
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           receiver_id: receiverId,
           content,
-          profile_type: profileType,
+          sender_profile_type: profileType,
+          receiver_profile_type: profileType,
           attachments: []
         })
       });
@@ -113,12 +118,21 @@ export const useProfileConversations = (profileType: 'basic' | 'love' | 'busines
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Clear conversations when profile type changes
+  useEffect(() => {
+    console.log(`Profile type changed to: ${profileType}, clearing conversations`);
+    setConversations([]);
+    setError('');
+  }, [profileType]);
+
   const fetchConversations = useCallback(async (): Promise<void> => {
     try {
+      // Clear conversations at start of fetch to avoid showing stale data
+      setConversations([]);
       setLoading(true);
       setError('');
 
-      const response = await fetch(`/api/friends/profile/conversations?profile_type=${profileType}`);
+      const response = await fetch(`/api/private-conversations?profile_type=${profileType}`);
       const data = await response.json();
 
       if (data.success) {
@@ -136,11 +150,41 @@ export const useProfileConversations = (profileType: 'basic' | 'love' | 'busines
     }
   }, [profileType]);
 
+  const deleteConversation = useCallback(async (otherUserId: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/private-conversations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          other_user_id: otherUserId,
+          sender_profile_type: profileType,
+          receiver_profile_type: profileType // For profile-specific deletion
+        })
+      });
+
+      if (response.ok) {
+        // Remove the conversation from local state
+        setConversations(prev => prev.filter(conv => conv.other_user.user_id !== otherUserId));
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to delete profile conversation:', errorText);
+        setError('Failed to delete conversation');
+        return false;
+      }
+    } catch (err) {
+      console.error('Error deleting profile conversation:', err);
+      setError('Failed to delete conversation');
+      return false;
+    }
+  }, [profileType]);
+
   return {
     conversations,
     setConversations,
     loading,
     error,
-    fetchConversations
+    fetchConversations,
+    deleteConversation
   };
 };

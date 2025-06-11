@@ -21,9 +21,11 @@ interface SidebarNavigationProps {
   isMobile: boolean;
   isSidebarVisible: boolean;
   isConversationsSidebarHidden: boolean;
+  activeProfileType: 'basic' | 'love' | 'business';
   onCategoryChange: (category: 'direct' | 'groups') => void;
   onNewAction: () => void;
   onInvitationsClick: () => void;
+  onProfileTypeChange: (profileType: 'basic' | 'love' | 'business') => void;
   setIsConversationsSidebarHidden: (hidden: boolean) => void;
 }
 
@@ -34,9 +36,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   isMobile,
   isSidebarVisible,
   isConversationsSidebarHidden,
+  activeProfileType,
   onCategoryChange,
   onNewAction,
   onInvitationsClick,
+  onProfileTypeChange,
   setIsConversationsSidebarHidden
 }) => {
   return (
@@ -82,6 +86,45 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* First Separator */}
         <div className="w-8 h-px bg-white mx-auto"></div>
+        
+        {/* Profile Type Selector - only show for direct messages */}
+        {selectedCategory === 'direct' && (
+          <>
+            {/* Profile Type Buttons */}
+            <div 
+              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
+                activeProfileType === 'basic' ? 'bg-white text-black' : ''
+              }`}
+              onClick={() => onProfileTypeChange('basic')}
+              title="Basic Profile"
+            >
+              B
+            </div>
+            
+            <div 
+              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
+                activeProfileType === 'love' ? 'bg-white text-black' : ''
+              }`}
+              onClick={() => onProfileTypeChange('love')}
+              title="Love Profile"
+            >
+              L
+            </div>
+            
+            <div 
+              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
+                activeProfileType === 'business' ? 'bg-white text-black' : ''
+              }`}
+              onClick={() => onProfileTypeChange('business')}
+              title="Business Profile"
+            >
+              💼
+            </div>
+            
+            {/* Profile Type Separator */}
+            <div className="w-8 h-px bg-white mx-auto"></div>
+          </>
+        )}
         
         {/* Direct Messages Category */}
         <div 
