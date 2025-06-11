@@ -678,7 +678,11 @@ const UnifiedMessages: React.FC = () => {
             fetchChannels: groupManagement.fetchChannels,
             groupChannels: groupManagement.groupChannels
           }}
-          messages={{ deleteMessage: messages.deleteMessage }}
+          messages={{ 
+            deleteMessage: selectedCategory === 'direct' && selectedConversationType === 'direct' 
+              ? profileMessages.deleteMessage 
+              : messages.deleteMessage 
+          }}
           currentUser={currentUser}
           selectedChannel={selectedChannel}
           setSelectedChannel={setSelectedChannel}

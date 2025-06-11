@@ -103,13 +103,45 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
     }
   }, [profileType]);
 
+  const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message_id: messageId,
+          sender_profile_type: profileType,
+          receiver_profile_type: profileType
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove the deleted message from local state
+        setMessages(prevMessages => 
+          prevMessages.filter(msg => msg._id !== messageId)
+        );
+        return true;
+      } else {
+        setError(data.message || 'Failed to delete message');
+        return false;
+      }
+    } catch (err) {
+      console.error('Error deleting profile message:', err);
+      setError('Failed to delete message');
+      return false;
+    }
+  }, [profileType]);
+
   return {
     messages,
     setMessages,
     loading,
     error,
     fetchMessages,
-    sendMessage
+    sendMessage,
+    deleteMessage
   };
 };
 
