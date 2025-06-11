@@ -87,45 +87,6 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* First Separator */}
         <div className="w-8 h-px bg-white mx-auto"></div>
         
-        {/* Profile Type Selector - only show for direct messages */}
-        {selectedCategory === 'direct' && (
-          <>
-            {/* Profile Type Buttons */}
-            <div 
-              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
-                activeProfileType === 'basic' ? 'bg-white text-black' : ''
-              }`}
-              onClick={() => onProfileTypeChange('basic')}
-              title="Basic Profile"
-            >
-              B
-            </div>
-            
-            <div 
-              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
-                activeProfileType === 'love' ? 'bg-white text-black' : ''
-              }`}
-              onClick={() => onProfileTypeChange('love')}
-              title="Love Profile"
-            >
-              L
-            </div>
-            
-            <div 
-              className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors text-xs font-bold ${
-                activeProfileType === 'business' ? 'bg-white text-black' : ''
-              }`}
-              onClick={() => onProfileTypeChange('business')}
-              title="Business Profile"
-            >
-              💼
-            </div>
-            
-            {/* Profile Type Separator */}
-            <div className="w-8 h-px bg-white mx-auto"></div>
-          </>
-        )}
-        
         {/* Direct Messages Category */}
         <div 
           className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
