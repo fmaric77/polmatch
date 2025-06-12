@@ -190,7 +190,6 @@ export async function GET(request: Request) {
       const latestMessage = messageMap.get(conv._id?.toString() ?? '');
       
       // Parse profile context - no longer adding text-based suffix since UI now uses symbols
-      let conversationNameSuffix = '';
       // Profile context is still parsed for other purposes but no longer used for display names
       
       // Decrypt latest message content if it exists

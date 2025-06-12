@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
 
 interface User {
   user_id: string;

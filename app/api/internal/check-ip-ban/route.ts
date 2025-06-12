@@ -1,42 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
+import { 
+  serverBanCache, 
+  isServerCacheValid
+} from '../ban-cache-utils';
 
 const MONGODB_URI = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
-
-// In-memory cache for the API as well (server-side)
-interface BanCacheEntry {
-  banned: boolean;
-  ban_date: string | null;
-  timestamp: number;
-}
-
-const serverBanCache = new Map<string, BanCacheEntry>();
-const SERVER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
-
-function isServerCacheValid(entry: BanCacheEntry): boolean {
-  return (Date.now() - entry.timestamp) < SERVER_CACHE_DURATION;
-}
-
-// Clean up expired cache entries
-function cleanupServerCache(): void {
-  const now = Date.now();
-  for (const [ip, entry] of serverBanCache.entries()) {
-    if (!isServerCacheValid(entry)) {
-      serverBanCache.delete(ip);
-    }
-  }
-}
-
-// Run cache cleanup every 5 minutes
-if (typeof globalThis !== 'undefined') {
-  setInterval(cleanupServerCache, 5 * 60 * 1000);
-}
-
-// Function to clear cache for specific IP (for immediate invalidation)
-export function clearServerCache(ip_address: string): void {
-  serverBanCache.delete(ip_address);
-  console.log(`Cleared server cache for IP: ${ip_address}`);
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {

@@ -20,30 +20,6 @@ import InviteModal from './modals/InviteModal';
 import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
 import ContextMenu from './modals/ContextMenu';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faEllipsisV, 
-  faSearch, 
-  faPlus, 
-  faHashtag, 
-  faUsers, 
-  faPhoneAlt, 
-  faVideoSlash, 
-  faUserPlus, 
-  faUserMinus, 
-  faVolumeUp, 
-  faVolumeMute, 
-  faCog, 
-  faSignOutAlt, 
-  faAt, 
-  faLock, 
-  faBars, 
-  faTimes,
-  faUser,
-  faHeart,
-  faBriefcase,
-  faComment
-} from '@fortawesome/free-solid-svg-icons';
 
 type ProfileType = 'basic' | 'love' | 'business';
 

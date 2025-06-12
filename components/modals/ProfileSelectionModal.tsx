@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faUser, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
 
 interface ProfileSelectionModalProps {
   isOpen: boolean;

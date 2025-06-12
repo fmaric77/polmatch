@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clearServerCache } from '../ban-cache-utils';
 
 // Clear server cache endpoint  
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -15,8 +16,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'IP address is required' }, { status: 400 });
     }
 
-    // Import the cache clearing function
-    const { clearServerCache } = await import('../../check-ip-ban/route');
+    // Clear the server cache for the specified IP
     clearServerCache(ip_address);
 
     return NextResponse.json({ 

@@ -224,7 +224,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                     NO {selectedCategory === 'direct' ? 'CONTACTS' : 'OPERATIONS'} MATCH SEARCH
                   </div>
                   <div className="text-xs font-mono text-gray-500 uppercase">
-                    QUERY: "{searchQuery}"
+                    QUERY: &quot;{searchQuery}&quot;
                   </div>
                   <div className="text-xs font-mono text-gray-500 mt-2 uppercase">
                     {selectedCategory === 'direct' 

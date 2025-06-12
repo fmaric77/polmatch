@@ -16,7 +16,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Import the cache clearing function
-    const { clearMiddlewareCache } = await import('../../../middleware');
+    const { clearMiddlewareCache } = await import('../../../../middleware');
     clearMiddlewareCache(ip_address);
 
     return NextResponse.json({ 
