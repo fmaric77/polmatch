@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faHome, faUser, faSearch, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faHome, faUser, faSearch, faSignOutAlt, faBars, faTimes, faUserFriends } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -10,7 +10,6 @@ import { usePathname } from 'next/navigation';
 const Header = () => {
   const [open, setOpen] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -19,10 +18,8 @@ const Header = () => {
         const res = await fetch('/api/session');
         const data = await res.json();
         setIsAdmin(!!(data.valid && data.user && data.user.is_admin));
-        setUsername(data.user?.username || null);
       } catch {
         setIsAdmin(false);
-        setUsername(null);
       }
     }
     checkAdmin();
@@ -54,11 +51,6 @@ const Header = () => {
         <Image src="/images/polstrat-dark.png" alt="Polstrat Logo" className="h-16 mb-8 drop-shadow-lg" width={128} height={48} />
         <nav className="w-full flex-1">
           <ul className="flex flex-col space-y-6 w-full px-4">
-            {username && (
-              <li className="text-white text-center mb-2">
-                <span className="font-semibold">Logged in as:</span> {username}
-              </li>
-            )}
             <li>
               <a href="/chat" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faEnvelope} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-blue-400 group-hover:text-blue-200 transition-colors" />
@@ -81,6 +73,12 @@ const Header = () => {
               <a href="/search" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
                 <FontAwesomeIcon icon={faSearch} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-pink-400 group-hover:text-pink-200 transition-colors" />
                 <span className="font-medium">Search Users</span>
+              </a>
+            </li>
+            <li>
+              <a href="/friends" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
+                <FontAwesomeIcon icon={faUserFriends} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-purple-400 group-hover:text-purple-200 transition-colors" />
+                <span className="font-medium">Friends & Requests</span>
               </a>
             </li>
             {isAdmin && (

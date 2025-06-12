@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '../../../lib/mongodb-connection';
 import { addSSEConnection, removeSSEConnection } from '../../../lib/sse-notifications';
 
 interface SSEMessage {
-  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED';
+  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP';
   data: unknown;
 }
 

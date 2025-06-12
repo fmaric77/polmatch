@@ -136,14 +136,21 @@ export async function getProfilePicture(userId: string): Promise<string | null> 
 }
 
 // Optimized message retrieval for private conversations
-export async function getPrivateMessages(userId1: string, userId2: string, limit: number = 50): Promise<unknown[]> {
+export async function getPrivateMessages(userId1: string, userId2: string, limit: number = 50, profileContext?: string): Promise<unknown[]> {
   const { db } = await connectToDatabase();
   
   const sortedParticipants = [userId1, userId2].sort();
   
-  return await db.collection('pm').find({
+  const query: Record<string, unknown> = {
     participant_ids: { $all: sortedParticipants, $size: 2 }
-  })
+  };
+  
+  // Add profile context if provided
+  if (profileContext) {
+    query.profile_context = profileContext;
+  }
+  
+  return await db.collection('pm').find(query)
   .sort({ timestamp: -1 })
   .limit(limit)
   .project({
@@ -151,7 +158,8 @@ export async function getPrivateMessages(userId1: string, userId2: string, limit
     sender_id: 1,
     encrypted_content: 1,
     timestamp: 1,
-    is_read: 1
+    is_read: 1,
+    profile_context: 1
   })
   .toArray();
 }

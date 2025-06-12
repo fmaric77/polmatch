@@ -19,6 +19,7 @@ interface GroupMessage {
   timestamp: string;
   attachments: string[];
   sender_username: string;
+  sender_display_name?: string;
   current_user_read: boolean;
   total_members: number;
   read_count: number;

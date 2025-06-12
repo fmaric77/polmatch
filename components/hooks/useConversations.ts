@@ -46,7 +46,7 @@ interface Group {
   user_role?: string;
 }
 
-export const useConversations = (currentUser: { user_id: string; username: string } | null) => {
+export const useConversations = (currentUser: { user_id: string; username: string } | null, profileType?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,11 +55,17 @@ export const useConversations = (currentUser: { user_id: string; username: strin
     if (!currentUser) return;
 
     try {
-      console.log('Fetching conversations for user:', currentUser.user_id);
+      console.log('Fetching conversations for user:', currentUser.user_id, 'profile type:', profileType);
+      
+      // Build URL with optional profile type filter
+      let dmsUrl = '/api/private-conversations';
+      if (profileType) {
+        dmsUrl += `?profile_type=${profileType}`;
+      }
       
       // Fetch DMs and groups in parallel
       const [dmsRes, groupsRes] = await Promise.all([
-        fetch('/api/private-conversations'),
+        fetch(dmsUrl),
         fetch('/api/groups/list')
       ]);
 
@@ -121,18 +127,38 @@ export const useConversations = (currentUser: { user_id: string; username: strin
 
   const deleteConversation = useCallback(async (conv: Conversation) => {
     if (conv.type === 'direct') {
-      await fetch('/api/messages', {
+      // Use the correct private-conversations DELETE endpoint
+      // Include profile type if available, otherwise the backend will delete from all collections
+      const deletePayload: { other_user_id: string; sender_profile_type?: string; receiver_profile_type?: string } = {
+        other_user_id: conv.id
+      };
+      
+      // Add profile type context if available (defaulting to 'basic' for consistency)
+      if (profileType) {
+        deletePayload.sender_profile_type = profileType;
+        deletePayload.receiver_profile_type = 'basic'; // Assume basic for receiver unless we have more context
+      }
+      
+      const response = await fetch('/api/private-conversations', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ other_user_id: conv.id })
+        body: JSON.stringify(deletePayload)
       });
       
-      setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'direct')));
+      if (response.ok) {
+        setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'direct')));
+      } else {
+        console.error('Failed to delete conversation:', await response.text());
+      }
     } else if (conv.type === 'group') {
-      await fetch(`/api/groups/${conv.id}`, { method: 'DELETE' });
-      setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'group')));
+      const response = await fetch(`/api/groups/${conv.id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'group')));
+      } else {
+        console.error('Failed to delete group:', await response.text());
+      }
     }
-  }, []);
+  }, [profileType]);
 
   return {
     conversations,
