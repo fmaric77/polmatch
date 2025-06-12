@@ -45,7 +45,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
       <div className="p-2 space-y-2">
         {/* Home Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('frontpage') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/frontpage'}
@@ -56,7 +56,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
         
         {/* Profile Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('profile') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/profile'}
@@ -67,7 +67,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
         
         {/* Search Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('search') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/search'}
@@ -78,7 +78,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
         
         {/* Catalogue Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('catalogue') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/catalogue'}
@@ -92,7 +92,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
         
         {/* Chat Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('chat') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/chat'}
@@ -103,7 +103,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
 
         {/* Discover Groups Navigation */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             isActive('discover-groups') ? 'bg-white text-black' : ''
           }`}
           onClick={() => window.location.href = '/discover-groups'}
@@ -115,7 +115,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
         {/* Admin Dashboard */}
         {isAdmin && (
           <div 
-            className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+            className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
               isActive('admindashboard') ? 'bg-white text-black' : ''
             }`}
             onClick={() => window.location.href = '/admindashboard'}
@@ -129,7 +129,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
       {/* Bottom Navigation - Logout */}
       <div className="mt-auto p-2 pb-4">
         <div 
-          className="w-12 h-12 bg-red-900 border border-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+          className="w-12 h-12 bg-red-900 border border-red-500 rounded-none flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
           onClick={async () => {
             await fetch('/api/logout', { method: 'POST' });
             window.location.href = '/';

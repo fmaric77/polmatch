@@ -10,6 +10,10 @@ export interface ProfileMessage {
   read: boolean;
   attachments: string[];
   profile_type: 'basic' | 'love' | 'business';
+  sender_profile_data?: {
+    display_name: string;
+    profile_picture_url: string;
+  };
 }
 
 interface ProfileConversation {
@@ -18,6 +22,7 @@ interface ProfileConversation {
   other_user: {
     user_id: string;
     username: string;
+    display_name?: string;
     first_name?: string;
     last_name?: string;
     profile_picture?: string;

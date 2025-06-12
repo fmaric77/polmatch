@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useConversations } from './hooks/useConversations';
 import { useProfileConversations, useProfileMessages } from './hooks/useProfileMessaging';
@@ -13,7 +13,7 @@ import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
 import CreateGroupModal from './modals/CreateGroupModal';
-import StartConversationModal from './modals/StartConversationModal';
+import NewDMModal from './modals/NewDMModal';
 import MembersModal from './modals/MembersModal';
 import BannedUsersModal from './modals/BannedUsersModal';
 import InviteModal from './modals/InviteModal';
@@ -510,7 +510,22 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [contextMenu]);
 
-  const selectedConversationData = conversations.conversations.find(c => c.id === selectedConversation);
+  // Use appropriate conversation data based on the selected category
+  const selectedConversationData = useMemo(() => {
+    if (selectedCategory === 'direct') {
+      const profileConversation = profileConversations.conversations.find(pc => pc.other_user.user_id === selectedConversation);
+      if (profileConversation) {
+        return {
+          id: selectedConversation,
+          name: profileConversation.other_user.display_name || profileConversation.other_user.username,
+          type: 'direct' as const,
+          user_id: selectedConversation
+        };
+      }
+    }
+    return conversations.conversations.find(c => c.id === selectedConversation);
+  }, [selectedCategory, selectedConversation, profileConversations.conversations, conversations.conversations]);
+    
   // Compute if the current user can manage members in the selected group
   const canManageMembers: boolean = selectedConversationType === 'group'
     ? groupManagement.canManageMembers(selectedConversation)
@@ -526,6 +541,25 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [conversations.fetchConversations, selectedConversation, groupManagement.fetchGroupMembers]);
 
+  // Helper function to get profile type symbol
+  const getProfileTypeSymbol = (profileType: 'basic' | 'love' | 'business'): string => {
+    switch (profileType) {
+      case 'love':
+        return '♥️'; // Heart symbol for personal/love profile
+      case 'business':
+        return '💼'; // Green briefcase symbol for corporate/business profile
+      case 'basic':
+      default:
+        return '👤'; // Person symbol for general/basic profile
+    }
+  };
+
+  // Helper function to create conversation name with symbolic indicators
+  const createConversationNameWithSymbol = (username: string, profileType: 'basic' | 'love' | 'business'): string => {
+    const symbol = getProfileTypeSymbol(profileType);
+    return `${symbol} ${username}`;
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-black text-white">
@@ -538,7 +572,7 @@ const UnifiedMessages: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
+    <div className="flex h-screen bg-black text-white">
       {/* Mobile overlay */}
       {isMobile && isSidebarVisible && (
         <div 
@@ -546,6 +580,9 @@ const UnifiedMessages: React.FC = () => {
           onClick={() => setIsSidebarVisible(false)}
         />
       )}
+
+      {/* Main Content Container */}
+      <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
 
       {/* Main navigation sidebar */}
       <SidebarNavigation
@@ -569,7 +606,7 @@ const UnifiedMessages: React.FC = () => {
           selectedCategory === 'direct' 
             ? profileConversations.conversations.map(pc => ({
                 id: pc.other_user.user_id,
-                name: pc.other_user.username,
+                name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
                 type: 'direct' as const,
                 last_message: pc.latest_message?.content,
                 last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
@@ -714,8 +751,7 @@ const UnifiedMessages: React.FC = () => {
       )}
 
       {modals.modals.showNewDMModal && (
-        <StartConversationModal
-          isOpen={true}
+        <NewDMModal
           onClose={() => modals.closeModal('showNewDMModal')}
           onSuccess={(conversation) => {
             selectConversation(conversation);
@@ -724,6 +760,8 @@ const UnifiedMessages: React.FC = () => {
             profileConversations.fetchConversations();
             modals.closeModal('showNewDMModal');
           }}
+          senderProfileType={activeProfileType}
+          receiverProfileType={activeProfileType}
         />
       )}
 
@@ -810,6 +848,7 @@ const UnifiedMessages: React.FC = () => {
           onClose={() => modals.closeModal('showBannedUsersModal')}
         />
       )}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// In-memory cache for IP ban status
+interface BanCacheEntry {
+  banned: boolean;
+  timestamp: number;
+}
+
+const banCache = new Map<string, BanCacheEntry>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // Helper function to get client IP address from request
 function getClientIP(request: NextRequest): string {
   let ip_address = request.headers.get('x-forwarded-for') || 
@@ -14,10 +23,21 @@ function getClientIP(request: NextRequest): string {
   return ip_address;
 }
 
-// Check if IP address is banned using internal API
+// Check if cached entry is still valid
+function isCacheValid(entry: BanCacheEntry): boolean {
+  return (Date.now() - entry.timestamp) < CACHE_DURATION;
+}
+
+// Check if IP address is banned using internal API with caching
 async function isIPBanned(ip_address: string, request: NextRequest): Promise<boolean> {
   if (ip_address === 'unknown') {
     return false; // Don't block unknown IPs
+  }
+
+  // Check cache first
+  const cachedEntry = banCache.get(ip_address);
+  if (cachedEntry && isCacheValid(cachedEntry)) {
+    return cachedEntry.banned;
   }
 
   try {
@@ -34,14 +54,56 @@ async function isIPBanned(ip_address: string, request: NextRequest): Promise<boo
 
     if (response.ok) {
       const data = await response.json();
-      return data.banned === true;
+      const banned = data.banned === true;
+      
+      // Cache the result
+      banCache.set(ip_address, {
+        banned,
+        timestamp: Date.now()
+      });
+      
+      return banned;
     }
+    
+    // On API error, cache as not banned for a shorter duration
+    banCache.set(ip_address, {
+      banned: false,
+      timestamp: Date.now()
+    });
     
     return false; // Don't block on API error
   } catch (error) {
     console.error('Error checking IP ban status:', error);
+    
+    // On error, cache as not banned for a shorter duration
+    banCache.set(ip_address, {
+      banned: false,
+      timestamp: Date.now()
+    });
+    
     return false; // Don't block on error
   }
+}
+
+// Clean up expired cache entries periodically
+function cleanupCache(): void {
+  const now = Date.now();
+  for (const [ip, entry] of banCache.entries()) {
+    if (!isCacheValid(entry)) {
+      banCache.delete(ip);
+    }
+  }
+}
+
+// Run cache cleanup every 10 minutes
+if (typeof globalThis !== 'undefined') {
+  setInterval(cleanupCache, 10 * 60 * 1000);
+}
+
+// Function to clear cache for specific IP (for immediate invalidation)
+export function clearMiddlewareCache(ip_address: string): void {
+  banCache.delete(ip_address);
+  console.log(`Cleared middleware cache for IP: ${ip_address}`);
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
@@ -51,7 +113,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/favicon.ico') ||
-    (pathname.includes('.') && !pathname.startsWith('/api/'))
+    pathname.includes('.') && !pathname.startsWith('/api/') ||
+    pathname.startsWith('/sounds/') // Skip audio files
   ) {
     return NextResponse.next();
   }
@@ -68,7 +131,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // Get client IP address
   const clientIP = getClientIP(request);
 
-  // Check if IP is banned
+  // Skip ban check for localhost/development IPs
+  if (clientIP === '127.0.0.1' || clientIP === '::1' || clientIP.startsWith('192.168.') || clientIP.startsWith('10.') || clientIP === 'unknown') {
+    return NextResponse.next();
+  }
+
+  // Check if IP is banned (with caching)
   const isBanned = await isIPBanned(clientIP, request);
 
   if (isBanned) {

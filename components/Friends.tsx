@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileModal from './ProfileModal';
+import { profilePictureCache } from '../lib/profilePictureCache';
 
 interface User {
   user_id: string;
@@ -88,6 +89,18 @@ export default function Friends() {
       setProfileFriends(data.friends);
       setProfileIncoming(data.incoming);
       setProfileOutgoing(data.outgoing);
+
+      // Prefetch profile pictures for all friends and requests
+      const allUserIds = [
+        ...data.friends.map((f: FriendRequest) => f.user_id === data.user_id ? f.friend_id : f.user_id),
+        ...data.incoming.map((req: FriendRequest) => req.user_id),
+        ...data.outgoing.map((req: FriendRequest) => req.friend_id)
+      ].filter(Boolean);
+
+      if (allUserIds.length > 0) {
+        profilePictureCache.prefetchMultiple(allUserIds)
+          .catch(err => console.warn('Error prefetching friend profile pictures:', err));
+      }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('fetchProfileFriends error:', error);
@@ -103,6 +116,13 @@ export default function Friends() {
       const data = await res.json();
       if (data.success) {
         setUsers(data.users);
+
+        // Prefetch profile pictures for all users
+        const userIds = data.users.map((u: User) => u.user_id).filter(Boolean);
+        if (userIds.length > 0) {
+          profilePictureCache.prefetchMultiple(userIds)
+            .catch(err => console.warn('Error prefetching user profile pictures:', err));
+        }
       }
     } catch {}
   }

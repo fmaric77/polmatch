@@ -52,7 +52,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       <div className="p-2 space-y-2">
         {/* Home Navigation */}
         <div 
-          className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => window.location.href = '/'}
           title="Home"
         >
@@ -61,7 +61,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Profile Navigation */}
         <div 
-          className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => window.location.href = '/profile'}
           title="Profile"
         >
@@ -70,7 +70,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Search Navigation */}
         <div 
-          className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => window.location.href = '/search'}
           title="Search Users"
         >
@@ -82,7 +82,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Direct Messages Category */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             selectedCategory === 'direct' ? 'bg-white text-black' : ''
           }`}
           onClick={() => onCategoryChange('direct')}
@@ -93,7 +93,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Groups Category */}
         <div 
-          className={`w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             selectedCategory === 'groups' ? 'bg-white text-black' : ''
           }`}
           onClick={() => onCategoryChange('groups')}
@@ -107,7 +107,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Actions */}
         <div 
-          className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => selectedCategory === 'direct' ? onShowNewDMModal() : onShowCreateGroupModal()}
           title={selectedCategory === 'direct' ? 'New Direct Message' : 'Create Group'}
         >
@@ -116,7 +116,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         
         {/* Invitations */}
         <div 
-          className="relative w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          className="relative w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={onShowInvitationsModal}
           title="Invitations"
         >
@@ -131,7 +131,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         {/* Admin Dashboard */}
         {currentUser?.is_admin && (
           <div 
-            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
             onClick={() => window.location.href = '/admindashboard'}
             title="Admin Dashboard"
           >
@@ -142,7 +142,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         {/* Mobile Chat Sidebar Toggle */}
         {isMobile && (
           <div 
-            className="w-12 h-12 bg-black border border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+            className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
             onClick={onToggleConversationsSidebar}
             title={isConversationsSidebarHidden ? "Show Chat Sidebar" : "Hide Chat Sidebar"}
           >
@@ -157,7 +157,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       {/* Bottom Navigation - Logout */}
       <div className="mt-auto p-2 pb-4">
         <div 
-          className="w-12 h-12 bg-red-900 border border-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+          className="w-12 h-12 bg-red-900 border border-red-500 rounded-none flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
           onClick={handleLogout}
           title="Logout"
         >

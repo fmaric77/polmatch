@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
+import { 
+  serverBanCache, 
+  isServerCacheValid
+} from '../ban-cache-utils';
 
 const MONGODB_URI = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
 
@@ -17,6 +21,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ banned: false });
     }
 
+    // Check server-side cache first
+    const cachedEntry = serverBanCache.get(ip_address);
+    if (cachedEntry && isServerCacheValid(cachedEntry)) {
+      return NextResponse.json({ 
+        banned: cachedEntry.banned,
+        ban_date: cachedEntry.ban_date 
+      });
+    }
+
     // Connect to MongoDB and check ban status
     const client = new MongoClient(MONGODB_URI);
     
@@ -26,6 +39,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       
       // Check if IP exists in ban collection
       const ban = await db.collection('ban').findOne({ ip_address });
+      
+      const result = {
+        banned: ban !== null,
+        ban_date: ban?.ban_date || null
+      };
+
+      // Cache the result
+      serverBanCache.set(ip_address, {
+        ...result,
+        timestamp: Date.now()
+      });
       
       if (ban !== null) {
         // If IP is banned, also clear any existing sessions from this IP
@@ -38,10 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
       }
       
-      return NextResponse.json({ 
-        banned: ban !== null,
-        ban_date: ban?.ban_date || null 
-      });
+      return NextResponse.json(result);
       
     } finally {
       await client.close();
