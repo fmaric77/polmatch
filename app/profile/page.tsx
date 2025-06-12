@@ -420,19 +420,16 @@ export default function ProfilePage() {
       <Navigation currentPage="profile" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-12 p-6 pb-16">
-          <div className="bg-black/80 border border-white rounded-lg shadow-lg">
+          <div className="bg-black border-2 border-white rounded-none shadow-2xl">
             {/* FBI Header */}
-            <div className="border-b border-white/30 p-8">
-              <h1 className="text-4xl font-bold font-mono text-center uppercase tracking-wider mb-2">
-                [CLASSIFIED AGENT MANAGEMENT SYSTEM]
-              </h1>
-              <p className="text-center text-gray-300 font-mono text-sm uppercase tracking-wider">
-                PERSONNEL FILE ADMINISTRATION / DOSSIER MANAGEMENT / CONTACT REGISTRY
-              </p>
+            <div className="border-b-2 border-white bg-white text-black p-3 text-center">
+              <div className="font-mono text-xs mb-1 font-bold tracking-widest uppercase">CLASSIFIED</div>
+              <h1 className="text-2xl font-bold tracking-widest uppercase">AGENT MANAGEMENT SYSTEM</h1>
+              <div className="font-mono text-xs mt-1 tracking-widest uppercase">PERSONNEL FILE ADMINISTRATION</div>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex border-b border-white/30">
+            <div className="flex border-b-2 border-white">
               <button
                 onClick={() => setActiveTab('settings')}
                 className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${

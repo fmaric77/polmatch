@@ -311,10 +311,10 @@ export default function SearchUsersPage() {
         <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
           {/* FBI-Style Header */}
           <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-            <div className="border-b-2 border-white bg-white text-black p-3 md:p-4 text-center">
-              <div className="font-mono text-xs mb-1">CLASSIFIED</div>
-              <h1 className="text-lg md:text-2xl font-bold tracking-widest">SUBJECT SEARCH DATABASE</h1>
-              <div className="font-mono text-xs mt-1">AUTHORIZED PERSONNEL ONLY</div>
+            <div className="border-b-2 border-white bg-white text-black p-3 text-center">
+              <div className="font-mono text-xs mb-1 font-bold tracking-widest uppercase">CLASSIFIED</div>
+              <h1 className="text-lg md:text-2xl font-bold tracking-widest uppercase">SUBJECT SEARCH DATABASE</h1>
+              <div className="font-mono text-xs mt-1 tracking-widest uppercase">AUTHORIZED PERSONNEL ONLY</div>
             </div>
             <div className="p-3 md:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">

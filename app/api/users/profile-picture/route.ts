@@ -26,11 +26,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Optimized profile picture lookup using single aggregation query
     const profilePictureUrl = await getProfilePicture(userId);
     
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       profile_picture_url: profilePictureUrl,
       user_id: userId 
     });
+
+    // Add caching headers to reduce repeated requests
+    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=300'); // 5 minutes
+    response.headers.set('ETag', `"${userId}-${Date.now()}"`);
+    
+    return response;
   } catch (err) {
     console.error('Profile picture API error:', err);
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) }, { status: 500 });

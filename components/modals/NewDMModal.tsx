@@ -76,22 +76,22 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   const getProfileIcon = (profileType: string): React.ReactElement => {
     switch (profileType) {
       case 'love':
-        return <FontAwesomeIcon icon={faHeart} className="text-pink-400" />;
+        return <FontAwesomeIcon icon={faHeart} className="text-red-400" />;
       case 'business':
-        return <FontAwesomeIcon icon={faBriefcase} className="text-green-400" />;
+        return <FontAwesomeIcon icon={faBriefcase} className="text-yellow-400" />;
       default:
-        return <FontAwesomeIcon icon={faUser} className="text-blue-400" />;
+        return <FontAwesomeIcon icon={faUser} className="text-green-400" />;
     }
   };
 
   const getProfileLabel = (profileType: string): string => {
     switch (profileType) {
       case 'love':
-        return 'Love';
+        return 'Personal';
       case 'business':
-        return 'Business';
+        return 'Corporate';
       default:
-        return 'Basic';
+        return 'General';
     }
   };
 
@@ -124,7 +124,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
       if (data.success) {
         const conversation: Conversation = {
           id: selectedUser.user_id,
-          name: `${selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`} (${getProfileLabel(senderProfileType)} ↔ ${getProfileLabel(receiverProfileType)})`,
+          name: selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`,
           type: 'direct',
           user_id: selectedUser.user_id
         };
@@ -146,37 +146,39 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-black border border-white rounded-lg p-6 w-full max-w-md max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            {getProfileIcon(senderProfileType)}
-            <h2 className="text-xl font-bold text-white">
-              New {getProfileLabel(senderProfileType)} → {getProfileLabel(receiverProfileType)} Message
-            </h2>
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+        {/* FBI-Style Header */}
+        <div className="border-b-2 border-white bg-white text-black p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="font-mono text-xs">SECURE CHANNEL ESTABLISHMENT</div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
+            >
+              ×
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <FontAwesomeIcon icon={faTimes} />
-          </button>
+          <div className="font-mono text-xs mt-1 text-center uppercase tracking-wider">
+            SECURE CHANNEL ESTABLISHMENT PROTOCOL
+          </div>
         </div>
 
-        <div className="space-y-4 flex-1 flex flex-col">
+        <div className="p-4 space-y-4 flex-1 flex flex-col bg-black text-white">
           {/* Profile Context Info */}
-          <div className="bg-gray-800 rounded p-3 text-center">
-            <div className="text-sm text-gray-300">
-              <span>You as </span>
-              <span className="font-medium text-white">{getProfileLabel(senderProfileType)}</span>
-              <span> → Connecting with </span>
-              <span className="font-medium text-white">{getProfileLabel(receiverProfileType)} profiles</span>
+          <div className="bg-gray-900 border border-white p-3 rounded-none">
+            <div className="font-mono text-xs text-center uppercase tracking-wider">
+              <span className="text-gray-400">ESTABLISHING SECURE COMMUNICATION CHANNEL</span>
             </div>
           </div>
 
           {fetchingUsers ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-white">Loading users...</div>
+              <div className="font-mono text-white uppercase tracking-wider">
+                [SCANNING PERSONNEL DATABASE...]
+              </div>
             </div>
           ) : (
             <>
@@ -190,28 +192,28 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search users..."
-                  className="w-full bg-black text-white border border-white rounded p-2 pl-10 focus:outline-none focus:ring-1 focus:ring-white"
+                  placeholder="SEARCH AGENT ID OR NAME..."
+                  className="w-full bg-black text-white border-2 border-white rounded-none p-2 pl-10 focus:outline-none focus:ring-2 focus:ring-white font-mono uppercase tracking-wider text-xs"
                   disabled={loading}
                 />
               </div>
 
               {/* Users List */}
-              <div className="flex-1 min-h-0 border border-white rounded p-2">
+              <div className="flex-1 min-h-0 border-2 border-white rounded-none p-2 bg-gray-900">
                 <div className="h-full overflow-y-auto space-y-1">
                   {filteredUsers.length === 0 ? (
-                    <div className="text-gray-400 text-center py-4">
-                      {searchQuery ? 'No users found' : `No ${getProfileLabel(receiverProfileType).toLowerCase()} profiles available`}
+                    <div className="text-gray-400 text-center py-4 font-mono uppercase tracking-wider text-xs">
+                      {searchQuery ? '[NO MATCHING PERSONNEL]' : `[NO ${getProfileLabel(receiverProfileType).toUpperCase()} AGENTS AVAILABLE]`}
                     </div>
                   ) : (
                     filteredUsers.map((user) => (
                       <button
                         key={user.user_id}
                         onClick={() => handleUserSelect(user)}
-                        className={`w-full text-left p-3 rounded transition-colors ${
+                        className={`w-full text-left p-3 rounded-none border transition-colors font-mono ${
                           selectedUser?.user_id === user.user_id
-                            ? 'bg-white text-black'
-                            : 'hover:bg-gray-800 text-white'
+                            ? 'bg-white text-black border-white'
+                            : 'bg-transparent text-white border-gray-600 hover:bg-white/10 hover:border-white'
                         }`}
                         disabled={loading}
                       >
@@ -219,7 +221,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                           <div className="flex items-center space-x-2">
                             {getProfileIcon(receiverProfileType)}
                             <div>
-                              <div className="font-medium">
+                              <div className="font-bold text-xs uppercase tracking-wider">
                                 {user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`}
                               </div>
                               {user.display_name && (
@@ -230,27 +232,32 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                               )}
                             </div>
                           </div>
-                          <div className="text-xs opacity-50">
-                            {user.visibility === 'friends' ? '👥 Friends' : '🌍 Public'}
+                          <div className="text-xs opacity-50 font-mono uppercase">
+                            {user.visibility === 'friends' ? 'ALLIED' : 'PUBLIC'}
                           </div>
                         </div>
                       </button>
                     ))
                   )}
                 </div>
-              </div>          {/* Selected User Display */}
-          {selectedUser && (
-            <div className="bg-gray-800 rounded p-2">
-              <div className="text-white text-sm">
-                Selected: <span className="font-medium">{selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}</span>
               </div>
-            </div>
-          )}
+
+              {/* Selected User Display */}
+              {selectedUser && (
+                <div className="bg-gray-900 border border-white rounded-none p-2">
+                  <div className="text-white font-mono text-xs uppercase tracking-wider">
+                    <span className="text-gray-400">TARGET SELECTED: </span>
+                    <span className="font-bold">{selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
           {error && (
-            <div className="text-red-400 text-sm">{error}</div>
+            <div className="text-red-400 font-mono text-xs uppercase tracking-wider border border-red-400 bg-red-900/20 p-2">
+              [ERROR: {error.toUpperCase()}]
+            </div>
           )}
 
           {/* Action Buttons */}
@@ -258,17 +265,17 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded-none border-2 border-gray-600 hover:bg-gray-700 hover:border-white transition-colors font-mono uppercase tracking-wider text-xs"
               disabled={loading}
             >
-              Cancel
+              ABORT
             </button>
             <button
               onClick={handleStartConversation}
-              className="flex-1 bg-white text-black py-2 px-4 rounded hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="flex-1 bg-white text-black py-2 px-4 rounded-none border-2 border-white hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:border-gray-600 disabled:cursor-not-allowed font-mono uppercase tracking-wider text-xs font-bold"
               disabled={loading || !selectedUser || fetchingUsers}
             >
-              {loading ? 'Starting...' : 'Start Conversation'}
+              {loading ? 'ESTABLISHING...' : 'ESTABLISH CHANNEL'}
             </button>
           </div>
         </div>

@@ -33,6 +33,22 @@ export async function POST(request: Request) {
       ban_date: new Date().toISOString(),
     });
     
+    // Clear IP cache immediately after banning
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/internal/clear-ip-cache`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-request': 'true',
+        },
+        body: JSON.stringify({ ip_address: userToBan.ip_address }),
+      });
+      console.log(`Cleared IP cache for banned IP: ${userToBan.ip_address}`);
+    } catch (cacheError) {
+      console.error('Failed to clear IP cache:', cacheError);
+      // Don't fail the ban operation if cache clearing fails
+    }
+    
     // Clear all sessions from the banned IP address
     const sessionDeleteResult = await db.collection('sessions').deleteMany({
       ip_address: userToBan.ip_address

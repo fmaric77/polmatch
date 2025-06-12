@@ -189,19 +189,9 @@ export async function GET(request: Request) {
       const otherUser = otherUserId ? userMap.get(otherUserId) : null;
       const latestMessage = messageMap.get(conv._id?.toString() ?? '');
       
-      // Parse profile context to get conversation name suffix
+      // Parse profile context - no longer adding text-based suffix since UI now uses symbols
       let conversationNameSuffix = '';
-      if (conv.profile_context) {
-        const [userProfile, otherProfile] = conv.profile_context.split('_');
-        const sortedParticipants = getSortedParticipants(auth.user.user_id, otherUserId || '');
-        
-        // Determine which profile belongs to current user and which to other user
-        if (sortedParticipants[0] === auth.user.user_id) {
-          conversationNameSuffix = ` (${userProfile} ↔ ${otherProfile})`;
-        } else {
-          conversationNameSuffix = ` (${otherProfile} ↔ ${userProfile})`;
-        }
-      }
+      // Profile context is still parsed for other purposes but no longer used for display names
       
       // Decrypt latest message content if it exists
       let decryptedLatestMessage = null;
@@ -242,7 +232,7 @@ export async function GET(request: Request) {
         profile_context: conv.profile_context,
         other_user: otherUser ? {
           user_id: otherUser.user_id,
-          username: otherUser.username + conversationNameSuffix,
+          username: otherUser.username,
           first_name: otherUser.first_name,
           last_name: otherUser.last_name,
           profile_picture: otherUser.profile_picture

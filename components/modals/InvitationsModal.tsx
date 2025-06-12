@@ -81,24 +81,27 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
   const isResponding = (invitationId: string): boolean => responding.has(invitationId);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-black border border-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <FontAwesomeIcon icon={faUsers} />
-            <span>Group Invitations ({invitations.length})</span>
-          </h2>
-          <div className="flex items-center space-x-2">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
+      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">RECRUITMENT INVITATIONS</div>
+            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center space-x-3">
+              <FontAwesomeIcon icon={faUsers} />
+              <span>PENDING ASSIGNMENTS ({invitations.length})</span>
+            </h2>
+          </div>
+          <div className="flex items-center space-x-3">
             <button
               onClick={onRefresh}
-              className="text-gray-400 hover:text-white transition-colors p-2"
-              title="Refresh invitations"
+              className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
+              title="REFRESH INVITATIONS"
             >
               <FontAwesomeIcon icon={faRefresh} />
             </button>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
             >
               <FontAwesomeIcon icon={faTimes} />
             </button>
@@ -106,55 +109,64 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
         </div>
 
         {error && (
-          <div className="bg-red-600/20 border border-red-600 rounded p-3 mb-4">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="bg-red-600/20 border-2 border-red-400 rounded-none p-3 mb-4">
+            <p className="text-red-400 text-sm font-mono uppercase tracking-wide">{error}</p>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto">
           {invitations.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">
-              <FontAwesomeIcon icon={faUsers} className="text-4xl mb-4" />
-              <p className="text-lg mb-2">No pending invitations</p>
-              <p className="text-sm">You&apos;ll see group invitations here when you receive them</p>
+            <div className="text-center py-8">
+              <div className="bg-black border-2 border-gray-400 rounded-none p-6 shadow-lg">
+                <FontAwesomeIcon icon={faUsers} className="text-4xl mb-4 text-gray-400" />
+                <p className="text-lg mb-2 text-gray-400 font-mono uppercase tracking-wide">NO PENDING ASSIGNMENTS</p>
+                <p className="text-sm text-gray-500 font-mono uppercase tracking-widest">RECRUITMENT INVITATIONS WILL APPEAR HERE</p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {invitations.map((invitation) => (
                 <div
                   key={invitation.invitation_id}
-                  className="border border-gray-700 rounded-lg p-4 bg-gray-900/50"
+                  className="border-2 border-white rounded-none p-4 bg-black shadow-lg"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <FontAwesomeIcon icon={faUsers} className="text-blue-400" />
-                        <h3 className="text-white font-semibold">{invitation.group_name}</h3>
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 bg-blue-600/20 border border-blue-400 rounded-none">
+                          <FontAwesomeIcon icon={faUsers} className="text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-mono uppercase tracking-wide text-lg">{invitation.group_name}</h3>
+                          <div className="text-yellow-400 text-xs font-mono uppercase tracking-widest">TASK FORCE ASSIGNMENT</div>
+                        </div>
                       </div>
-                      <p className="text-gray-300 text-sm mb-1">
-                        Invited by <span className="font-medium text-white">{invitation.inviter_username}</span>
-                      </p>
-                      <p className="text-gray-400 text-xs">
-                        {formatInviteDate(invitation.created_at)}
-                      </p>
+                      <div className="bg-black border border-gray-500 rounded-none p-3 shadow-inner">
+                        <p className="text-gray-300 text-sm font-mono uppercase tracking-wide mb-1">
+                          RECRUITMENT BY: <span className="font-medium text-white">AGENT-{invitation.inviter_username}</span>
+                        </p>
+                        <p className="text-gray-400 text-xs font-mono uppercase tracking-widest">
+                          ISSUED: {formatInviteDate(invitation.created_at)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex space-x-2 ml-4">
+                    <div className="flex space-x-3 ml-4">
                       <button
                         onClick={() => handleResponse(invitation.invitation_id, 'accept')}
                         disabled={isResponding(invitation.invitation_id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                        className="bg-black text-green-400 border-2 border-green-400 px-4 py-2 rounded-none hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wide flex items-center space-x-2"
                       >
                         <FontAwesomeIcon icon={faCheck} />
-                        <span>{isResponding(invitation.invitation_id) ? 'Accepting...' : 'Accept'}</span>
+                        <span>{isResponding(invitation.invitation_id) ? 'ACCEPTING...' : 'ACCEPT'}</span>
                       </button>
                       <button
                         onClick={() => handleResponse(invitation.invitation_id, 'decline')}
                         disabled={isResponding(invitation.invitation_id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                        className="bg-black text-red-400 border-2 border-red-400 px-4 py-2 rounded-none hover:bg-red-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wide flex items-center space-x-2"
                       >
                         <FontAwesomeIcon icon={faX} />
-                        <span>{isResponding(invitation.invitation_id) ? 'Declining...' : 'Decline'}</span>
+                        <span>{isResponding(invitation.invitation_id) ? 'DECLINING...' : 'DECLINE'}</span>
                       </button>
                     </div>
                   </div>
@@ -164,13 +176,13 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-gray-700 mt-4">
+        <div className="flex justify-end pt-6 border-t-2 border-gray-700 mt-6">
           <button
             onClick={onClose}
-            className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition-colors"
+            className="bg-black text-white border-2 border-white px-6 py-3 rounded-none hover:bg-white hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
             disabled={responding.size > 0}
           >
-            Close
+            CLOSE ASSIGNMENTS
           </button>
         </div>
       </div>

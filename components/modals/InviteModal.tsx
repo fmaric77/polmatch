@@ -106,16 +106,19 @@ const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-black border border-white rounded-lg p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
+      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-            Invite Users
-          </h2>
+          <div>
+            <div className="text-green-400 font-mono uppercase tracking-widest text-xs mb-2">RECRUITMENT OPERATION</div>
+            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+              <FontAwesomeIcon icon={faUserPlus} className="mr-3" />
+              RECRUIT AGENTS
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
@@ -132,44 +135,55 @@ const InviteModal: React.FC<InviteModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search users..."
-              className="w-full bg-black text-white border border-white rounded p-2 pl-10 focus:outline-none focus:ring-1 focus:ring-white"
+              placeholder="SEARCH PERSONNEL DATABASE..."
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
             />
           </div>
 
           {/* Selected Count */}
           {selectedUsers.size > 0 && (
-            <div className="text-white text-sm">
-              {selectedUsers.size} user{selectedUsers.size > 1 ? 's' : ''} selected
+            <div className="bg-green-600/20 border border-green-400 rounded-none p-2">
+              <div className="text-green-400 text-sm font-mono uppercase tracking-wider">
+                {selectedUsers.size} AGENT{selectedUsers.size > 1 ? 'S' : ''} SELECTED FOR RECRUITMENT
+              </div>
             </div>
           )}
 
           {/* Users List */}
-          <div className="flex-1 min-h-0 border border-white rounded p-2">
-            <div className="h-full overflow-y-auto space-y-1">
+          <div className="flex-1 min-h-0 border-2 border-white rounded-none p-3 bg-black shadow-inner">
+            <div className="h-full overflow-y-auto space-y-2">
               {filteredUsers.length === 0 ? (
-                <div className="text-gray-400 text-center py-4">
-                  {searchQuery ? 'No users found' : 'No users available to invite'}
+                <div className="text-center py-8">
+                  <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
+                    <div className="text-gray-400 font-mono uppercase tracking-wide">
+                      {searchQuery ? 'NO MATCHING PERSONNEL' : 'NO AVAILABLE RECRUITS'}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 filteredUsers.map((user) => (
                   <button
                     key={user.user_id}
                     onClick={() => handleUserToggle(user.user_id)}
-                    className={`w-full text-left p-2 rounded transition-colors flex items-center justify-between ${
+                    className={`w-full text-left p-3 rounded-none border-2 transition-all flex items-center justify-between shadow-lg font-mono ${
                       selectedUsers.has(user.user_id)
-                        ? 'bg-white text-black'
-                        : 'hover:bg-gray-800 text-white'
+                        ? 'bg-green-600 border-green-400 text-white shadow-green-400/30'
+                        : 'bg-black border-gray-400 hover:border-white text-white'
                     }`}
                     disabled={loading || inviting.has(user.user_id)}
                   >
-                    <div className="flex items-center">
-                      <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                      {user.username}
+                    <div className="flex items-center space-x-3">
+                      <FontAwesomeIcon icon={faUserPlus} className="text-green-400" />
+                      <div>
+                        <div className="uppercase tracking-wide">AGENT-{user.username}</div>
+                        <div className="text-xs text-gray-400 uppercase tracking-widest">
+                          STATUS: {selectedUsers.has(user.user_id) ? 'SELECTED' : 'AVAILABLE'}
+                        </div>
+                      </div>
                     </div>
                     {inviting.has(user.user_id) && (
-                      <div className="text-xs">Inviting...</div>
+                      <div className="text-xs font-mono uppercase tracking-widest text-yellow-400">RECRUITING...</div>
                     )}
                   </button>
                 ))
@@ -178,11 +192,15 @@ const InviteModal: React.FC<InviteModalProps> = ({
           </div>
 
           {error && (
-            <div className="text-red-400 text-sm">{error}</div>
+            <div className="bg-red-600/20 border-2 border-red-400 rounded-none p-3">
+              <div className="text-red-400 text-sm font-mono uppercase tracking-wide">{error}</div>
+            </div>
           )}
 
           {success && (
-            <div className="text-green-400 text-sm">{success}</div>
+            <div className="bg-green-600/20 border-2 border-green-400 rounded-none p-3">
+              <div className="text-green-400 text-sm font-mono uppercase tracking-wide">{success}</div>
+            </div>
           )}
 
           {/* Action Buttons */}
@@ -190,17 +208,17 @@ const InviteModal: React.FC<InviteModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+              className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
               disabled={loading}
             >
-              {selectedUsers.size === 0 ? 'Close' : 'Cancel'}
+              {selectedUsers.size === 0 ? 'CLOSE' : 'ABORT'}
             </button>
             <button
               onClick={handleInviteSelected}
-              className="flex-1 bg-white text-black py-2 px-4 rounded hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
               disabled={loading || selectedUsers.size === 0}
             >
-              {loading ? 'Inviting...' : `Invite ${selectedUsers.size || ''}`}
+              {loading ? 'RECRUITING...' : `RECRUIT ${selectedUsers.size || ''} AGENT${selectedUsers.size !== 1 ? 'S' : ''}`}
             </button>
           </div>
         </div>

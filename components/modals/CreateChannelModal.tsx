@@ -83,25 +83,28 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-black border border-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
+      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            <FontAwesomeIcon icon={faHashtag} className="mr-2" />
-            Create Channel
-          </h2>
+          <div>
+            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CLASSIFIED OPERATION</div>
+            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+              <FontAwesomeIcon icon={faHashtag} className="mr-3" />
+              CREATE SECURE CHANNEL
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
-              Channel Name
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              CHANNEL DESIGNATION
             </label>
             <div className="relative">
               <FontAwesomeIcon 
@@ -112,50 +115,52 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                 type="text"
                 value={form.name}
                 onChange={(e) => handleInputChange('name', e.target.value.toLowerCase())}
-                placeholder="channel-name"
-                className="w-full bg-black text-white border border-white rounded p-2 pl-10 focus:outline-none focus:ring-1 focus:ring-white"
+                placeholder="channel-designation"
+                className="w-full bg-black text-white border-2 border-white rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
                 disabled={loading}
                 required
               />
             </div>
-            <div className="text-xs text-gray-400 mt-1">
-              Use lowercase letters, numbers, hyphens, and underscores only
+            <div className="text-xs text-gray-400 mt-2 font-mono uppercase tracking-wide">
+              USE LOWERCASE LETTERS, NUMBERS, HYPHENS, AND UNDERSCORES ONLY
             </div>
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
-              Description (Optional)
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              OPERATIONAL DESCRIPTION (OPTIONAL)
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="What's this channel about?"
-              className="w-full bg-black text-white border border-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-white resize-none"
+              placeholder="CHANNEL PURPOSE AND CLASSIFICATION..."
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg"
               rows={3}
               disabled={loading}
             />
           </div>
 
           {error && (
-            <div className="text-red-400 text-sm">{error}</div>
+            <div className="bg-red-600/20 border-2 border-red-400 rounded-none p-3">
+              <div className="text-red-400 text-sm font-mono uppercase tracking-wide">{error}</div>
+            </div>
           )}
 
           <div className="flex space-x-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+              className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
               disabled={loading}
             >
-              Cancel
+              ABORT
             </button>
             <button
               type="submit"
-              className="flex-1 bg-white text-black py-2 px-4 rounded hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
               disabled={loading || !form.name.trim()}
             >
-              {loading ? 'Creating...' : 'Create Channel'}
+              {loading ? 'ESTABLISHING...' : 'CREATE CHANNEL'}
             </button>
           </div>
         </form>

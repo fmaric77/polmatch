@@ -96,46 +96,49 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-black border border-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
+      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            <FontAwesomeIcon icon={faUsers} className="mr-2" />
-            Create Group
-          </h2>
+          <div>
+            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CLASSIFIED OPERATION</div>
+            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+              <FontAwesomeIcon icon={faUsers} className="mr-3" />
+              ESTABLISH TASK FORCE
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
-              Group Name
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              TASK FORCE DESIGNATION
             </label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="Enter group name"
-              className="w-full bg-black text-white border border-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-white"
+              placeholder="ENTER TASK FORCE NAME"
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
               required
             />
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
-              Description
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              MISSION DESCRIPTION
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter group description"
-              className="w-full bg-black text-white border border-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-white resize-none"
+              placeholder="ENTER MISSION OBJECTIVES AND SCOPE"
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg"
               rows={3}
               disabled={loading}
               required
@@ -143,20 +146,20 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
-              Topic (Optional)
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              OPERATIONAL TOPIC (OPTIONAL)
             </label>
             <input
               type="text"
               value={form.topic}
               onChange={(e) => handleInputChange('topic', e.target.value)}
-              placeholder="Enter group topic"
-              className="w-full bg-black text-white border border-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-white"
+              placeholder="ENTER OPERATION TOPIC"
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 p-3 bg-black border-2 border-gray-400 rounded-none shadow-lg">
             <input
               type="checkbox"
               id="is_private"
@@ -165,31 +168,33 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               className="text-white focus:ring-white"
               disabled={loading}
             />
-            <label htmlFor="is_private" className="text-white text-sm flex items-center">
-              <FontAwesomeIcon icon={faLock} className="mr-1" />
-              Private Group
+            <label htmlFor="is_private" className="text-white text-sm flex items-center font-mono uppercase tracking-wide">
+              <FontAwesomeIcon icon={faLock} className="mr-2 text-red-400" />
+              CLASSIFIED TASK FORCE
             </label>
           </div>
 
           {error && (
-            <div className="text-red-400 text-sm">{error}</div>
+            <div className="bg-red-600/20 border-2 border-red-400 rounded-none p-3">
+              <div className="text-red-400 text-sm font-mono uppercase tracking-wide">{error}</div>
+            </div>
           )}
 
-          <div className="flex space-x-4 pt-4">
+          <div className="flex space-x-4 pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+              className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
               disabled={loading}
             >
-              Cancel
+              ABORT MISSION
             </button>
             <button
               type="submit"
-              className="flex-1 bg-white text-black py-2 px-4 rounded hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
               disabled={loading || !form.name.trim() || !form.description.trim()}
             >
-              {loading ? 'Creating...' : 'Create Group'}
+              {loading ? 'ESTABLISHING...' : 'ESTABLISH TASK FORCE'}
             </button>
           </div>
         </form>

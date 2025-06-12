@@ -86,18 +86,47 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Get messages for this conversation
     const messageCollectionName = `pm_${profile_type}`;
-    const messages = await db.collection(messageCollectionName)
+    const rawMessages = await db.collection(messageCollectionName)
       .find({ conversation_id: conversation._id })
       .sort({ timestamp: -1 })
       .limit(limit)
       .toArray();
 
     // Reverse to get chronological order
-    messages.reverse();
+    rawMessages.reverse();
+
+    // Get unique sender IDs to fetch their profile data
+    const senderIds = [...new Set(rawMessages.map(msg => msg.sender_id))];
+    
+    // Fetch profile data for all senders
+    const senderProfiles = await db.collection('profiles')
+      .find({ 
+        user_id: { $in: senderIds },
+        profile_type: profile_type
+      })
+      .toArray();
+
+    // Create a map for quick lookup of sender profile data
+    const senderProfileMap = new Map();
+    senderProfiles.forEach(profile => {
+      senderProfileMap.set(profile.user_id, {
+        display_name: profile.display_name || '',
+        profile_picture_url: profile.profile_picture_url || ''
+      });
+    });
+
+    // Enhance messages with sender profile data
+    const enhancedMessages = rawMessages.map(msg => ({
+      ...msg,
+      sender_profile_data: senderProfileMap.get(msg.sender_id) || {
+        display_name: '',
+        profile_picture_url: ''
+      }
+    }));
 
     return NextResponse.json({ 
       success: true, 
-      messages,
+      messages: enhancedMessages,
       conversation,
       profile_type 
     });

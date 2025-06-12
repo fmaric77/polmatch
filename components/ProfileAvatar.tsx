@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { profilePictureCache } from '../lib/profilePictureCache';
 
 interface ProfileAvatarProps {
   userId: string;
@@ -12,7 +13,7 @@ interface ProfileAvatarProps {
   showFallback?: boolean;
 }
 
-const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ 
+const ProfileAvatar: React.FC<ProfileAvatarProps> = React.memo(({ 
   userId, 
   size = 40, 
   className = '', 
@@ -23,41 +24,41 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
     const fetchProfilePicture = async () => {
       try {
-        console.log('Fetching profile picture for user:', userId);
-        const response = await fetch(`/api/users/profile-picture?user_id=${userId}`);
-        const data = await response.json();
-        
-        console.log('Profile picture API response:', data);
-        
-        if (data.success && data.profile_picture_url) {
-          console.log('Setting profile picture URL:', data.profile_picture_url);
-          setProfilePictureUrl(data.profile_picture_url);
-        } else {
-          console.log('No profile picture URL found or API error');
+        const cachedUrl = await profilePictureCache.getProfilePicture(userId);
+        if (isMounted) {
+          setProfilePictureUrl(cachedUrl);
         }
       } catch (error) {
         console.error('Error fetching profile picture:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    if (userId) {
-      fetchProfilePicture();
-    } else {
-      setLoading(false);
-    }
+    fetchProfilePicture();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId]);
 
   const handleImageError = () => {
-    console.log('Image failed to load:', profilePictureUrl);
     setImageError(true);
   };
 
-  // Show fallback icon if no image URL, image failed to load, or loading
-  if (loading || !profilePictureUrl || imageError) {
+  // Memoize the fallback component to prevent unnecessary re-renders
+  const fallbackComponent = useMemo(() => {
     if (!showFallback) return null;
     
     return (
@@ -72,6 +73,11 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
         />
       </div>
     );
+  }, [showFallback, className, size]);
+
+  // Show fallback icon if no image URL, image failed to load, or loading
+  if (loading || !profilePictureUrl || imageError) {
+    return fallbackComponent;
   }
 
   return (
@@ -89,6 +95,8 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
       />
     </div>
   );
-};
+});
+
+ProfileAvatar.displayName = 'ProfileAvatar';
 
 export default ProfileAvatar;
