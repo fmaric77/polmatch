@@ -33,11 +33,6 @@ class ProfilePictureCache {
     const promise = new Promise<string | null>((resolve, reject) => {
       this.batchQueue.add(userId);
       
-      // Store the resolve/reject functions for this user
-      if (!this.pendingRequests.has(userId)) {
-        this.pendingRequests.set(userId, promise);
-      }
-      
       // Set up batch processing if not already scheduled
       if (!this.batchTimeout) {
         this.batchTimeout = setTimeout(() => {
@@ -63,6 +58,7 @@ class ProfilePictureCache {
       }
     });
 
+    // Store the promise after it's been created
     this.pendingRequests.set(userId, promise);
     return promise;
   }

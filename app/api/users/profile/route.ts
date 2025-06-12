@@ -139,7 +139,8 @@ export async function GET(request: NextRequest) {
                   question_id: '$question_id',
                   question_text: '$question.question_text',
                   answer: '$answer',
-                  completion_date: '$completion_date'
+                  completion_date: '$completion_date',
+                  profile_display_text: '$question.profile_display_text'
                 }
               }
             }

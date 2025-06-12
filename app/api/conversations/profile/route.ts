@@ -75,14 +75,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const otherUserId = conv.participant_ids.find((id: string) => id !== userId);
       if (!otherUserId) continue;
 
-      // Get other user's profile data for this profile type
+      // Get other user's basic data
       const otherUser = await db.collection('users').findOne({ user_id: otherUserId });
       if (!otherUser) continue;
 
-      // Get user's profile-specific data
-      const userCatalogue = await db.collection('user_catalogues').findOne({
-        user_id: otherUserId,
-        profile_type: profileType
+      // Get other user's profile-specific data from the correct profile collection
+      const profileCollectionName = `${profileType}profiles`;
+      const otherUserProfile = await db.collection(profileCollectionName).findOne({
+        user_id: otherUserId
       });
 
       // Get latest message for this conversation
@@ -99,14 +99,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       conversations.push({
         id: otherUserId,
-        name: userCatalogue?.display_name || otherUser.username || otherUserId,
+        name: otherUserProfile?.display_name || otherUser.username || otherUserId,
         type: 'direct',
         profile_type: profileType,
         other_user: {
           user_id: otherUserId,
           username: otherUser.username,
-          display_name: userCatalogue?.display_name,
-          profile_picture_url: userCatalogue?.profile_picture_url
+          display_name: otherUserProfile?.display_name,
+          profile_picture_url: otherUserProfile?.profile_picture_url
         },
         last_message: latestMessage ? {
           content: latestMessage.content,

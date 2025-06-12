@@ -152,7 +152,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
         <div className="border-b-2 border-white bg-white text-black p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="font-mono text-xs">SECURE CHANNEL ESTABLISHMENT</div>
+              <div className="font-mono text-xs"></div>
             </div>
             <button
               onClick={onClose}

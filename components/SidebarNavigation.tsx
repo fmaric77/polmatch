@@ -47,7 +47,6 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     }`}>
       {/* FBI Header */}
       <div className="border-b-2 border-white bg-white text-black p-2 text-center">
-        <div className="font-mono text-xs font-bold tracking-widest">OPERATIONS</div>
       </div>
       
       <div className="p-2 space-y-3">

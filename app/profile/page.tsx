@@ -361,16 +361,16 @@ export default function ProfilePage() {
       <div className="flex h-screen bg-black text-white">
         <Navigation currentPage="profile" />
         <main className="flex-1 flex flex-col overflow-y-auto">
-          <div className="w-full max-w-4xl mx-auto mt-12 p-6 pb-16">
-            <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
-              <div className="flex justify-between items-center mb-6">
+          <div className="w-full max-w-4xl mx-auto mt-4 sm:mt-8 md:mt-12 p-4 sm:p-6 pb-8 sm:pb-16">
+            <div className="bg-black/80 border border-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
                 <div>
-                  <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">[CLASSIFIED FORM: {activeQuestionnaire.title}]</h1>
-                  <p className="text-gray-300 font-mono text-sm mt-2">DOSSIER COMPLETION PROTOCOL: {activeQuestionnaire.description}</p>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-mono uppercase tracking-wider">[CLASSIFIED FORM: {activeQuestionnaire.title}]</h1>
+                  <p className="text-gray-300 font-mono text-xs sm:text-sm mt-2">DOSSIER COMPLETION PROTOCOL: {activeQuestionnaire.description}</p>
                 </div>
                 <button
                   onClick={() => setActiveQuestionnaire(null)}
-                  className="px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                  className="px-3 sm:px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider text-xs sm:text-sm w-full sm:w-auto"
                 >
                   ← ABORT FORM
                 </button>
@@ -387,18 +387,18 @@ export default function ProfilePage() {
                   </div>
                 ))}
 
-                <div className="flex gap-4 pt-6 border-t border-white/30">
+                <div className="flex flex-col xs:flex-row gap-3 sm:gap-4 pt-6 border-t border-white/30">
                   <button
                     type="button"
                     onClick={() => setActiveQuestionnaire(null)}
-                    className="px-6 py-3 bg-black text-white border border-white font-mono rounded hover:bg-white/10 transition-colors uppercase tracking-wider"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white border border-white font-mono rounded hover:bg-white/10 transition-colors uppercase tracking-wider text-xs sm:text-sm"
                   >
                     TERMINATE SESSION
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-6 py-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors disabled:opacity-50 uppercase tracking-wider"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors disabled:opacity-50 uppercase tracking-wider text-xs sm:text-sm"
                   >
                     {submitting ? 'PROCESSING...' : 'COMMIT TO DATABASE'}
                   </button>
@@ -419,40 +419,40 @@ export default function ProfilePage() {
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="profile" />
       <main className="flex-1 flex flex-col overflow-y-auto">
-        <div className="w-full max-w-6xl mx-auto mt-12 p-6 pb-16">
+        <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 md:p-6 pb-8">
           <div className="bg-black border-2 border-white rounded-none shadow-2xl">
             {/* FBI Header */}
             <div className="border-b-2 border-white bg-white text-black p-3 text-center">
               <div className="font-mono text-xs mb-1 font-bold tracking-widest uppercase">CLASSIFIED</div>
-              <h1 className="text-2xl font-bold tracking-widest uppercase">AGENT MANAGEMENT SYSTEM</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-widest uppercase">AGENT MANAGEMENT SYSTEM</h1>
               <div className="font-mono text-xs mt-1 tracking-widest uppercase">PERSONNEL FILE ADMINISTRATION</div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex border-b-2 border-white">
+            {/* Tab Navigation - Made responsive with smaller text on mobile */}
+            <div className="flex flex-col sm:flex-row border-b-2 border-white">
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
                   activeTab === 'settings'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 border-white/30'
                 }`}
               >
                 DOSSIER SETTINGS
               </button>
               <button
                 onClick={() => setActiveTab('questionnaires')}
-                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
                   activeTab === 'questionnaires'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 border-white/30'
                 }`}
               >
                 CLASSIFICATION FORMS
               </button>
               <button
                 onClick={() => setActiveTab('friends')}
-                className={`flex-1 px-6 py-4 text-center transition-colors font-mono uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
                   activeTab === 'friends'
                     ? 'bg-white text-black border-b-2 border-white'
                     : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -463,29 +463,29 @@ export default function ProfilePage() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
 
 
               {activeTab === 'settings' && (
                 <div>
                   <h1 className="text-2xl font-bold font-mono mb-6 uppercase tracking-wider">[AGENT DOSSIER CONFIGURATION]</h1>
                   
-                  {/* Profile Type Tabs */}
-                  <div className="flex gap-4 mb-6">
+                  {/* Profile Type Tabs - Made responsive */}
+                  <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
                     <button 
-                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('basic')}
                     >
                       GENERAL
                     </button>
                     <button 
-                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('love')}
                     >
                       PERSONAL
                     </button>
                     <button 
-                      className={`px-4 py-2 rounded font-mono uppercase tracking-wider ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
                       onClick={() => setActiveProfileTab('business')}
                     >
                       CORPORATE
@@ -725,19 +725,19 @@ export default function ProfilePage() {
 
               {activeTab === 'questionnaires' && (
                 <div>
-                  <h1 className="text-3xl font-bold font-mono mb-6 text-center uppercase tracking-wider">[CLASSIFICATION FORM DATABASE]</h1>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-mono mb-6 text-center uppercase tracking-wider">[CLASSIFICATION FORM DATABASE]</h1>
                   
-                  {/* Profile Type Selector */}
-                  <div className="flex justify-center mb-8">
-                    <div className="flex bg-black border border-white rounded-lg p-1">
+                  {/* Profile Type Selector - Made responsive */}
+                  <div className="flex justify-center mb-6 sm:mb-8">
+                    <div className="flex flex-col sm:flex-row bg-black border border-white rounded-lg p-1">
                       {(['basic', 'business', 'love'] as const).map((type) => (
                         <button
                           key={type}
                           onClick={() => setSelectedProfileType(type)}
-                          className={`px-4 py-2 rounded-md transition-colors font-mono uppercase tracking-wider ${
+                          className={`px-3 sm:px-4 py-2 rounded-md transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
                             selectedProfileType === type
                               ? 'bg-white text-black'
-                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 sm:border-r border-gray-700 last:border-none'
                           }`}
                         >
                           {type === 'basic' ? 'GENERAL' : type === 'business' ? 'CORPORATE' : 'PERSONAL'} FILE
@@ -763,18 +763,18 @@ export default function ProfilePage() {
                           
                           <div className="space-y-3">
                             {group.questionnaires.map((questionnaire) => (
-                              <div key={questionnaire.questionnaire_id} className="flex justify-between items-center bg-black/60 border border-white/30 p-4 rounded-lg">
-                                <div>
-                                  <h3 className="font-semibold font-mono uppercase tracking-wider">{questionnaire.title}</h3>
-                                  <p className="text-sm text-gray-400 font-mono">{questionnaire.description}</p>
+                              <div key={questionnaire.questionnaire_id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-black/60 border border-white/30 p-3 sm:p-4 rounded-lg">
+                                <div className="mb-3 sm:mb-0">
+                                  <h3 className="font-semibold font-mono uppercase tracking-wider text-sm sm:text-base">{questionnaire.title}</h3>
+                                  <p className="text-xs sm:text-sm text-gray-400 font-mono">{questionnaire.description}</p>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 self-end sm:self-auto w-full sm:w-auto justify-end">
                                   {questionnaire.completed ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-green-400 text-sm font-mono uppercase tracking-wider">[COMPLETED]</span>
+                                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                                      <span className="text-green-400 text-xs sm:text-sm font-mono uppercase tracking-wider order-2 sm:order-1">[COMPLETED]</span>
                                       <button
                                         onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                        className="px-3 py-1 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors text-sm uppercase tracking-wider"
+                                        className="px-3 py-1 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors text-xs sm:text-sm uppercase tracking-wider order-1 sm:order-2"
                                       >
                                         REVIEW/EDIT
                                       </button>
@@ -782,7 +782,7 @@ export default function ProfilePage() {
                                   ) : (
                                     <button
                                       onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                      className="px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                                      className="px-3 sm:px-4 py-1 sm:py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider text-xs sm:text-sm"
                                     >
                                       INITIATE FORM
                                     </button>

@@ -16,6 +16,7 @@ interface QuestionnaireAnswer {
   question_text: string;
   answer: string;
   completion_date: string;
+  profile_display_text?: string;
 }
 
 interface QuestionnaireGroup {
@@ -292,24 +293,40 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                                       </div>
                                     )}
                                     <div className="space-y-3">
-                                      {questionnaire.answers.map((answer, index) => (
-                                        <div key={answer.question_id} className="border-l-4 border-white pl-4 py-2">
-                                          <div className="text-xs font-mono text-gray-400 mb-1">
-                                            Q{(index + 1).toString().padStart(2, '0')}:
-                                          </div>
-                                          <div className="text-sm text-gray-300 font-medium mb-2">
-                                            {answer.question_text}
-                                          </div>
-                                          <div className="text-white font-mono">
-                                            {answer.answer}
-                                          </div>
-                                          {answer.completion_date && (
-                                            <div className="text-xs font-mono text-gray-500 mt-1">
-                                              RECORDED: {new Date(answer.completion_date).toLocaleDateString('en-US').replace(/\//g, '.')}
+                                      {questionnaire.answers.map((answer, index) => {
+                                        // Use profile_display_text if available, otherwise use question_text
+                                        let displayText = answer.question_text;
+                                        let hasAnswerPlaceholder = false;
+                                        
+                                        if (answer.profile_display_text && answer.profile_display_text.trim()) {
+                                          // Check if the profile display text contains the {answer} placeholder
+                                          hasAnswerPlaceholder = answer.profile_display_text.includes('{answer}');
+                                          // Replace placeholder with user's answer in profile_display_text
+                                          displayText = answer.profile_display_text.replace(/\{answer\}/g, answer.answer);
+                                        }
+                                        
+                                        return (
+                                          <div key={answer.question_id} className="border-l-4 border-white pl-4 py-2">
+                                            <div className="text-xs font-mono text-gray-400 mb-1">
+                                              Q{(index + 1).toString().padStart(2, '0')}:
                                             </div>
-                                          )}
-                                        </div>
-                                      ))}
+                                            <div className="text-sm text-gray-300 font-medium mb-2">
+                                              {displayText}
+                                            </div>
+                                            {/* Show raw answer if: 1) no profile_display_text OR 2) profile_display_text doesn't contain {answer} placeholder */}
+                                            {(!answer.profile_display_text || !answer.profile_display_text.trim() || !hasAnswerPlaceholder) && (
+                                              <div className="text-white font-mono">
+                                                {answer.answer}
+                                              </div>
+                                            )}
+                                            {answer.completion_date && (
+                                              <div className="text-xs font-mono text-gray-500 mt-1">
+                                                RECORDED: {new Date(answer.completion_date).toLocaleDateString('en-US').replace(/\//g, '.')}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
