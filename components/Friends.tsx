@@ -26,11 +26,6 @@ export default function Friends() {
   const [profileIncoming, setProfileIncoming] = useState<FriendRequest[]>([]);
   const [profileOutgoing, setProfileOutgoing] = useState<FriendRequest[]>([]);
   
-  // Legacy global state (for backwards compatibility)
-  const [friends, setFriends] = useState<FriendRequest[]>([]);
-  const [incoming, setIncoming] = useState<FriendRequest[]>([]);
-  const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
-  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,9 +60,7 @@ export default function Friends() {
         throw new Error(data.message || 'Unknown error');
       }
       setMyId(data.user_id);
-      setFriends(data.friends);
-      setIncoming(data.incoming);
-      setOutgoing(data.outgoing);
+      // Note: This function now only sets myId, profile-specific data is handled by fetchProfileFriends
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('fetchFriends error:', error);

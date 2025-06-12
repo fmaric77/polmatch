@@ -242,7 +242,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       content: content, // Use unencrypted content for notification
       timestamp: message.timestamp,
       attachments: attachments || [],
-      sender_username: auth.username // Use username from auth if available
+      sender_username: auth.user.username // Use username from auth if available
     });
 
     return NextResponse.json({ 

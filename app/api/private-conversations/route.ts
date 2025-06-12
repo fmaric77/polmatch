@@ -26,6 +26,7 @@ interface MessageDocument {
   _id: unknown;
   conversation_id: unknown;
   content: string;
+  encrypted_content?: string;
   sender_id: string;
   timestamp: Date;
   [key: string]: unknown;
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
     const userProfileType = url.searchParams.get('profile_type'); // e.g., 'basic', 'love', 'business'
 
     // Build query to filter conversations
-    let conversationQuery: Record<string, unknown> = {
+    const conversationQuery: Record<string, unknown> = {
       participant_ids: auth.user.user_id
     };
 
@@ -107,14 +108,14 @@ export async function GET(request: Request) {
           const conversations = await db.collection(collectionName).find(conversationQuery)
             .sort({ updated_at: -1 }).toArray();
           privateConversations.push(...conversations);
-        } catch (error) {
+        } catch {
           // Collection might not exist, skip
           console.log(`Collection ${collectionName} not found or empty`);
         }
       }
       
       // Sort all conversations by updated_at
-      privateConversations.sort((a: any, b: any) => 
+      (privateConversations as ConversationDocument[]).sort((a: ConversationDocument, b: ConversationDocument) => 
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
       
@@ -140,7 +141,6 @@ export async function GET(request: Request) {
     const userMap = new Map((otherUsers as unknown as UserDocument[]).map((u: UserDocument) => [u.user_id, u]));
 
     // Get the latest message for each conversation from the appropriate message collections
-    const conversationIds = (privateConversations as ConversationDocument[]).map((conv: ConversationDocument) => conv._id);
     const messageMap = new Map<string, MessageDocument>();
 
     // Group conversations by their message collection
@@ -208,8 +208,8 @@ export async function GET(request: Request) {
       if (latestMessage) {
         try {
           // Handle both encrypted_content (profile messages) and content (legacy messages)
-          const contentToDecrypt = latestMessage.encrypted_content || latestMessage.content;
-          if (contentToDecrypt) {
+          const contentToDecrypt = (latestMessage as MessageDocument & { encrypted_content?: string }).encrypted_content || latestMessage.content;
+          if (contentToDecrypt && typeof contentToDecrypt === 'string') {
             const bytes = CryptoJS.AES.decrypt(contentToDecrypt, SECRET_KEY);
             const decryptedContent = bytes.toString(CryptoJS.enc.Utf8) || '[Decryption failed]';
             decryptedLatestMessage = {
@@ -217,8 +217,8 @@ export async function GET(request: Request) {
               content: decryptedContent
             };
             // Remove encrypted_content if it exists
-            if (decryptedLatestMessage.encrypted_content) {
-              delete decryptedLatestMessage.encrypted_content;
+            if ('encrypted_content' in decryptedLatestMessage) {
+              delete (decryptedLatestMessage as MessageDocument & { encrypted_content?: string }).encrypted_content;
             }
           } else {
             // If no content to decrypt, use as-is
@@ -230,8 +230,8 @@ export async function GET(request: Request) {
             content: '[Decryption failed]'
           };
           // Remove encrypted_content if it exists
-          if (decryptedLatestMessage.encrypted_content) {
-            delete decryptedLatestMessage.encrypted_content;
+          if ('encrypted_content' in decryptedLatestMessage) {
+            delete (decryptedLatestMessage as MessageDocument & { encrypted_content?: string }).encrypted_content;
           }
         }
       }
@@ -475,7 +475,7 @@ export async function DELETE(request: Request) {
           if (messagesResult.deletedCount > 0 || conversationResult.deletedCount > 0) {
             console.log(`📦 Deleted from ${messagesCol}: ${messagesResult.deletedCount} messages, ${conversationResult.deletedCount} conversations`);
           }
-        } catch (error) {
+        } catch {
           // Collection might not exist, continue with others
           console.log(`⚠️  Could not access ${messagesCol}/${conversationsCol}, continuing...`);
         }

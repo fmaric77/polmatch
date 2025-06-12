@@ -53,7 +53,7 @@ interface ProfileModalProps {
   restrictToProfileType?: boolean; // New prop to restrict modal to only show one profile type
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ userId, username, isOpen, onClose, defaultActiveTab, restrictToProfileType = false }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, defaultActiveTab, restrictToProfileType = false }) => {
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');

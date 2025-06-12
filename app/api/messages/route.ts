@@ -19,6 +19,13 @@ interface PrivateMessage {
   [key: string]: unknown;
 }
 
+interface ConversationDocument {
+  _id?: unknown;
+  updated_at: string;
+  lastMessage?: unknown;
+  [key: string]: unknown;
+}
+
 // Helper function to get sorted participant IDs for consistent conversation lookup
 function getSortedParticipants(userId1: string, userId2: string): string[] {
   return [userId1, userId2].sort();
@@ -218,7 +225,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     } else {
       // Get all conversations for the user from profile-specific collections
       const conversationCollections = ['private_conversations_basic', 'private_conversations_love', 'private_conversations_business', 'private_conversations'];
-      let allConversations: unknown[] = [];
+      let allConversations: ConversationDocument[] = [];
       
       // Search across all conversation collections
       for (const collectionName of conversationCollections) {
@@ -266,7 +273,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             allConversations.push({
               ...conv,
               lastMessage: latestMessage
-            });
+            } as ConversationDocument);
           }
         } catch (error) {
           // Collection might not exist, skip
@@ -275,7 +282,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       }
       
       // Sort all conversations by updated_at and limit to 20
-      allConversations.sort((a: any, b: any) => 
+      allConversations.sort((a: ConversationDocument, b: ConversationDocument) => 
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
       allConversations = allConversations.slice(0, 20);

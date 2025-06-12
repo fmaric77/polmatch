@@ -27,7 +27,7 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
   onClose
 }) => {
   const handleUnbanMember = async (bannedUser: BannedUser): Promise<void> => {
-    if (window.confirm(`Unban ${bannedUser.display_name || `AGENT-${bannedUser.user_id.substring(0, 8).toUpperCase()}`}? They will be able to join the group again.`)) {
+    if (window.confirm(`Unban ${bannedUser.username || `AGENT-${bannedUser.user_id.substring(0, 8).toUpperCase()}`}? They will be able to join the group again.`)) {
       try {
         await onUnbanMember(selectedConversation, bannedUser.user_id);
       } catch (error) {

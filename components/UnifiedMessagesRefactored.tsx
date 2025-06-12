@@ -21,12 +21,6 @@ import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
 import ContextMenu from './modals/ContextMenu';
 
-interface User {
-  user_id: string;
-  username: string;
-  display_name?: string;
-}
-
 type ProfileType = 'basic' | 'love' | 'business';
 
 interface PrivateMessage {
@@ -99,7 +93,6 @@ interface Channel {
 const UnifiedMessages: React.FC = () => {
   // Core state
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; display_name?: string; is_admin?: boolean } | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Profile separation state
@@ -351,8 +344,7 @@ const UnifiedMessages: React.FC = () => {
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            const filteredUsers = data.users.filter((u: User) => u.user_id !== currentUser.user_id);
-            setUsers(filteredUsers);
+            // Users data fetched but not stored since it's unused
           }
         })
         .catch(err => console.error('Failed to fetch users:', err));

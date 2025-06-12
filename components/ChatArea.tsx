@@ -125,7 +125,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   canManageMembers,
   typingUsers,
   onTyping,
-  sessionToken
+
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

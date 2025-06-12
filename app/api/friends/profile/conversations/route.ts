@@ -5,26 +5,6 @@ import CryptoJS from 'crypto-js';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
-interface ProfileConversation {
-  id: string;
-  participant_ids: string[];
-  other_user: {
-    user_id: string;
-    username: string;
-    first_name?: string;
-    last_name?: string;
-    profile_picture?: string;
-  };
-  created_at: Date;
-  updated_at: Date;
-  latest_message?: {
-    content: string;
-    timestamp: string;
-    sender_id: string;
-  };
-  profile_type: 'basic' | 'love' | 'business';
-}
-
 // Helper function to get sorted participant IDs
 function getSortedParticipants(userId1: string, userId2: string): string[] {
   return [userId1, userId2].sort();

@@ -10,7 +10,6 @@ import { usePathname } from 'next/navigation';
 const Header = () => {
   const [open, setOpen] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -19,10 +18,8 @@ const Header = () => {
         const res = await fetch('/api/session');
         const data = await res.json();
         setIsAdmin(!!(data.valid && data.user && data.user.is_admin));
-        setUsername(data.user?.username || null);
       } catch {
         setIsAdmin(false);
-        setUsername(null);
       }
     }
     checkAdmin();

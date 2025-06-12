@@ -2,16 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Navigation from '@/components/Navigation';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faSearch, 
-  faUsers, 
-  faPlus, 
-  faCalendar,
-  faClock,
-  faArrowLeft,
-  faArrowRight
-} from '@fortawesome/free-solid-svg-icons';
 
 interface PublicGroup {
   group_id: string;
@@ -136,20 +126,6 @@ export default function DiscoverGroups() {
     });
   };
 
-  // Format relative time
-  const formatRelativeTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return formatDate(dateString);
-  };
-
   useEffect(() => {
     fetchGroups(1, '');
   }, [fetchGroups]);
@@ -236,7 +212,7 @@ export default function DiscoverGroups() {
                   <div className="text-xs md:text-sm font-mono text-gray-400 mb-2">
                     DISPLAYING {groups.length} OF {pagination.totalCount} DETECTED NETWORKS
                     {searchQuery && (
-                      <span className="block sm:inline sm:ml-2">MATCHING "{searchQuery.toUpperCase()}"</span>
+                      <span className="block sm:inline sm:ml-2">MATCHING &quot;{searchQuery.toUpperCase()}&quot;</span>
                     )}
                   </div>
                   <div className="text-xs font-mono text-gray-500">

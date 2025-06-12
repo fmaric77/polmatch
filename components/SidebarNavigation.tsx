@@ -36,11 +36,9 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   isMobile,
   isSidebarVisible,
   isConversationsSidebarHidden,
-  activeProfileType,
   onCategoryChange,
   onNewAction,
   onInvitationsClick,
-  onProfileTypeChange,
   setIsConversationsSidebarHidden
 }) => {
   return (

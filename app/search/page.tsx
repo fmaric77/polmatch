@@ -37,8 +37,6 @@ export default function SearchUsersPage() {
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<Friend[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(false);
   
   // Profile separation state
@@ -91,8 +89,8 @@ export default function SearchUsersPage() {
       const res = await fetch('/api/friends');
       const data = await res.json();
       if (data.success) {
-        setFriends(data.friends);
-        setPendingRequests([...data.incoming, ...data.outgoing]);
+        setProfileFriends(data.friends);
+        setProfilePendingRequests([...data.incoming, ...data.outgoing]);
       }
     } catch {}
   }
@@ -379,7 +377,7 @@ export default function SearchUsersPage() {
             {availableUsers.length === 0 && search && (
               <div className="text-center py-8 md:py-12 px-4">
                 <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  NO SUBJECTS FOUND MATCHING "{search.toUpperCase()}"
+                  NO SUBJECTS FOUND MATCHING &quot;{search.toUpperCase()}&quot;
                 </div>
                 <div className="text-xs md:text-sm text-gray-500 font-mono">
                   REFINE SEARCH PARAMETERS OR CHECK SECURITY CLEARANCE

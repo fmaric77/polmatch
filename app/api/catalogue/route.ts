@@ -2,19 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '../../../lib/mongodb-connection';
 
-interface CatalogueItem {
+interface CatalogueItemDocument {
   catalogued_user_id: string;
   category: string;
   added_at: string;
+  owner_user_id: string;
 }
 
-interface User {
+interface UserDocument {
   user_id: string;
   username: string;
   display_name?: string;
 }
 
-export async function GET(request: NextRequest) {
+interface EnrichedCatalogueItem {
+  user_id: string;
+  username: string;
+  display_name: string;
+  category: string;
+  added_at: string;
+}
+
+export async function GET() {
   try {
     const { db } = await connectToDatabase();
     
@@ -31,21 +40,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user's catalogue items
-    const catalogueItems = await db.collection('user_catalogues')
+    const catalogueItemsRaw = await db.collection('user_catalogues')
       .find({ owner_user_id: session.user_id })
       .sort({ added_at: -1 })
       .toArray();
+    const catalogueItems = catalogueItemsRaw as unknown as CatalogueItemDocument[];
 
     // Get user details for each catalogued user
-    const userIds = catalogueItems.map((item: any) => item.catalogued_user_id);
-    const users = await db.collection('users')
+    const userIds = catalogueItems.map((item: CatalogueItemDocument) => item.catalogued_user_id);
+    const usersRaw = await db.collection('users')
       .find({ user_id: { $in: userIds } })
       .project({ user_id: 1, username: 1, display_name: 1 })
       .toArray();
+    const users = usersRaw as unknown as UserDocument[];
 
     // Combine catalogue data with user details
-    const enrichedItems = catalogueItems.map((item: any) => {
-      const user = users.find((u: any) => u.user_id === item.catalogued_user_id);
+    const enrichedItems = catalogueItems.map((item: CatalogueItemDocument) => {
+      const user = users.find((u: UserDocument) => u.user_id === item.catalogued_user_id);
       return {
         user_id: item.catalogued_user_id,
         username: user?.username || '',
@@ -53,7 +64,7 @@ export async function GET(request: NextRequest) {
         category: item.category,
         added_at: item.added_at
       };
-    }).filter((item: any) => item.username); // Filter out items where user no longer exists
+    }).filter((item: EnrichedCatalogueItem) => item.username); // Filter out items where user no longer exists
 
     return NextResponse.json({
       success: true,
