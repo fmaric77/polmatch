@@ -10,6 +10,7 @@ interface Question {
   options: string[];
   is_required: boolean;
   display_order: number;
+  profile_display_text?: string;
 }
 
 interface Questionnaire {
@@ -41,7 +42,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     title: '',
     description: '',
     is_hidden: false,
-    questions: [{ question_text: '', question_type: 'text', options: [], is_required: false }]
+    questions: [{ question_text: '', question_type: 'text', options: [], is_required: false, profile_display_text: '' }]
   });
   const [submitMessage, setSubmitMessage] = useState('');
   const [showEditQuestionnaire, setShowEditQuestionnaire] = useState(false);
@@ -110,7 +111,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
           title: '',
           description: '',
           is_hidden: false,
-          questions: [{ question_text: '', question_type: 'text', options: [], is_required: false }]
+          questions: [{ question_text: '', question_type: 'text', options: [], is_required: false, profile_display_text: '' }]
         });
         // Refresh the group data
         window.location.reload();
@@ -125,7 +126,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   const addQuestion = () => {
     setQuestionnaireForm(prev => ({
       ...prev,
-      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false }]
+      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false, profile_display_text: '' }]
     }));
   };
 
@@ -175,6 +176,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
       questions: questionnaire.questions.map(q => ({
         ...q,
         options: q.options || [],
+        profile_display_text: q.profile_display_text || ''
       }))
     });
     setShowEditQuestionnaire(true);
@@ -191,7 +193,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   const addEditQuestion = () => {
     setEditQuestionnaireForm((prev) => prev ? {
       ...prev,
-      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false, question_id: '', display_order: 0 }]
+      questions: [...prev.questions, { question_text: '', question_type: 'text', options: [], is_required: false, question_id: '', display_order: 0, profile_display_text: '' }]
     } : null);
   };
 
@@ -251,14 +253,14 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     return (
       <div className="flex h-screen bg-black text-white">
         <Navigation currentPage="admin" />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="w-full max-w-6xl mx-auto mt-12 p-6">
-            <div className="bg-black/80 border border-white rounded-lg p-8 text-center">
-              <h1 className="text-2xl font-bold mb-4">Error</h1>
-              <p className="text-red-400">{error || 'Questionnaire group not found'}</p>
+        <main className="flex-1 flex flex-col overflow-y-auto">
+          <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 sm:p-6">
+            <div className="bg-black/80 border border-white rounded-lg p-4 sm:p-6 md:p-8 text-center">
+              <h1 className="text-xl sm:text-2xl font-bold mb-4">Error</h1>
+              <p className="text-red-400 text-sm sm:text-base">{error || 'Questionnaire group not found'}</p>
               <button
                 onClick={() => router.push('/admindashboard')}
-                className="mt-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
+                className="mt-4 px-3 sm:px-4 py-2 bg-white text-black rounded hover:bg-gray-200 transition-colors text-xs sm:text-base"
               >
                 Return to Dashboard
               </button>
@@ -272,31 +274,31 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   return (
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="admin" />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="w-full max-w-6xl mx-auto mt-12 p-6">
-          <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center">
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 sm:p-6">
+          <div className="bg-black/80 border border-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0">
                 <button
                   onClick={() => router.push('/admindashboard')}
-                  className="mr-4 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  className="mb-2 sm:mb-0 sm:mr-4 px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs sm:text-sm"
                 >
                   ← Back
                 </button>
                 <div>
-                  <h1 className="text-3xl font-bold">{group.title}</h1>
-                  <p className="text-gray-300">{group.description}</p>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{group.title}</h1>
+                  <p className="text-gray-300 text-xs sm:text-sm">{group.description}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCreateQuestionnaire(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs sm:text-sm"
               >
                 Add Questionnaire
               </button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8 text-xs sm:text-sm">
               <div>
                 <span className="text-gray-400">Profile Type:</span>
                 <div className="font-medium capitalize">{group.profile_type}</div>
@@ -318,31 +320,31 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
             </div>
 
             {/* Questionnaires List */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4">Questionnaires</h2>
+            <div className="mb-4 sm:mb-6 md:mb-8">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Questionnaires</h2>
               {group.questionnaires.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 border border-white rounded-lg">
+                <div className="text-center py-6 sm:py-8 text-gray-400 border border-white rounded-lg text-xs sm:text-sm">
                   No questionnaires in this group. Create your first questionnaire to get started.
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {group.questionnaires.map((questionnaire) => (
-                    <div key={questionnaire.questionnaire_id} className="border border-white rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
+                    <div key={questionnaire.questionnaire_id} className="border border-white rounded-lg p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-2">
                         <div>
-                          <h3 className="text-lg font-semibold">{questionnaire.title}</h3>
-                          <p className="text-gray-300 text-sm">{questionnaire.description}</p>
+                          <h3 className="text-base sm:text-lg font-semibold">{questionnaire.title}</h3>
+                          <p className="text-gray-300 text-xs sm:text-sm">{questionnaire.description}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 self-end sm:self-auto">
                           <button
                             onClick={() => openEditQuestionnaire(questionnaire)}
-                            className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
+                            className="px-2 sm:px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-xs sm:text-sm"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => deleteQuestionnaire(questionnaire.questionnaire_id)}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                            className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm"
                           >
                             Delete
                           </button>
@@ -362,6 +364,11 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                             {questionnaire.questions.map((question, idx) => (
                               <div key={question.question_id} className="mb-2">
                                 <div className="font-medium">{idx + 1}. {question.question_text}</div>
+                                {question.profile_display_text && (
+                                  <div className="text-blue-400 text-sm ml-4">
+                                    Profile display: {question.profile_display_text}
+                                  </div>
+                                )}
                                 <div className="text-gray-400">
                                   Type: {question.question_type} | Required: {question.is_required ? 'Yes' : 'No'}
                                   {question.options.length > 0 && (
@@ -455,6 +462,14 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                               onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
                               className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
                               required
+                            />
+
+                            <input
+                              type="text"
+                              placeholder="Profile display text (optional - how this will appear on user's profile)"
+                              value={question.profile_display_text || ''}
+                              onChange={(e) => updateQuestion(index, 'profile_display_text', e.target.value)}
+                              className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
                             />
 
                             <div className="flex gap-4">
@@ -640,6 +655,14 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                               onChange={(e) => updateEditQuestion(index, 'question_text', e.target.value)}
                               className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
                               required
+                            />
+                            
+                            <input
+                              type="text"
+                              placeholder="Profile display text (optional - how this will appear on user's profile)"
+                              value={question.profile_display_text || ''}
+                              onChange={(e) => updateEditQuestion(index, 'profile_display_text', e.target.value)}
+                              className="w-full p-2 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-blue-400"
                             />
                             <div className="flex gap-4">
                               <select

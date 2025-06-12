@@ -139,41 +139,43 @@ export default function CataloguePage() {
           <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-6">
             <div className="border-b-2 border-white bg-white text-black p-3 text-center">
               <div className="font-mono text-xs mb-1 font-bold tracking-widest uppercase">CLASSIFIED</div>
-              <h1 className="text-2xl font-bold tracking-widest uppercase">SUBJECT FILES REPOSITORY</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-widest uppercase">SUBJECT FILES REPOSITORY</h1>
               <div className="font-mono text-xs mt-1 tracking-widest uppercase">CONFIDENTIAL - AUTHORIZED ACCESS ONLY</div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-3 gap-4 text-center text-xs font-mono mb-4">
+            <div className="p-3 sm:p-6">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center text-xs font-mono mb-4">
                 <div>
                   <div className="text-gray-400">TOTAL SUBJECTS</div>
-                  <div className="text-xl font-bold">{catalogueItems.length.toString().padStart(3, '0')}</div>
+                  <div className="text-base sm:text-xl font-bold">{catalogueItems.length.toString().padStart(3, '0')}</div>
                 </div>
                 <div>
                   <div className="text-gray-400">ACTIVE CASES</div>
-                  <div className="text-xl font-bold">{getCaseNumber(selectedCategory)}</div>
+                  <div className="text-base sm:text-xl font-bold">{getCaseNumber(selectedCategory)}</div>
                 </div>
                 <div>
                   <div className="text-gray-400">CLEARANCE LEVEL</div>
-                  <div className="text-xl font-bold text-red-400">TOP SECRET</div>
+                  <div className="text-base sm:text-xl font-bold text-red-400">TOP SECRET</div>
                 </div>
               </div>
               
-              {/* Case Type Selection */}
-              <div className="flex justify-center gap-2 mb-4">
-                <div className="text-sm font-mono text-gray-400 mr-4 self-center">CASE TYPE:</div>
-                {(Object.keys(categoryLabels) as CatalogueCategory[]).map(category => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 border-2 font-mono text-sm tracking-wider transition-all ${
-                      selectedCategory === category 
-                        ? `${categoryColors[category]} text-white`
-                        : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {categoryLabels[category]} ({catalogueItems.filter(item => item.category === category).length.toString().padStart(2, '0')})
-                  </button>
-                ))}
+              {/* Case Type Selection - Made responsive */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
+                <div className="text-sm font-mono text-gray-400 mb-2 sm:mb-0 sm:mr-4 self-center">CASE TYPE:</div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {(Object.keys(categoryLabels) as CatalogueCategory[]).map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-3 sm:px-4 py-2 border-2 font-mono text-xs sm:text-sm tracking-wider transition-all ${
+                        selectedCategory === category 
+                          ? `${categoryColors[category]} text-white`
+                          : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {categoryLabels[category]} ({catalogueItems.filter(item => item.category === category).length.toString().padStart(2, '0')})
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {actionMessage && (
@@ -201,26 +203,26 @@ export default function CataloguePage() {
                 </div>
               </div>
             ) : (
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 <div className="grid gap-4">
                   {filteredItems.map((item, index) => (
                     <div key={item.user_id} className="border border-gray-600 bg-gray-900/50 relative">
-                      {/* File Header */}
-                      <div className="bg-white text-black p-2 font-mono text-xs flex justify-between">
+                      {/* File Header - Responsive text */}
+                      <div className="bg-white text-black p-2 font-mono text-xs flex flex-col sm:flex-row sm:justify-between">
                         <div>
                           <span className="font-bold">FILE #{index + 1}.{getCaseNumber(selectedCategory)}</span>
-                          <span className="ml-4">CLASSIFICATION: {categoryLabels[selectedCategory]}</span>
+                          <span className="ml-2 sm:ml-4">CLASS: {categoryLabels[selectedCategory]}</span>
                         </div>
-                        <div>
+                        <div className="mt-1 sm:mt-0">
                           ARCHIVED: {new Date(item.added_at).toLocaleDateString('en-US').replace(/\//g, '.')}
                         </div>
                       </div>
                       
-                      {/* File Content */}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between">
+                      {/* File Content - Made responsive */}
+                      <div className="p-3 sm:p-4">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between">
                           {/* Subject Info */}
-                          <div className="flex items-start space-x-4 flex-1">
+                          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
                             {/* Photo Section */}
                             <div className="border-2 border-white bg-gray-800 p-2">
                               <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
@@ -229,8 +231,8 @@ export default function CataloguePage() {
                             </div>
                             
                             {/* Subject Details */}
-                            <div className="flex-1 font-mono">
-                              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                            <div className="flex-1 font-mono w-full">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
                                 <div>
                                   <span className="text-gray-400">SUBJECT NAME:</span>
                                   <div className="text-white font-bold tracking-wider">
@@ -254,23 +256,23 @@ export default function CataloguePage() {
                               {/* Redacted Information Bar */}
                               <div className="mt-3 p-2 bg-black border border-gray-600">
                                 <div className="text-xs text-gray-500 font-mono">
-                                  ADDITIONAL INFORMATION: <span className="bg-black text-black border-b border-gray-600">█████████████████████</span>
+                                  ADDITIONAL INFORMATION: <span className="bg-black text-black border-b border-gray-600">█████████████</span>
                                 </div>
                               </div>
                             </div>
                           </div>
                           
-                          {/* Action Buttons */}
-                          <div className="flex flex-col space-y-2 ml-4">
+                          {/* Action Buttons - Mobile friendly layout */}
+                          <div className="flex sm:flex-col justify-center mt-4 md:mt-0 space-x-2 sm:space-x-0 sm:space-y-2 sm:ml-4">
                             <button 
                               onClick={() => handleViewProfile(item)} 
-                              className="px-4 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
+                              className="px-3 sm:px-4 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider flex-1 sm:flex-none"
                             >
                               VIEW DOSSIER
                             </button>
                             <button 
                               onClick={() => removeFromCatalogue(item.user_id)} 
-                              className="px-4 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+                              className="px-3 sm:px-4 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider flex-1 sm:flex-none"
                             >
                               ARCHIVE FILE
                             </button>
@@ -279,7 +281,7 @@ export default function CataloguePage() {
                       </div>
                       
                       {/* Security Footer */}
-                      <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700">
+                      <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700 break-words">
                         ⚠ CONFIDENTIAL - UNAUTHORIZED ACCESS PROHIBITED ⚠
                       </div>
                     </div>

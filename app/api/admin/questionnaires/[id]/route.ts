@@ -17,6 +17,7 @@ type QuestionInput = {
   options?: string[];
   is_required?: boolean;
   display_order?: number;
+  profile_display_text?: string;
 };
 
 // GET: Get specific questionnaire group with questions (admin only)
@@ -181,7 +182,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       question_type: question.question_type || 'text',
       options: question.options || [],
       is_required: question.is_required || false,
-      display_order: question.display_order || index + 1
+      display_order: question.display_order || index + 1,
+      profile_display_text: question.profile_display_text || ''
     }));
 
     if (questionsToInsert.length > 0) {

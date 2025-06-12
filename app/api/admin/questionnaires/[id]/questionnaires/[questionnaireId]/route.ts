@@ -11,6 +11,7 @@ type QuestionInput = {
   question_type: string;
   options?: string[];
   is_required?: boolean;
+  profile_display_text?: string;
 };
 
 interface RouteContext {
@@ -125,7 +126,8 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         question_type: q.question_type,
         options: q.options || [],
         is_required: !!q.is_required,
-        display_order: idx
+        display_order: idx,
+        profile_display_text: q.profile_display_text || ''
       }));
       if (questionsToInsert.length > 0) {
         await db.collection('questions').insertMany(questionsToInsert);

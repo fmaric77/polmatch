@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [questionnaireGroups, setQuestionnaireGroups] = useState<QuestionnaireGroup[]>([]);
   const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(false);
   const [questionnairesError, setQuestionnairesError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const router = useRouter();
 
   useEffect(() => {
@@ -136,6 +137,11 @@ export default function AdminDashboard() {
     }
   };
 
+  // Filtered questionnaire groups for category filtering
+  const filteredQuestionnaireGroups = questionnaireGroups.filter(
+    (group) => selectedCategory === 'all' || group.profile_type === selectedCategory
+  );
+
   // Delete questionnaire group handler
   const handleDeleteQuestionnaireGroup = async (groupId: string) => {
     if (!window.confirm('Are you sure you want to delete this questionnaire group? This will delete all questionnaires and questions within it.')) return;
@@ -154,20 +160,20 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="admin" />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl mx-auto mt-12 p-6">
-          {/* Sidebar for admin navigation (future features) */}
-          <aside className="w-full md:w-1/4 bg-black/80 border border-white rounded-lg shadow-lg p-6 flex flex-col gap-4 mb-8 md:mb-0">
-            <h2 className="text-xl font-bold mb-4 text-white">Admin Menu</h2>
-            <nav className="flex flex-col gap-2">
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8 w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 sm:p-6">
+          {/* Sidebar for admin navigation - Made responsive */}
+          <aside className="w-full md:w-1/4 bg-black/80 border border-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col gap-3 sm:gap-4 mb-4 md:mb-0">
+            <h2 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4 text-white">Admin Menu</h2>
+            <nav className="flex flex-row md:flex-col flex-wrap gap-2">
               <button
-                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'create' ? 'bg-white/10' : 'hover:bg-white/10'} text-white`}
+                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'create' ? 'bg-white/10' : 'hover:bg-white/10'} text-white text-xs sm:text-sm flex-1 md:flex-none`}
                 onClick={() => setActiveSection('create')}
               >
                 Create User
               </button>
               <button
-                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'manage' ? 'bg-white/10' : 'hover:bg-white/10'} text-white`}
+                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'manage' ? 'bg-white/10' : 'hover:bg-white/10'} text-white text-xs sm:text-sm flex-1 md:flex-none`}
                 onClick={() => {
                   setActiveSection('manage');
                   fetchUsers();
@@ -176,7 +182,7 @@ export default function AdminDashboard() {
                 Manage Users
               </button>
               <button
-                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'questionnaires' ? 'bg-white/10' : 'hover:bg-white/10'} text-white`}
+                className={`text-left p-2 rounded transition-colors font-medium border border-white ${activeSection === 'questionnaires' ? 'bg-white/10' : 'hover:bg-white/10'} text-white text-xs sm:text-sm flex-1 md:flex-none`}
                 onClick={() => {
                   setActiveSection('questionnaires');
                   fetchQuestionnaireGroups();
@@ -184,24 +190,24 @@ export default function AdminDashboard() {
               >
                 Manage Questionnaires
               </button>
-              <button className="text-left p-2 rounded hover:bg-white/10 transition-colors font-medium text-white border border-white">Site Analytics</button>
+              <button className="text-left p-2 rounded hover:bg-white/10 transition-colors font-medium text-white border border-white text-xs sm:text-sm flex-1 md:flex-none">Site Analytics</button>
             </nav>
           </aside>
 
           {/* Main admin content area */}
-          <section className="flex-1 bg-black/80 border border-white rounded-lg shadow-lg p-8">
-            <h1 className="text-3xl font-bold mb-8 text-center">Administrator Dashboard</h1>
+          <section className="flex-1 bg-black/80 border border-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-center">Administrator Dashboard</h1>
             {activeSection === 'create' && (
-              <div className="bg-black/80 text-white rounded-lg shadow p-6 mb-8">
-                <h2 className="text-xl font-bold mb-4">Create New User</h2>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="bg-black/80 text-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+                <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Create New User</h2>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-4 max-w-md mx-auto">
                   <input
                     type="text"
                     name="username"
                     placeholder="Username"
                     value={form.username}
                     onChange={handleChange}
-                    className="p-2 bg-black text-white border border-white rounded focus:outline-none"
+                    className="p-2 bg-black text-white border border-white rounded focus:outline-none text-sm sm:text-base"
                     required
                   />
                   <input
@@ -210,7 +216,7 @@ export default function AdminDashboard() {
                     placeholder="Email"
                     value={form.email}
                     onChange={handleChange}
-                    className="p-2 bg-black text-white border border-white rounded focus:outline-none"
+                    className="p-2 bg-black text-white border border-white rounded focus:outline-none text-sm sm:text-base"
                     required
                   />
                   <input
@@ -219,10 +225,10 @@ export default function AdminDashboard() {
                     placeholder="Password"
                     value={form.password}
                     onChange={handleChange}
-                    className="p-2 bg-black text-white border border-white rounded focus:outline-none"
+                    className="p-2 bg-black text-white border border-white rounded focus:outline-none text-sm sm:text-base"
                     required
                   />
-                  <label className="flex items-center text-white">
+                  <label className="flex items-center text-white text-sm sm:text-base">
                     <input
                       type="checkbox"
                       name="is_admin"
@@ -232,103 +238,153 @@ export default function AdminDashboard() {
                     />
                     Admin
                   </label>
-                  <button type="submit" className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors">
+                  <button type="submit" className="p-2 bg-white text-black rounded hover:bg-gray-200 transition-colors text-sm sm:text-base">
                     Create User
                   </button>
-                  {message && <div className="text-center mt-2 text-green-400">{message}</div>}
+                  {message && <div className="text-center mt-2 text-green-400 text-sm sm:text-base">{message}</div>}
                 </form>
               </div>
             )}
             {activeSection === 'manage' && (
-              <div className="bg-black/80 text-white rounded-lg shadow p-6 mb-8">
-                <h2 className="text-xl font-bold mb-4">Manage Users</h2>
+              <div className="bg-black/80 text-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+                <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Manage Users</h2>
                 <input
                   type="text"
                   placeholder="Search by username or email"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="mb-4 p-2 bg-black text-white border border-white rounded focus:outline-none w-full"
+                  className="mb-4 p-2 bg-black text-white border border-white rounded focus:outline-none w-full text-sm sm:text-base"
                 />
                 {loadingUsers ? (
-                  <div>Loading users...</div>
+                  <div className="text-center py-4 text-sm sm:text-base">Loading users...</div>
                 ) : usersError ? (
-                  <div className="text-red-400">{usersError}</div>
+                  <div className="text-red-400 text-center py-4 text-sm sm:text-base">{usersError}</div>
                 ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="border-b border-white p-2">Username</th>
-                        <th className="border-b border-white p-2">Email</th>
-                        <th className="border-b border-white p-2">Admin</th>
-                        <th className="border-b border-white p-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user._id} className="hover:bg-white/10">
-                          <td className="p-2">{user.username}</td>
-                          <td className="p-2">{user.email}</td>
-                          <td className="p-2">{user.is_admin ? 'Yes' : 'No'}</td>
-                          <td className="p-2">
-                            <button
-                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                              onClick={() => handleBanUser(user.user_id)}
-                            >
-                              Ban
-                            </button>
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="border-b border-white p-2 text-xs sm:text-sm">Username</th>
+                          <th className="border-b border-white p-2 text-xs sm:text-sm">Email</th>
+                          <th className="border-b border-white p-2 text-xs sm:text-sm">Admin</th>
+                          <th className="border-b border-white p-2 text-xs sm:text-sm">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.map((user) => (
+                          <tr key={user._id} className="hover:bg-white/10">
+                            <td className="p-2 text-xs sm:text-sm">{user.username}</td>
+                            <td className="p-2 text-xs sm:text-sm">{user.email}</td>
+                            <td className="p-2 text-xs sm:text-sm">{user.is_admin ? 'Yes' : 'No'}</td>
+                            <td className="p-2">
+                              <button
+                                className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm"
+                                onClick={() => handleBanUser(user.user_id)}
+                              >
+                                Ban
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             )}
             {activeSection === 'questionnaires' && (
-              <div className="bg-black/80 text-white rounded-lg shadow p-6 mb-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">Manage Questionnaires</h2>
+              <div className="bg-black/80 text-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3 sm:gap-0">
+                  <h2 className="text-lg sm:text-xl font-bold">Manage Questionnaires</h2>
                   <button 
-                    className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200 transition-colors"
+                    className="px-3 sm:px-4 py-2 bg-white text-black rounded hover:bg-gray-200 transition-colors text-xs sm:text-sm w-full sm:w-auto"
                     onClick={() => window.location.href = '/admindashboard/questionnaires/create'}
                   >
                     Create New Group
                   </button>
                 </div>
+                
+                {/* Category Filter Buttons - Made responsive */}
+                <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+                  <button
+                    className={`px-2 sm:px-4 py-1 sm:py-2 rounded border transition-colors text-xs sm:text-sm ${
+                      selectedCategory === 'all' 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-black border-white text-white hover:bg-white/10'
+                    }`}
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    All Categories
+                  </button>
+                  <button
+                    className={`px-2 sm:px-4 py-1 sm:py-2 rounded border transition-colors text-xs sm:text-sm ${
+                      selectedCategory === 'basic' 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-black border-white text-white hover:bg-white/10'
+                    }`}
+                    onClick={() => setSelectedCategory('basic')}
+                  >
+                    Basic
+                  </button>
+                  <button
+                    className={`px-2 sm:px-4 py-1 sm:py-2 rounded border transition-colors text-xs sm:text-sm ${
+                      selectedCategory === 'love' 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-black border-white text-white hover:bg-white/10'
+                    }`}
+                    onClick={() => setSelectedCategory('love')}
+                  >
+                    Love
+                  </button>
+                  <button
+                    className={`px-2 sm:px-4 py-1 sm:py-2 rounded border transition-colors text-xs sm:text-sm ${
+                      selectedCategory === 'business' 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-black border-white text-white hover:bg-white/10'
+                    }`}
+                    onClick={() => setSelectedCategory('business')}
+                  >
+                    Business
+                  </button>
+                </div>
+
                 {loadingQuestionnaires ? (
-                  <div>Loading questionnaire groups...</div>
+                  <div className="text-center py-4 text-sm sm:text-base">Loading questionnaire groups...</div>
                 ) : questionnairesError ? (
-                  <div className="text-red-400">{questionnairesError}</div>
+                  <div className="text-red-400 text-center py-4 text-sm sm:text-base">{questionnairesError}</div>
                 ) : (
-                  <div className="space-y-4">
-                    {questionnaireGroups.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
-                        No questionnaire groups found. Create your first group to get started.
+                  <div className="space-y-3 sm:space-y-4">
+                    {filteredQuestionnaireGroups.length === 0 ? (
+                      <div className="text-center py-6 sm:py-8 text-gray-400 text-sm sm:text-base">
+                        {selectedCategory === 'all' 
+                          ? 'No questionnaire groups found. Create your first group to get started.'
+                          : `No questionnaire groups found for "${selectedCategory}" category.`
+                        }
                       </div>
                     ) : (
-                      questionnaireGroups.map((group) => (
-                        <div key={group.group_id} className="border border-white rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-2">
+                      filteredQuestionnaireGroups.map((group) => (
+                        <div key={group.group_id} className="border border-white rounded-lg p-3 sm:p-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-3 sm:gap-0 sm:mb-2">
                             <div>
-                              <h3 className="text-lg font-semibold">{group.title}</h3>
-                              <p className="text-gray-300 text-sm">{group.description}</p>
+                              <h3 className="text-base sm:text-lg font-semibold">{group.title}</h3>
+                              <p className="text-gray-300 text-xs sm:text-sm">{group.description}</p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 self-end sm:self-start">
                               <button
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                                className="px-2 sm:px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs sm:text-sm"
                                 onClick={() => window.location.href = `/admindashboard/questionnaires/${group.group_id}`}
                               >
                                 Manage
                               </button>
                               <button
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                                className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm"
                                 onClick={() => handleDeleteQuestionnaireGroup(group.group_id)}
                               >
                                 Delete
                               </button>
                             </div>
                           </div>
-                          <div className="flex gap-4 text-sm text-gray-400">
+                          <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
                             <span>Profile Type: <span className="text-white capitalize">{group.profile_type}</span></span>
                             <span>Questionnaires: <span className="text-white">{group.questionnaire_count}</span></span>
                             <span>Created by: <span className="text-white">{group.creator_username || 'Unknown'}</span></span>
@@ -342,8 +398,8 @@ export default function AdminDashboard() {
               </div>
             )}
             {/* Placeholder for future admin widgets/features */}
-            <div className="bg-black/60 border border-white rounded-lg p-6 text-white text-center">
-              <p className="text-lg">More admin features coming soon...</p>
+            <div className="bg-black/60 border border-white rounded-lg p-3 sm:p-6 text-white text-center">
+              <p className="text-sm sm:text-base md:text-lg">More admin features coming soon...</p>
             </div>
           </section>
         </div>
