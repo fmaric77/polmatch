@@ -11,7 +11,8 @@ import {
   faSignOutAlt,
   faKey,
   faTimes,
-  faBookmark
+  faBookmark,
+  faBriefcase
 } from '@fortawesome/free-solid-svg-icons';
 
 interface SidebarNavigationProps {
@@ -88,6 +89,16 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         >
           <FontAwesomeIcon icon={faBookmark} className="text-purple-400 mb-1" />
           <div className="text-xs font-mono text-white">ARCHIVE</div>
+        </div>
+        
+        {/* Jobs Navigation */}
+        <div 
+          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          onClick={() => window.location.href = '/jobs'}
+          title="JOB OPERATIONS"
+        >
+          <FontAwesomeIcon icon={faBriefcase} className="text-orange-400 mb-1" />
+          <div className="text-xs font-mono text-white">JOBS</div>
         </div>
         
         {/* First Separator */}

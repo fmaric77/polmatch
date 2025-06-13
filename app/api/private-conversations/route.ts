@@ -140,6 +140,22 @@ export async function GET(request: Request) {
     // Create a map for quick lookup
     const userMap = new Map((otherUsers as unknown as UserDocument[]).map((u: UserDocument) => [u.user_id, u]));
 
+    // Get profile-specific display names if profile type is specified
+    const profileDataMap = new Map<string, { display_name?: string; profile_picture_url?: string }>();
+    if (userProfileType && ['basic', 'love', 'business'].includes(userProfileType)) {
+      const profileCollectionName = `${userProfileType}profiles`;
+      const profileData = await db.collection(profileCollectionName).find({
+        user_id: { $in: otherUserIds }
+      }).toArray();
+      
+      for (const profile of profileData as unknown as { user_id: string; display_name?: string; profile_picture_url?: string }[]) {
+        profileDataMap.set(profile.user_id, {
+          display_name: profile.display_name,
+          profile_picture_url: profile.profile_picture_url
+        });
+      }
+    }
+
     // Get the latest message for each conversation from the appropriate message collections
     const messageMap = new Map<string, MessageDocument>();
 
@@ -187,6 +203,7 @@ export async function GET(request: Request) {
     const conversations = (privateConversations as unknown as ConversationDocument[]).map((conv: ConversationDocument) => {
       const otherUserId = conv.participant_ids.find((id: string) => id !== auth.user.user_id);
       const otherUser = otherUserId ? userMap.get(otherUserId) : null;
+      const otherUserProfile = otherUserId ? profileDataMap.get(otherUserId) : null;
       const latestMessage = messageMap.get(conv._id?.toString() ?? '');
       
       // Parse profile context - no longer adding text-based suffix since UI now uses symbols
@@ -232,6 +249,7 @@ export async function GET(request: Request) {
         other_user: otherUser ? {
           user_id: otherUser.user_id,
           username: otherUser.username,
+          display_name: otherUserProfile?.display_name,
           first_name: otherUser.first_name,
           last_name: otherUser.last_name,
           profile_picture: otherUser.profile_picture

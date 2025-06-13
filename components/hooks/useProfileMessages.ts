@@ -29,12 +29,26 @@ export const useProfileMessages = (
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Refs for managing auto-refresh
+  // Refs for managing auto-refresh and stable references
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isActiveRef = useRef(true);
+  const currentUserRef = useRef(currentUser);
+  const otherUserIdRef = useRef(otherUserId);
+  const profileTypeRef = useRef(profileType);
+
+  // Update refs when props change
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+    otherUserIdRef.current = otherUserId;
+    profileTypeRef.current = profileType;
+  }, [currentUser, otherUserId, profileType]);
 
   const fetchMessages = useCallback(async () => {
-    if (!currentUser || !otherUserId || !profileType) {
+    const user = currentUserRef.current;
+    const otherId = otherUserIdRef.current;
+    const pType = profileTypeRef.current;
+
+    if (!user || !otherId || !pType) {
       setMessages([]);
       return;
     }
@@ -44,8 +58,8 @@ export const useProfileMessages = (
       setError('');
 
       const params = new URLSearchParams({
-        other_user_id: otherUserId,
-        profile_type: profileType,
+        other_user_id: otherId,
+        profile_type: pType,
         limit: '50'
       });
 
@@ -66,10 +80,14 @@ export const useProfileMessages = (
     } finally {
       setLoading(false);
     }
-  }, [currentUser, otherUserId, profileType]);
+  }, []); // No dependencies - uses refs instead
 
   const sendMessage = useCallback(async (content: string): Promise<boolean> => {
-    if (!currentUser || !otherUserId || !content.trim() || !profileType) {
+    const user = currentUserRef.current;
+    const otherId = otherUserIdRef.current;
+    const pType = profileTypeRef.current;
+
+    if (!user || !otherId || !content.trim() || !pType) {
       return false;
     }
 
@@ -83,9 +101,9 @@ export const useProfileMessages = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          receiver_id: otherUserId,
+          receiver_id: otherId,
           content: content.trim(),
-          profile_type: profileType
+          profile_type: pType
         }),
       });
 
@@ -107,10 +125,14 @@ export const useProfileMessages = (
     } finally {
       setSending(false);
     }
-  }, [currentUser, otherUserId, profileType, fetchMessages]);
+  }, [fetchMessages]); // Only fetchMessages as dependency since it's now stable
 
   const markAsRead = useCallback(async () => {
-    if (!currentUser || !otherUserId || !profileType) {
+    const user = currentUserRef.current;
+    const otherId = otherUserIdRef.current;
+    const pType = profileTypeRef.current;
+
+    if (!user || !otherId || !pType) {
       return;
     }
 
@@ -121,16 +143,16 @@ export const useProfileMessages = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          other_user_id: otherUserId,
-          profile_type: profileType
+          other_user_id: otherId,
+          profile_type: pType
         }),
       });
 
       if (res.ok) {
-        // Update local messages to mark as read
+        // Update local messages to mark as read using functional update
         setMessages(prevMessages => 
           prevMessages.map(msg => 
-            msg.receiver_id === currentUser.user_id 
+            msg.receiver_id === user.user_id 
               ? { ...msg, read: true }
               : msg
           )
@@ -139,11 +161,15 @@ export const useProfileMessages = (
     } catch (err) {
       console.error('Error marking profile messages as read:', err);
     }
-  }, [currentUser, otherUserId, profileType]);
+  }, []); // No dependencies - uses refs instead
 
   // Auto-refresh messages every 5 seconds when active
   useEffect(() => {
-    if (!isActiveRef.current || !currentUser || !otherUserId || !profileType) {
+    const user = currentUserRef.current;
+    const otherId = otherUserIdRef.current;
+    const pType = profileTypeRef.current;
+
+    if (!isActiveRef.current || !user || !otherId || !pType) {
       return;
     }
 
@@ -170,7 +196,7 @@ export const useProfileMessages = (
         clearInterval(refreshTimerRef.current);
       }
     };
-  }, [fetchMessages]);
+  }, [currentUser, otherUserId, profileType, fetchMessages]); // These dependencies are needed to restart when conversation changes
 
   // Handle component unmounting or becoming inactive
   useEffect(() => {
@@ -185,16 +211,20 @@ export const useProfileMessages = (
 
   // Mark messages as read when conversation becomes active
   useEffect(() => {
-    if (currentUser && otherUserId && profileType && messages.length > 0) {
+    const user = currentUserRef.current;
+    const otherId = otherUserIdRef.current;
+    const pType = profileTypeRef.current;
+
+    if (user && otherId && pType && messages.length > 0) {
       const unreadMessages = messages.filter(
-        msg => msg.receiver_id === currentUser.user_id && !msg.read
+        msg => msg.receiver_id === user.user_id && !msg.read
       );
       
       if (unreadMessages.length > 0) {
         markAsRead();
       }
     }
-  }, [currentUser, otherUserId, profileType, messages, markAsRead]);
+  }, [messages, markAsRead]); // Only depend on messages and markAsRead (which is now stable)
 
   return {
     messages,

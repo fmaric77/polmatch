@@ -166,7 +166,9 @@ const Groups = () => {
 
   // Fetch available users for invitation
   const fetchAvailableUsers = useCallback(() => {
-    fetch('/api/users/available')
+    if (!selectedGroup) return;
+    
+    fetch(`/api/users/available?group_id=${selectedGroup}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -178,7 +180,7 @@ const Groups = () => {
       .catch(() => {
         setError('Failed to load users');
       });
-  }, []);
+  }, [selectedGroup]);
 
   useEffect(() => {
     // Clear previous group data immediately when switching groups
