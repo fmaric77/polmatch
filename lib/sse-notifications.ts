@@ -166,6 +166,7 @@ export interface GroupMessageData {
   timestamp: string;
   attachments?: string[];
   sender_username?: string;
+  sender_display_name?: string;
 }
 
 // Notify about a new group message
@@ -179,14 +180,29 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
       group_id: data.group_id
     }).toArray();
     
-    // Get sender username if not provided
+    // Get sender username and display name if not provided
     let senderUsername = data.sender_username;
-    if (!senderUsername) {
+    let senderDisplayName = data.sender_display_name;
+    
+    if (!senderUsername || !senderDisplayName) {
+      // Get user's basic info
       const sender = await db.collection('users').findOne(
         { user_id: data.sender_id },
         { projection: { username: 1 } }
       );
-      senderUsername = sender?.username || 'Unknown';
+      
+      if (!senderUsername) {
+        senderUsername = sender?.username || 'Unknown';
+      }
+      
+      // Always fetch basic profile display name for group messages
+      if (!senderDisplayName) {
+        const basicProfile = await db.collection('basicprofiles').findOne(
+          { user_id: data.sender_id },
+          { projection: { display_name: 1 } }
+        );
+        senderDisplayName = basicProfile?.display_name || senderUsername || 'Unknown';
+      }
     }
     
     // Create SSE data with group-specific structure
@@ -199,6 +215,7 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
       timestamp: data.timestamp,
       attachments: data.attachments || [],
       sender_username: senderUsername,
+      sender_display_name: senderDisplayName,
       total_members: members.length,
       read_count: 1, // Only sender has read it initially
       read_by_others: false

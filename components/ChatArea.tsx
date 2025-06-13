@@ -440,8 +440,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                               ? selectedConversationData.name 
                               : null;
                           } else {
-                            // For group messages, use the sender's display name
-                            displayName = (message as GroupMessage).sender_display_name || null;
+                            // For group messages, use proper fallback hierarchy
+                            const groupMessage = message as GroupMessage;
+                            displayName = groupMessage.sender_display_name || 
+                                        groupMessage.sender_username || 
+                                        `AGENT-${groupMessage.sender_id.substring(0, 8).toUpperCase()}`;
                           }
                           
                           return displayName ? (

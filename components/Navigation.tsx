@@ -10,7 +10,8 @@ import {
   faSignOutAlt,
   faKey,
   faUsers,
-  faBookmark
+  faBookmark,
+  faBriefcase
 } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
 
@@ -85,6 +86,17 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           title="Catalogue"
         >
           <FontAwesomeIcon icon={faBookmark} />
+        </div>
+        
+        {/* Jobs Navigation */}
+        <div 
+          className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
+            isActive('jobs') ? 'bg-white text-black' : ''
+          }`}
+          onClick={() => window.location.href = '/jobs'}
+          title="Jobs"
+        >
+          <FontAwesomeIcon icon={faBriefcase} />
         </div>
         
         {/* Separator */}

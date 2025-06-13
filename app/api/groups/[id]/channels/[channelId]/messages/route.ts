@@ -233,6 +233,15 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     await db.collection('group_messages').insertOne(message);
 
+    // Fetch sender's basic profile display name for group message notifications
+    // Group messages always use the basic profile display name regardless of current active profile
+    const basicProfile = await db.collection('basicprofiles').findOne(
+      { user_id: auth.userId },
+      { projection: { display_name: 1 } }
+    );
+    
+    const senderDisplayName = basicProfile?.display_name || auth.user.username || 'Unknown';
+
     // Send SSE notification to all group members
     await notifyNewGroupMessage({
       message_id: messageId,
@@ -242,7 +251,8 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       content: content, // Use unencrypted content for notification
       timestamp: message.timestamp,
       attachments: attachments || [],
-      sender_username: auth.user.username // Use username from auth if available
+      sender_username: auth.user.username, // Keep username for backward compatibility
+      sender_display_name: senderDisplayName // Always use basic profile display name
     });
 
     return NextResponse.json({ 

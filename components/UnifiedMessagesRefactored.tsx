@@ -105,6 +105,9 @@ const UnifiedMessages: React.FC = () => {
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Auto-select state (for URL parameters)
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -367,13 +370,27 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [activeProfileType, currentUser]);
 
+  // Clear URL parameters after auto-select to prevent forced navigation
+  useEffect(() => {
+    if (hasAutoSelected) {
+      // Use router.replace to update URL without page reload and without adding to history
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has('user') || currentUrl.searchParams.has('profile')) {
+        currentUrl.searchParams.delete('user');
+        currentUrl.searchParams.delete('profile');
+        const newUrl = currentUrl.pathname + (currentUrl.search ? currentUrl.search : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [hasAutoSelected]);
+
   // Clear and refetch messages when profile type changes for selected conversation
   useEffect(() => {
-    if (currentUser && selectedConversation && selectedConversationType === 'direct' && selectedCategory === 'direct') {
+    if (currentUser && selectedConversation && selectedConversationType === 'direct' && selectedCategory === 'direct' && !profileMessages.loading) {
       // Fetch messages for the new profile type (clearing is handled by the hook)
       profileMessages.fetchMessages(selectedConversation);
     }
-  }, [activeProfileType, selectedConversation, selectedConversationType, selectedCategory, currentUser]);
+  }, [activeProfileType, selectedConversation, selectedConversationType, selectedCategory]); // Removed currentUser dependency to reduce re-renders
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
@@ -409,18 +426,96 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [selectedConversation, groupManagement.fetchAvailableUsers]);
 
-  // Auto-select conversation from URL params
+  // Auto-select conversation from URL params (only once)
   useEffect(() => {
+    // Only auto-select once to prevent forced navigation back
+    if (hasAutoSelected) return;
+    
     const dmUserId = searchParams.get('user');
-    if (dmUserId && conversations.conversations.length > 0) {
-      const targetConversation = conversations.conversations.find(
-        c => c.type === 'direct' && c.id === dmUserId
-      );
-      if (targetConversation) {
-        selectConversation(targetConversation);
+    const profileParam = searchParams.get('profile') as ProfileType;
+    
+    // Set profile type from URL parameter if provided
+    if (profileParam && ['basic', 'love', 'business'].includes(profileParam)) {
+      setActiveProfileType(profileParam);
+    }
+    
+    if (dmUserId) {
+      // If we have a profile parameter, look in profile conversations
+      if (profileParam && ['love', 'business'].includes(profileParam) && profileConversations.conversations.length > 0) {
+        const targetConversation = profileConversations.conversations.find(
+          pc => pc.other_user.user_id === dmUserId
+        );
+        if (targetConversation) {
+          // Set category to direct to use profile conversations
+          setSelectedCategory('direct');
+          selectConversation({
+            id: targetConversation.other_user.user_id,
+            name: targetConversation.other_user.display_name || targetConversation.other_user.username,
+            type: 'direct'
+          });
+          setHasAutoSelected(true); // Mark as auto-selected
+        }
+      } 
+      // Fallback to regular conversations for basic profile or if profile not specified
+      else if (conversations.conversations.length > 0) {
+        const targetConversation = conversations.conversations.find(
+          c => c.type === 'direct' && c.id === dmUserId
+        );
+        if (targetConversation) {
+          selectConversation(targetConversation);
+          setHasAutoSelected(true); // Mark as auto-selected
+        }
       }
     }
-  }, [searchParams, conversations.conversations, selectConversation]);
+  }, [searchParams, conversations.conversations, profileConversations.conversations, hasAutoSelected]); // Added hasAutoSelected to dependencies
+
+  // Auto-select conversation after profile conversations are loaded (for business/love profiles)
+  useEffect(() => {
+    // Only auto-select if we haven't already done so
+    if (hasAutoSelected) return;
+    
+    const dmUserId = searchParams.get('user');
+    const profileParam = searchParams.get('profile') as ProfileType;
+    
+    if (dmUserId && profileParam && ['love', 'business'].includes(profileParam) && 
+        activeProfileType === profileParam && profileConversations.conversations.length > 0 && 
+        !selectedConversation) {
+      
+      const targetConversation = profileConversations.conversations.find(
+        pc => pc.other_user.user_id === dmUserId
+      );
+      
+      if (targetConversation) {
+        // Set category to direct to use profile conversations
+        setSelectedCategory('direct');
+        selectConversation({
+          id: targetConversation.other_user.user_id,
+          name: targetConversation.other_user.display_name || targetConversation.other_user.username,
+          type: 'direct'
+        });
+        setHasAutoSelected(true); // Mark as auto-selected
+      }
+    }
+  }, [profileConversations.conversations, activeProfileType, selectedConversation, searchParams, hasAutoSelected]);
+
+  // Reset auto-select flag when user manually changes profiles or conversations
+  useEffect(() => {
+    // If user manually changes profile type, allow them to navigate freely
+    const profileParam = searchParams.get('profile') as ProfileType;
+    if (hasAutoSelected && profileParam && activeProfileType !== profileParam) {
+      setHasAutoSelected(false);
+    }
+  }, [activeProfileType, hasAutoSelected, searchParams]);
+
+  // Reset auto-select flag when user manually selects a different conversation
+  const selectConversationWithReset = useCallback((conversation: Conversation) => {
+    const dmUserId = searchParams.get('user');
+    // If user manually selects a different conversation than the URL one, reset auto-select
+    if (hasAutoSelected && dmUserId && conversation.id !== dmUserId) {
+      setHasAutoSelected(false);
+    }
+    selectConversation(conversation);
+  }, [selectConversation, hasAutoSelected, searchParams]);
 
   // Fetch messages when channel changes
   useEffect(() => {
@@ -619,7 +714,7 @@ const UnifiedMessages: React.FC = () => {
         selectedConversation={selectedConversation}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onSelectConversation={selectConversation}
+        onSelectConversation={selectConversationWithReset}
         onConversationContextMenu={handleConversationContextMenu}
         isMobile={isMobile}
         isConversationsSidebarHidden={isConversationsSidebarHidden}

@@ -10,6 +10,13 @@ const detectYouTubeURL = (text: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Utility function to detect image URLs
+const detectImageURL = (text: string): string | null => {
+  const imageRegex = /https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp|svg)(?:\?[^\s]*)?/i;
+  const match = text.match(imageRegex);
+  return match ? match[0] : null;
+};
+
 // YouTube embed component
 interface YouTubeEmbedProps {
   videoId: string;
@@ -67,6 +74,85 @@ const YouTubeEmbed: React.FC<YouTubeEmbedProps> = ({ videoId, content }) => {
   );
 };
 
+// Image embed component
+interface ImageEmbedProps {
+  imageUrl: string;
+  content: string;
+}
+
+const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [showFullSize, setShowFullSize] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <p className="leading-relaxed">{content}</p>
+      {!imageError ? (
+        <>
+          <div className="bg-black/40 border border-gray-600 rounded-lg p-3 max-w-md">
+            <div className="flex items-center space-x-2 mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">IMAGE</div>
+              <span className="text-gray-400 text-xs">Click to view full size</span>
+            </div>
+            <div 
+              className="relative cursor-pointer rounded overflow-hidden"
+              onClick={() => setShowFullSize(true)}
+            >
+              <img
+                src={imageUrl}
+                alt="Shared image"
+                className="w-full h-auto max-h-64 object-contain bg-gray-900"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+                style={{ display: imageLoaded ? 'block' : 'none' }}
+              />
+              {!imageLoaded && !imageError && (
+                <div className="flex items-center justify-center h-32 bg-gray-800 text-gray-400">
+                  Loading image...
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Full size overlay */}
+          {showFullSize && (
+            <div 
+              className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+              onClick={() => setShowFullSize(false)}
+            >
+              <div className="relative max-w-full max-h-full">
+                <img
+                  src={imageUrl}
+                  alt="Shared image - full size"
+                  className="max-w-full max-h-full object-contain"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowFullSize(false);
+                  }}
+                  className="absolute top-4 right-4 bg-black/70 text-white p-2 rounded hover:bg-black/90 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="bg-red-900/20 border border-red-600 rounded-lg p-3 max-w-md">
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">IMAGE</div>
+            <span className="text-red-400 text-xs">Failed to load</span>
+          </div>
+          <p className="text-red-300 text-sm">Could not load image from: {imageUrl}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Enhanced message content renderer
 interface MessageContentProps {
   content: string;
@@ -74,9 +160,15 @@ interface MessageContentProps {
 
 const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
   const youtubeVideoId = detectYouTubeURL(content);
+  const imageUrl = detectImageURL(content);
   
+  // Prioritize YouTube if both are detected (in case someone shares a YouTube link with image in description)
   if (youtubeVideoId) {
     return <YouTubeEmbed videoId={youtubeVideoId} content={content} />;
+  }
+  
+  if (imageUrl) {
+    return <ImageEmbed imageUrl={imageUrl} content={content} />;
   }
   
   return <p className="leading-relaxed">{content}</p>;
