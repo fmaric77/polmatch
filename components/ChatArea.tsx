@@ -432,12 +432,28 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   {!isCurrentUser && showAvatar && (
                     <div className="mb-2 bg-black border border-gray-500 rounded-none p-2 shadow-lg">
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-mono uppercase tracking-wide text-blue-400">
-                          {selectedConversationType === 'direct' 
-                            ? `AGENT-${(message as PrivateMessage).sender_profile_data?.display_name || message.sender_id.substring(0, 8).toUpperCase()}`
-                            : `AGENT-${(message as GroupMessage).sender_display_name || (message as GroupMessage).sender_username || message.sender_id.substring(0, 8).toUpperCase()}`
+                        {(() => {
+                          let displayName = null;
+                          if (selectedConversationType === 'direct') {
+                            // For direct messages, use the conversation name (which is the other user's display name)
+                            displayName = selectedConversationData?.name && selectedConversationData.name !== 'Unknown Contact' 
+                              ? selectedConversationData.name 
+                              : null;
+                          } else {
+                            // For group messages, use the sender's display name
+                            displayName = (message as GroupMessage).sender_display_name || null;
                           }
-                        </span>
+                          
+                          return displayName ? (
+                            <span className="text-sm font-mono uppercase tracking-wide text-blue-400">
+                              {displayName}
+                            </span>
+                          ) : (
+                            <span className="text-sm font-mono uppercase tracking-wide text-gray-500">
+                              [NO PROFILE NAME]
+                            </span>
+                          );
+                        })()}
                         <div className="w-px h-3 bg-gray-500"></div>
                         <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
                           {new Date(message.timestamp).toLocaleTimeString()}

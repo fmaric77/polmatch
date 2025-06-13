@@ -517,7 +517,7 @@ const UnifiedMessages: React.FC = () => {
       if (profileConversation) {
         return {
           id: selectedConversation,
-          name: profileConversation.other_user.display_name || profileConversation.other_user.username,
+          name: profileConversation.other_user.display_name || 'Unknown Contact',
           type: 'direct' as const,
           user_id: selectedConversation
         };
