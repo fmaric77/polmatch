@@ -85,17 +85,17 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">RECRUITMENT INVITATIONS</div>
+            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">GROUP INVITATIONS</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center space-x-3">
               <FontAwesomeIcon icon={faUsers} />
-              <span>PENDING ASSIGNMENTS ({invitations.length})</span>
+              <span>PENDING INVITES ({invitations.length})</span>
             </h2>
           </div>
           <div className="flex items-center space-x-3">
             <button
               onClick={onRefresh}
               className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
-              title="REFRESH INVITATIONS"
+              title="REFRESH INVITES"
             >
               <FontAwesomeIcon icon={faRefresh} />
             </button>
@@ -119,8 +119,8 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
             <div className="text-center py-8">
               <div className="bg-black border-2 border-gray-400 rounded-none p-6 shadow-lg">
                 <FontAwesomeIcon icon={faUsers} className="text-4xl mb-4 text-gray-400" />
-                <p className="text-lg mb-2 text-gray-400 font-mono uppercase tracking-wide">NO PENDING ASSIGNMENTS</p>
-                <p className="text-sm text-gray-500 font-mono uppercase tracking-widest">RECRUITMENT INVITATIONS WILL APPEAR HERE</p>
+                <p className="text-lg mb-2 text-gray-400 font-mono uppercase tracking-wide">NO PENDING INVITES</p>
+                <p className="text-sm text-gray-500 font-mono uppercase tracking-widest">GROUP INVITATIONS WILL APPEAR HERE</p>
               </div>
             </div>
           ) : (
@@ -138,15 +138,15 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
                         </div>
                         <div>
                           <h3 className="text-white font-mono uppercase tracking-wide text-lg">{invitation.group_name}</h3>
-                          <div className="text-yellow-400 text-xs font-mono uppercase tracking-widest">TASK FORCE ASSIGNMENT</div>
+                          <div className="text-yellow-400 text-xs font-mono uppercase tracking-widest">GROUP INVITATION</div>
                         </div>
                       </div>
                       <div className="bg-black border border-gray-500 rounded-none p-3 shadow-inner">
                         <p className="text-gray-300 text-sm font-mono uppercase tracking-wide mb-1">
-                          RECRUITMENT BY: <span className="font-medium text-white">AGENT-{invitation.inviter_username}</span>
+                          INVITED BY: <span className="font-medium text-white">{invitation.inviter_username}</span>
                         </p>
                         <p className="text-gray-400 text-xs font-mono uppercase tracking-widest">
-                          ISSUED: {formatInviteDate(invitation.created_at)}
+                          SENT: {formatInviteDate(invitation.created_at)}
                         </p>
                       </div>
                     </div>
@@ -182,7 +182,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
             className="bg-black text-white border-2 border-white px-6 py-3 rounded-none hover:bg-white hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
             disabled={responding.size > 0}
           >
-            CLOSE ASSIGNMENTS
+            CLOSE
           </button>
         </div>
       </div>

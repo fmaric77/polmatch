@@ -61,11 +61,6 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   isConversationsSidebarHidden,
   setIsConversationsSidebarHidden,
   setIsSidebarVisible,
-  // SSE status props
-  isConnected,
-  connectionError,
-  sessionToken,
-  currentUser,
   // Profile switcher props
   activeProfileType,
   setActiveProfileType
@@ -109,13 +104,11 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
       <div className={`${isMobile ? 'fixed left-20 top-0 z-40 h-full' : ''} w-80 bg-black border-2 border-white rounded-none shadow-2xl flex flex-col h-full transition-transform duration-300 ${
         isMobile ? (isConversationsSidebarHidden ? '-translate-x-full' : 'translate-x-0') : 'translate-x-0'
       }`}>
-        {/* FBI-Style Header */}
+        {/* Header */}
         <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-          <div className="font-mono text-xs mb-1 font-bold tracking-widest">SECURE COMMUNICATIONS</div>
           <h1 className="text-lg font-bold tracking-widest uppercase">
-            {selectedCategory === 'direct' ? 'DIRECT CHANNELS' : 'GROUP OPERATIONS'}
+            {selectedCategory === 'direct' ? 'Messages' : 'Groups'}
           </h1>
-          <div className="font-mono text-xs mt-1 tracking-widest">CLASSIFICATION: {selectedCategory === 'direct' ? 'PERSONAL' : 'OPERATIONAL'}</div>
         </div>
 
         {/* Control Panel */}
@@ -127,7 +120,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                 className="text-white mr-2"
               />
               <span className="font-mono text-sm font-bold text-white uppercase tracking-wider">
-                ACTIVE {selectedCategory === 'direct' ? 'CONTACTS' : 'OPERATIONS'}
+                {selectedCategory === 'direct' ? 'CONTACTS' : 'GROUPS'}
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -155,7 +148,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           {/* Profile Type Switcher - only show for direct messages */}
           {selectedCategory === 'direct' && (
             <div className="mb-4">
-              <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">SECURITY CLEARANCE:</div>
+              <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Profile Type:</div>
               <div className="flex gap-1 p-1 bg-gray-800 border border-white rounded-none">
                 {(['basic', 'love', 'business'] as const).map((profileType) => (
                   <button
@@ -174,42 +167,19 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             </div>
           )}
 
-          {/* SSE Connection Status */}
-          <div className="mb-4 p-3 bg-black/60 border border-white/20 rounded-none">
-            <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">CONNECTION STATUS:</div>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className={`p-2 border ${isConnected ? 'border-green-400 bg-green-900/20 text-green-400' : 'border-red-400 bg-red-900/20 text-red-400'}`}>
-                <div className="font-bold">LINK: {isConnected ? 'SECURE' : 'BROKEN'}</div>
-              </div>
-              <div className={`p-2 border ${sessionToken ? 'border-green-400 bg-green-900/20 text-green-400' : 'border-red-400 bg-red-900/20 text-red-400'}`}>
-                <div className="font-bold">AUTH: {sessionToken ? 'VALID' : 'INVALID'}</div>
-              </div>
-            </div>
-            {connectionError && (
-              <div className="text-red-400 mt-2 text-xs font-mono border border-red-400 bg-red-900/20 p-2">
-                ERROR: {connectionError.toUpperCase()}
-              </div>
-            )}
-            {currentUser && (
-              <div className="text-gray-400 mt-2 text-xs font-mono">
-                AGENT ID: {currentUser.user_id.substring(0, 8).toUpperCase()}
-              </div>
-            )}
-          </div>
           
           {/* Search Bar */}
           <div className="relative">
-            <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">TARGET SEARCH:</div>
             <input
               type="text"
-              placeholder={`[SEARCH ${selectedCategory === 'direct' ? 'CONTACTS' : 'OPERATIONS'}]`}
+              placeholder={`Search ${selectedCategory === 'direct' ? 'contacts' : 'groups'}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-black text-white border border-white rounded-none px-3 py-2 pl-8 text-sm focus:outline-none focus:border-white/60 font-mono placeholder-gray-500"
             />
             <FontAwesomeIcon 
               icon={faSearch} 
-              className="absolute left-2 top-8 text-white opacity-60 text-sm"
+              className="absolute left-2 top-2 text-white opacity-60 text-sm"
             />
           </div>
         </div>
@@ -228,8 +198,8 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                   </div>
                   <div className="text-xs font-mono text-gray-500 mt-2 uppercase">
                     {selectedCategory === 'direct' 
-                      ? 'INITIATE NEW SECURE CHANNEL' 
-                      : 'ESTABLISH NEW OPERATION'
+                      ? 'Start a new conversation' 
+                      : 'Create a new group'
                     }
                   </div>
                 </div>
@@ -240,12 +210,12 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
               return (
                 <div className="p-6 text-center border border-gray-600 bg-gray-900/50 m-4">
                   <div className="font-mono text-gray-400 mb-2 uppercase tracking-wider">
-                    NO {selectedCategory === 'direct' ? 'SECURE CHANNELS' : 'ACTIVE OPERATIONS'}
+                    NO {selectedCategory === 'direct' ? 'CONVERSATIONS' : 'GROUPS'}
                   </div>
                   <div className="text-xs font-mono text-gray-500 uppercase">
                     {selectedCategory === 'direct' 
-                      ? 'ESTABLISH CONTACT WITH AGENTS' 
-                      : 'CREATE OR JOIN OPERATIONS'
+                      ? 'Find users to message' 
+                      : 'Create or join groups'
                     }
                   </div>
                 </div>
@@ -264,12 +234,6 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                   selectedConversation === conversation.id ? 'bg-white/10 border-white' : ''
                 }`}
               >
-                {/* File Header */}
-                <div className="bg-white text-black p-2 font-mono text-xs flex justify-between border-b border-gray-600">
-                  <span className="font-bold">{conversation.type === 'direct' ? 'CONTACT FILE' : 'OPERATION FILE'}</span>
-                  <span>ID: {conversation.id.substring(0, 8).toUpperCase()}</span>
-                </div>
-                
                 {/* File Content */}
                 <div className="p-3">
                   <div className="flex items-start space-x-3">
@@ -306,19 +270,19 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                       </div>
                       
                       <div className="text-xs text-gray-400 mb-1">
-                        STATUS: {conversation.type === 'direct' ? 'ACTIVE CONTACT' : 'OPERATIONAL'}
+                        {conversation.type === 'direct' ? 'Direct Message' : 'Group'}
                       </div>
                       
                       {conversation.last_message && (
                         <div className="text-xs text-gray-300 border-t border-gray-600 pt-2 mt-2">
-                          <span className="text-gray-400">LAST TRANSMISSION:</span>
+                          <span className="text-gray-400">Last message:</span>
                           <div className="truncate">{conversation.last_message}</div>
                         </div>
                       )}
                       
                       {conversation.type === 'group' && conversation.members_count && (
                         <div className="text-xs text-gray-400 mt-1">
-                          PERSONNEL: {conversation.members_count}
+                          Members: {conversation.members_count}
                         </div>
                       )}
                     </div>

@@ -159,10 +159,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json();
-    const { receiver_id, content, profile_type } = body as { 
+    const { receiver_id, content, profile_type, reply_to } = body as { 
       receiver_id: string; 
       content: string; 
-      profile_type: 'basic' | 'love' | 'business' 
+      profile_type: 'basic' | 'love' | 'business';
+      reply_to?: {
+        message_id: string;
+        content: string;
+        sender_name: string;
+      }
     };
 
     if (!receiver_id || !content || !profile_type) {
@@ -170,6 +175,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         success: false, 
         message: 'receiver_id, content, and profile_type are required' 
       }, { status: 400 });
+    }
+
+    // Validate reply_to if provided
+    if (reply_to !== undefined) {
+      if (typeof reply_to !== 'object' || reply_to === null) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'reply_to must be an object' 
+        }, { status: 400 });
+      }
+      
+      const requiredReplyFields = ['message_id', 'content', 'sender_name'] as const;
+      for (const field of requiredReplyFields) {
+        if (!reply_to[field] || typeof reply_to[field] !== 'string') {
+          return NextResponse.json({ 
+            success: false, 
+            message: `reply_to.${field} is required and must be a string` 
+          }, { status: 400 });
+        }
+      }
+      
+      // Validate reply content length
+      if (reply_to.content.length > 500) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'reply_to.content too long (max 500 characters)' 
+        }, { status: 400 });
+      }
     }
 
     if (!['basic', 'love', 'business'].includes(profile_type)) {
@@ -267,6 +300,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         profile_picture_url: senderProfile.profile_picture_url || ''
       }
     };
+
+    // Add reply_to information if provided
+    if (reply_to) {
+      (message as unknown as Record<string, unknown>).reply_to = {
+        message_id: reply_to.message_id,
+        content: reply_to.content,
+        sender_name: reply_to.sender_name
+      };
+    }
 
     // Insert message into profile-specific collection
     const messageCollectionName = `pm_${profile_type}`;

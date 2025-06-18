@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
+import { getAnonymousDisplayName } from '../lib/anonymization';
 
 interface Profile {
   profile_id: string;
@@ -133,13 +134,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
       onClick={handleOverlayClick}
     >
       <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* FBI-Style Header */}
-        <div className="border-b-2 border-white bg-white text-black p-4 text-center">
-          <div className="font-mono text-xs mb-1">CLASSIFIED DOSSIER</div>
-          <h1 className="text-xl font-bold tracking-widest">SUBJECT PROFILE ANALYSIS</h1>
-          <div className="font-mono text-xs mt-1">ID: {userId.substring(0, 8).toUpperCase()}</div>
-        </div>
-
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
           {loading && (
@@ -225,7 +219,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                               <div>
                                 <span className="text-gray-400">SUBJECT NAME:</span>
                                 <div className="text-white font-bold tracking-wider">
-                                  {(profileData.profiles[activeTab]?.display_name || `AGENT-${userId.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                                  {getAnonymousDisplayName(profileData.profiles[activeTab]?.display_name, null, userId)}
                                 </div>
                               </div>
                               <div>

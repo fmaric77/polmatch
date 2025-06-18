@@ -116,10 +116,35 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     }
 
     const body = await req.json();
-    const { content, channel_id } = body;
+    const { content, channel_id, reply_to } = body;
 
     if (!content || !channel_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Validate reply_to if provided
+    if (reply_to !== undefined) {
+      if (typeof reply_to !== 'object' || reply_to === null) {
+        return NextResponse.json({ 
+          error: 'reply_to must be an object' 
+        }, { status: 400 });
+      }
+      
+      const requiredReplyFields = ['message_id', 'content', 'sender_name'];
+      for (const field of requiredReplyFields) {
+        if (!reply_to[field] || typeof reply_to[field] !== 'string') {
+          return NextResponse.json({ 
+            error: `reply_to.${field} is required and must be a string` 
+          }, { status: 400 });
+        }
+      }
+      
+      // Validate reply content length
+      if (reply_to.content.length > 500) {
+        return NextResponse.json({ 
+          error: 'reply_to.content too long (max 500 characters)' 
+        }, { status: 400 });
+      }
     }
 
     // Verify channel exists and belongs to group
@@ -135,7 +160,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     // Encrypt message content
     const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
     
-    const message = {
+    const message: Record<string, unknown> = {
       message_id: uuidv4(),
       group_id: groupId,
       channel_id,
@@ -145,6 +170,15 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       edited: false,
       attachments: []
     };
+
+    // Add reply_to information if provided
+    if (reply_to) {
+      message.reply_to = {
+        message_id: reply_to.message_id,
+        content: reply_to.content,
+        sender_name: reply_to.sender_name
+      };
+    }
 
     await db.collection('group_messages').insertOne(message);
 

@@ -69,18 +69,29 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
     }
   }, [profileType]);
 
-  const sendMessage = useCallback(async (receiverId: string, content: string): Promise<boolean> => {
+  const sendMessage = useCallback(async (receiverId: string, content: string, replyTo?: { id: string; content: string; sender_name: string }): Promise<boolean> => {
     try {
+      const requestBody: Record<string, unknown> = {
+        receiver_id: receiverId,
+        content,
+        sender_profile_type: profileType,
+        receiver_profile_type: profileType,
+        attachments: []
+      };
+
+      // Add reply_to information if provided
+      if (replyTo) {
+        requestBody.reply_to = {
+          message_id: replyTo.id,
+          content: replyTo.content,
+          sender_name: replyTo.sender_name
+        };
+      }
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          receiver_id: receiverId,
-          content,
-          sender_profile_type: profileType,
-          receiver_profile_type: profileType,
-          attachments: []
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();

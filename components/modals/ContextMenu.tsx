@@ -4,7 +4,8 @@ import {
   faTrash,
   faUserMinus,
   faCopy,
-  faSignOutAlt
+  faSignOutAlt,
+  faReply
 } from '@fortawesome/free-solid-svg-icons';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
@@ -79,6 +80,7 @@ interface ContextMenuProps {
   };
   messages: {
     deleteMessage: (messageId: string) => Promise<boolean>;
+    setReplyTo?: (message: { id: string; content: string; sender_name: string }) => void;
   };
   currentUser: {
     user_id: string;
@@ -166,6 +168,27 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         const isOwnMessage = currentUser?.user_id === message?.sender_id;
         
         const messageItems: ContextMenuItem[] = [
+          {
+            id: 'reply',
+            label: 'Reply',
+            icon: faReply,
+            color: 'text-blue-400',
+            onClick: () => {
+              if (messages.setReplyTo && message.content) {
+                // Get sender name from message
+                const messageWithSender = message as { sender_display_name?: string; sender_username?: string; sender_id?: string };
+                const senderName = messageWithSender.sender_display_name || 
+                                 messageWithSender.sender_username || 
+                                 `USER-${message.sender_id?.substring(0, 8).toUpperCase()}`;
+                
+                messages.setReplyTo({
+                  id: contextMenu.id,
+                  content: message.content,
+                  sender_name: senderName
+                });
+              }
+            }
+          },
           {
             id: 'copy',
             label: 'Copy Text',

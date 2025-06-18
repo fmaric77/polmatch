@@ -110,10 +110,10 @@ const InviteModal: React.FC<InviteModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-green-400 font-mono uppercase tracking-widest text-xs mb-2">RECRUITMENT OPERATION</div>
+            <div className="text-green-400 font-mono uppercase tracking-widest text-xs mb-2">INVITE USERS</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faUserPlus} className="mr-3" />
-              RECRUIT AGENTS
+              INVITE MEMBERS
             </h2>
           </div>
           <button
@@ -135,7 +135,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH PERSONNEL DATABASE..."
+              placeholder="SEARCH USERS..."
               className="w-full bg-black text-white border-2 border-white rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
             />
@@ -145,7 +145,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
           {selectedUsers.size > 0 && (
             <div className="bg-green-600/20 border border-green-400 rounded-none p-2">
               <div className="text-green-400 text-sm font-mono uppercase tracking-wider">
-                {selectedUsers.size} AGENT{selectedUsers.size > 1 ? 'S' : ''} SELECTED FOR RECRUITMENT
+                {selectedUsers.size} USER{selectedUsers.size > 1 ? 'S' : ''} SELECTED
               </div>
             </div>
           )}
@@ -157,7 +157,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
                 <div className="text-center py-8">
                   <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
                     <div className="text-gray-400 font-mono uppercase tracking-wide">
-                      {searchQuery ? 'NO MATCHING PERSONNEL' : 'NO AVAILABLE RECRUITS'}
+                      {searchQuery ? 'NO MATCHING USERS' : 'NO AVAILABLE USERS'}
                     </div>
                   </div>
                 </div>
@@ -176,14 +176,14 @@ const InviteModal: React.FC<InviteModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <FontAwesomeIcon icon={faUserPlus} className="text-green-400" />
                       <div>
-                        <div className="uppercase tracking-wide">AGENT-{user.username}</div>
+                        <div className="uppercase tracking-wide">{user.username}</div>
                         <div className="text-xs text-gray-400 uppercase tracking-widest">
                           STATUS: {selectedUsers.has(user.user_id) ? 'SELECTED' : 'AVAILABLE'}
                         </div>
                       </div>
                     </div>
                     {inviting.has(user.user_id) && (
-                      <div className="text-xs font-mono uppercase tracking-widest text-yellow-400">RECRUITING...</div>
+                      <div className="text-xs font-mono uppercase tracking-widest text-yellow-400">INVITING...</div>
                     )}
                   </button>
                 ))
@@ -218,7 +218,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
               disabled={loading || selectedUsers.size === 0}
             >
-              {loading ? 'RECRUITING...' : `RECRUIT ${selectedUsers.size || ''} AGENT${selectedUsers.size !== 1 ? 'S' : ''}`}
+              {loading ? 'INVITING...' : `INVITE ${selectedUsers.size || ''} USER${selectedUsers.size !== 1 ? 'S' : ''}`}
             </button>
           </div>
         </div>

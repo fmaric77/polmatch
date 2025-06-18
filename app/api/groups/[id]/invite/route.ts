@@ -29,19 +29,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const group_id = resolvedParams.id;
     const inviter_id = session.user_id;
 
+    console.log('Group invitation attempt:', { group_id, inviter_id, invited_user_id });
+
     // Check if group exists
     const group = await db.collection('groups').findOne({ group_id });
     if (!group) {
+      console.log('Group not found:', group_id);
       return NextResponse.json({ success: false, message: 'Group not found' }, { status: 404 });
     }
 
-    // Check if inviter is a member of the group (and optionally has permission to invite)
+    // Check if inviter is a member of the group
     const inviterMembership = await db.collection('group_members').findOne({ 
       group_id, 
       user_id: inviter_id 
     });
+    console.log('Inviter membership:', inviterMembership);
     if (!inviterMembership) {
       return NextResponse.json({ success: false, message: 'You must be a member to invite others' }, { status: 403 });
+    }
+
+    // Check if user has permission to invite (could be expanded to check specific roles)
+    // For now, any member can invite
+    const canInvite = inviterMembership.role === 'owner' || 
+                     inviterMembership.role === 'admin' || 
+                     inviterMembership.role === 'member';
+    
+    if (!canInvite) {
+      return NextResponse.json({ success: false, message: 'You do not have permission to invite users to this group' }, { status: 403 });
     }
 
     // Get inviter's username

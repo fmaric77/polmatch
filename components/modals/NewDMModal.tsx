@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import { getAnonymousDisplayName, generateAnonymousId } from '../../lib/anonymization';
 
 interface User {
   user_id: string;
@@ -124,7 +125,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
       if (data.success) {
         const conversation: Conversation = {
           id: selectedUser.user_id,
-          name: selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`,
+          name: getAnonymousDisplayName(selectedUser.display_name, selectedUser.username, selectedUser.user_id),
           type: 'direct',
           user_id: selectedUser.user_id
         };
@@ -162,7 +163,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
             </button>
           </div>
           <div className="font-mono text-xs mt-1 text-center uppercase tracking-wider">
-            SECURE CHANNEL ESTABLISHMENT PROTOCOL
+            Start New Conversation
           </div>
         </div>
 
@@ -170,7 +171,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
           {/* Profile Context Info */}
           <div className="bg-gray-900 border border-white p-3 rounded-none">
             <div className="font-mono text-xs text-center uppercase tracking-wider">
-              <span className="text-gray-400">ESTABLISHING SECURE COMMUNICATION CHANNEL</span>
+              <span className="text-gray-400">Select a user to message</span>
             </div>
           </div>
 
@@ -192,7 +193,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="SEARCH AGENT ID OR NAME..."
+                  placeholder="Search users..."
                   className="w-full bg-black text-white border-2 border-white rounded-none p-2 pl-10 focus:outline-none focus:ring-2 focus:ring-white font-mono uppercase tracking-wider text-xs"
                   disabled={loading}
                 />
@@ -203,7 +204,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                 <div className="h-full overflow-y-auto space-y-1">
                   {filteredUsers.length === 0 ? (
                     <div className="text-gray-400 text-center py-4 font-mono uppercase tracking-wider text-xs">
-                      {searchQuery ? '[NO MATCHING PERSONNEL]' : `[NO ${getProfileLabel(receiverProfileType).toUpperCase()} AGENTS AVAILABLE]`}
+                      {searchQuery ? 'No matching users' : `No ${getProfileLabel(receiverProfileType)} users available`}
                     </div>
                   ) : (
                     filteredUsers.map((user) => (
@@ -222,11 +223,9 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                             {getProfileIcon(receiverProfileType)}
                             <div>
                               <div className="font-bold text-xs uppercase tracking-wider">
-                                {user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`}
+                                {getAnonymousDisplayName(user.display_name, user.username, user.user_id)}
                               </div>
-                              {user.display_name && (
-                                <div className="text-xs opacity-70">ID: {user.user_id.substring(0, 8).toUpperCase()}</div>
-                              )}
+                              <div className="text-xs opacity-70">ID: {generateAnonymousId(user.user_id)}</div>
                               {user.bio && (
                                 <div className="text-xs opacity-70 mt-1">{user.bio}</div>
                               )}
@@ -247,7 +246,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                 <div className="bg-gray-900 border border-white rounded-none p-2">
                   <div className="text-white font-mono text-xs uppercase tracking-wider">
                     <span className="text-gray-400">TARGET SELECTED: </span>
-                    <span className="font-bold">{selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}</span>
+                    <span className="font-bold">{getAnonymousDisplayName(selectedUser.display_name, selectedUser.username, selectedUser.user_id)}</span>
                   </div>
                 </div>
               )}

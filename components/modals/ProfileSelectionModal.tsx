@@ -59,10 +59,10 @@ const ProfileSelectionModal: React.FC<ProfileSelectionModalProps> = ({
       onClick={handleOverlayClick}
     >
       <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-2xl">
-        {/* FBI-Style Header */}
+        {/* Header */}
         <div className="border-b-2 border-white bg-white text-black p-4">
           <div className="flex items-center justify-between">
-            <div className="font-mono text-xs uppercase tracking-wider">CLEARANCE LEVEL SELECTION</div>
+            <div className="font-mono text-xs uppercase tracking-wider">PROFILE SELECTION</div>
             <button
               onClick={onClose}
               className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
@@ -70,17 +70,17 @@ const ProfileSelectionModal: React.FC<ProfileSelectionModalProps> = ({
               ×
             </button>
           </div>
-          <div className="font-mono text-xs mt-1 text-center">SECURE COMMUNICATION PROTOCOL INITIALIZATION</div>
+          <div className="font-mono text-xs mt-1 text-center">SELECT YOUR ACTIVE PROFILE</div>
         </div>
 
         <div className="p-6 space-y-6 bg-black text-white">
           <div className="text-gray-300 text-center mb-6 font-mono text-xs uppercase tracking-wider">
-            [CLASSIFIED] SELECT SECURITY CLEARANCE LEVEL FOR MISSION COMMUNICATIONS
+            SELECT PROFILE TYPE FOR MESSAGING
           </div>
 
           {/* Profile Selection */}
           <div>
-            <h3 className="text-lg font-mono font-bold text-white mb-4 text-center uppercase tracking-wider">CHOOSE CLEARANCE LEVEL</h3>
+            <h3 className="text-lg font-mono font-bold text-white mb-4 text-center uppercase tracking-wider">CHOOSE PROFILE</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {profileOptions.map((option) => (
                 <button
@@ -108,12 +108,12 @@ const ProfileSelectionModal: React.FC<ProfileSelectionModalProps> = ({
           {/* Summary */}
           <div className="bg-gray-900 border border-white rounded-none p-4">
             <div className="text-white text-center font-mono">
-              <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">SELECTED PROTOCOL:</div>
+              <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">SELECTED PROFILE:</div>
               <span className="font-bold uppercase tracking-wider">{profileOptions.find(p => p.type === selectedProfile)?.label}</span>
               <span className="mx-2">⬌</span>
               <span className="font-bold uppercase tracking-wider">{profileOptions.find(p => p.type === selectedProfile)?.label}</span>
               <div className="text-xs text-gray-300 mt-2 uppercase tracking-wider">
-                [RESTRICTED TO {profileOptions.find(p => p.type === selectedProfile)?.label.toUpperCase()} CLEARANCE PERSONNEL ONLY]
+                ACTIVE PROFILE: {profileOptions.find(p => p.type === selectedProfile)?.label.toUpperCase()}
               </div>
             </div>
           </div>
@@ -124,13 +124,13 @@ const ProfileSelectionModal: React.FC<ProfileSelectionModalProps> = ({
               onClick={onClose}
               className="flex-1 bg-gray-800 text-white py-3 px-4 rounded-none border-2 border-gray-600 hover:bg-gray-700 hover:border-white transition-colors font-mono uppercase tracking-wider text-xs"
             >
-              ABORT OPERATION
+              CANCEL
             </button>
             <button
               onClick={handleContinue}
               className="flex-1 bg-white text-black py-3 px-4 rounded-none border-2 border-white hover:bg-gray-200 transition-colors font-mono uppercase tracking-wider text-xs font-bold"
             >
-              PROCEED TO PERSONNEL SELECTION
+              CONTINUE
             </button>
           </div>
         </div>

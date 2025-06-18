@@ -106,11 +106,11 @@ export default function DiscoverGroups() {
         setError(''); // Clear any previous errors
         // You could add a success message state here if desired
       } else {
-        setError(data.error || 'Network connection failed - access denied');
+        setError(data.error || 'Failed to join group');
       }
     } catch (err) {
       console.error('Error joining group:', err);
-      setError('Network connection failed - transmission error');
+      setError('Failed to join group');
     } finally {
       setJoiningGroupId('');
     }
@@ -136,39 +136,19 @@ export default function DiscoverGroups() {
       
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
-          {/* FBI-Style Header */}
+          {/* Search Section */}
           <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-            <div className="border-b-2 border-white bg-white text-black p-3 md:p-4 text-center">
-              <div className="font-mono text-xs mb-1">CLASSIFIED</div>
-              <h1 className="text-lg md:text-2xl font-bold tracking-widest">OPERATION NETWORK DISCOVERY</h1>
-              <div className="font-mono text-xs mt-1">PUBLIC ORGANIZATION REGISTRY</div>
-            </div>
             <div className="p-3 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">
-                <div>
-                  <div className="text-gray-400">ACTIVE NETWORKS</div>
-                  <div className="text-lg md:text-xl font-bold">{pagination.totalCount.toString().padStart(3, '0')}</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">SURVEILLANCE STATUS</div>
-                  <div className="text-lg md:text-xl font-bold text-green-400">{loading ? 'SCANNING...' : 'MONITORING'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">INFILTRATION LEVEL</div>
-                  <div className="text-lg md:text-xl font-bold text-red-400">AUTHORIZED</div>
-                </div>
-              </div>
-
               {/* Search Section */}
               <div className="mb-4">
-                <div className="text-xs font-mono text-gray-400 mb-2 text-center">ENTER SEARCH PARAMETERS:</div>
+                <div className="text-xs font-mono text-gray-400 mb-2 text-center">SEARCH GROUPS:</div>
                 <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
                   <div className="flex-1 relative">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="NETWORK NAME, DESCRIPTION, OR OPERATION CODE..."
+                      placeholder="GROUP NAME, DESCRIPTION, OR TOPIC..."
                       className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
                     />
                   </div>
@@ -176,7 +156,7 @@ export default function DiscoverGroups() {
                     type="submit"
                     className="px-4 md:px-6 py-3 bg-white text-black font-mono text-xs md:text-sm tracking-wider hover:bg-gray-200 transition-colors"
                   >
-                    EXECUTE SEARCH
+                    SEARCH
                   </button>
                 </form>
               </div>
@@ -186,23 +166,28 @@ export default function DiscoverGroups() {
                   ⚠ {error.toUpperCase()}
                 </div>
               )}
+              {error && (
+                <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
+                  ⚠ {error}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Networks Container */}
+          {/* Groups Container */}
           <div className="bg-black border-2 border-white rounded-none shadow-2xl">
             {loading ? (
               <div className="text-center py-8 md:py-12 px-4">
-                <div className="font-mono text-gray-400 mb-2 text-sm md:text-base">SCANNING PUBLIC NETWORKS...</div>
+                <div className="font-mono text-gray-400 mb-2 text-sm md:text-base">LOADING GROUPS...</div>
                 <div className="text-red-400 animate-pulse">● ● ●</div>
               </div>
             ) : groups.length === 0 ? (
               <div className="text-center py-8 md:py-12 px-4">
                 <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  {searchQuery ? `NO NETWORKS MATCHING "${searchQuery.toUpperCase()}"` : 'NO PUBLIC NETWORKS DETECTED'}
+                  {searchQuery ? `NO GROUPS MATCHING "${searchQuery.toUpperCase()}"` : 'NO GROUPS FOUND'}
                 </div>
                 <div className="text-xs md:text-sm text-gray-500 font-mono">
-                  {searchQuery ? 'REFINE SEARCH PARAMETERS OR CHECK CLEARANCE LEVEL' : 'BE THE FIRST TO ESTABLISH A PUBLIC NETWORK'}
+                  {searchQuery ? 'TRY DIFFERENT SEARCH TERMS' : 'BE THE FIRST TO CREATE A GROUP'}
                 </div>
               </div>
             ) : (
@@ -210,13 +195,13 @@ export default function DiscoverGroups() {
                 {/* Results Info */}
                 <div className="mb-4 md:mb-6 text-center">
                   <div className="text-xs md:text-sm font-mono text-gray-400 mb-2">
-                    DISPLAYING {groups.length} OF {pagination.totalCount} DETECTED NETWORKS
+                    SHOWING {groups.length} OF {pagination.totalCount} GROUPS
                     {searchQuery && (
                       <span className="block sm:inline sm:ml-2">MATCHING &quot;{searchQuery.toUpperCase()}&quot;</span>
                     )}
                   </div>
                   <div className="text-xs font-mono text-gray-500">
-                    PAGE {pagination.currentPage} OF {pagination.totalPages} - SECURITY LEVEL: PUBLIC ACCESS
+                    PAGE {pagination.currentPage} OF {pagination.totalPages}
                   </div>
                 </div>
 
@@ -228,7 +213,7 @@ export default function DiscoverGroups() {
                       <div className="bg-white text-black p-2 font-mono text-xs">
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                            <span className="font-bold">NETWORK #{(index + 1).toString().padStart(3, '0')}</span>
+                            <span className="font-bold">GROUP #{(index + 1).toString().padStart(3, '0')}</span>
                             <span className="text-xs">STATUS: PUBLIC</span>
                           </div>
                           <div className="text-xs">
@@ -237,52 +222,48 @@ export default function DiscoverGroups() {
                         </div>
                       </div>
                       
-                      {/* Network Content */}
+                      {/* Group Content */}
                       <div className="p-3 md:p-4">
-                        {/* Network Info */}
+                        {/* Group Info */}
                         <div className="mb-4">
                           <div className="font-mono text-sm md:text-base font-bold text-white mb-2 tracking-wider">
                             {group.name.toUpperCase()}
                           </div>
                           {group.topic && (
                             <div className="text-xs font-mono text-gray-400 mb-2">
-                              OPERATION: {group.topic.toUpperCase()}
+                              TOPIC: {group.topic.toUpperCase()}
                             </div>
                           )}
                           <div className="text-xs md:text-sm text-gray-300 leading-relaxed mb-3">
-                            {group.description || 'NO OPERATIONAL BRIEFING PROVIDED'}
+                            {group.description || 'NO DESCRIPTION PROVIDED'}
                           </div>
                         </div>
 
-                        {/* Network Stats */}
+                        {/* Group Stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs font-mono mb-4">
                           <div>
-                            <span className="text-gray-400">OPERATIVES:</span>
-                            <div className="text-white font-bold">{group.members_count} ACTIVE</div>
+                            <span className="text-gray-400">MEMBERS:</span>
+                            <div className="text-white font-bold">{group.members_count}</div>
                           </div>
                           <div>
-                            <span className="text-gray-400">ESTABLISHED:</span>
+                            <span className="text-gray-400">CREATED:</span>
                             <div className="text-white">{formatDate(group.creation_date).toUpperCase()}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">COMMANDER:</span>
-                            <div className="text-white">AGENT-{group.creator_id.substring(0, 8).toUpperCase()}</div>
                           </div>
                         </div>
 
-                        {/* Join Network Button */}
+                        {/* Join Group Button */}
                         <button
                           onClick={() => handleJoinGroup(group.group_id)}
                           disabled={joiningGroupId === group.group_id}
                           className="w-full py-2 px-3 bg-white text-black font-mono text-xs md:text-sm tracking-wider hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {joiningGroupId === group.group_id ? 'JOINING...' : 'JOIN NETWORK'}
+                          {joiningGroupId === group.group_id ? 'JOINING...' : 'JOIN GROUP'}
                         </button>
                       </div>
                       
-                      {/* Security Footer */}
+                      {/* Public Footer */}
                       <div className="bg-green-900 text-white p-1 text-xs font-mono text-center border-t border-green-700">
-                        ⚠ PUBLIC NETWORK - OPEN ACCESS AUTHORIZED ⚠
+                        ⚠ PUBLIC GROUP - OPEN ACCESS ⚠
                       </div>
                     </div>
                   ))}

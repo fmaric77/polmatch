@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
+import { getAnonymousDisplayName } from '../lib/anonymization';
 
 interface Group {
   _id?: string;
@@ -561,7 +562,7 @@ const Groups = () => {
                         className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                       >
                         {msg.sender_id !== currentUser?.user_id && (
-                          <div className="font-semibold text-xs mb-1">{msg.sender_display_name || msg.sender_username || `AGENT-${msg.sender_id.substring(0, 8).toUpperCase()}`}</div>
+                          <div className="font-semibold text-xs mb-1">{getAnonymousDisplayName(msg.sender_display_name, msg.sender_username, msg.sender_id)}</div>
                         )}
                         <div>{msg.content}</div>
                         <div className="text-xs opacity-75 mt-1">
@@ -662,7 +663,7 @@ const Groups = () => {
                     <div className="flex items-center space-x-3">
                       <ProfileAvatar userId={member.user_id} size={32} />
                       <div>
-                        <div className="font-semibold text-white">{member.display_name || member.username || `AGENT-${member.user_id.substring(0, 8).toUpperCase()}`}</div>
+                        <div className="font-semibold text-white">{getAnonymousDisplayName(member.display_name, member.username, member.user_id)}</div>
                         <div className="text-sm text-gray-400">Role: {member.role}</div>
                       </div>
                     </div>
@@ -741,7 +742,7 @@ const Groups = () => {
                 <option value="">Select a user</option>
                 {availableUsers.map(user => (
                   <option key={user.user_id} value={user.user_id}>
-                    {user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`}
+                    {getAnonymousDisplayName(user.display_name, user.username, user.user_id)}
                   </option>
                 ))}
               </select>

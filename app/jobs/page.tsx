@@ -9,14 +9,15 @@ import {
   faMapMarkerAlt, 
   faClock, 
   faDollarSign, 
-  faUser, 
   faEnvelope, 
   faSearch, 
   faFilter,
   faTimes,
   faBuilding,
   faGraduationCap,
-  faCalendarAlt
+  faChevronDown,
+  faChevronUp,
+  faTrash
 } from '@fortawesome/free-solid-svg-icons';
 
 interface JobPosting {
@@ -55,6 +56,7 @@ export default function JobsPage(): JSX.Element {
   const [jobTypeFilter, setJobTypeFilter] = useState('');
   const [experienceFilter, setExperienceFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
 
   // New job form state
   const [newJob, setNewJob] = useState<{
@@ -181,6 +183,55 @@ export default function JobsPage(): JSX.Element {
     }
   };
 
+  const handleDeleteJob = async (job: JobPosting): Promise<void> => {
+    if (!currentUser || job.posted_by !== currentUser.user_id) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the job posting for "${job.title}" at ${job.company}? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch('/api/jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: job.job_id })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Remove from local state
+        setJobs(prevJobs => prevJobs.filter(j => j.job_id !== job.job_id));
+        // Also remove from expanded state if it was expanded
+        setExpandedJobs(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(job.job_id);
+          return newSet;
+        });
+        alert('Job posting deleted successfully');
+      } else {
+        alert('Failed to delete job posting: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      alert('Failed to delete job posting');
+    }
+  };
+
+  // Toggle expanded state for job postings
+  const toggleJobExpanded = (jobId: string): void => {
+    setExpandedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
   // Filter jobs based on search and filters
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -221,7 +272,7 @@ export default function JobsPage(): JSX.Element {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl mb-4">Loading...</h2>
-            <p className="text-gray-400">Loading job opportunities</p>
+            <p className="text-gray-400">Finding job opportunities for you</p>
           </div>
         </div>
       </div>
@@ -233,40 +284,28 @@ export default function JobsPage(): JSX.Element {
       <Navigation currentPage="jobs" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-7xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
-          {/* FBI-Style Header */}
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-            <div className="bg-white text-black p-3 text-center">
-              <div className="font-mono text-xs mb-1 font-bold tracking-widest">EMPLOYMENT OPERATIONS CENTER</div>
-              <h1 className="text-lg md:text-xl font-bold tracking-widest uppercase">
-                <FontAwesomeIcon icon={faBriefcase} className="mr-2" />
-                CAREER OPPORTUNITIES
-              </h1>
-              <div className="font-mono text-xs mt-1 tracking-widest">BUSINESS PROFILE RESTRICTED</div>
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-green-900 text-white border-2 border-green-700 py-3 px-6 rounded-none hover:bg-green-800 transition-all shadow-lg font-mono uppercase tracking-wider"
+              className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center justify-center"
               disabled={!currentUser}
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              POST JOB VACANCY
+              Post a Job
             </button>
             
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-blue-900 text-white border-2 border-blue-700 py-3 px-6 rounded-none hover:bg-blue-800 transition-all shadow-lg font-mono uppercase tracking-wider"
+              className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center"
             >
               <FontAwesomeIcon icon={faFilter} className="mr-2" />
-              {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'}
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
           </div>
 
           {/* Search and Filters */}
-          <div className="bg-black/80 border-2 border-white rounded-none shadow-lg mb-6 p-4">
+          <div className="bg-black/80 border border-white rounded-lg shadow-lg mb-6 p-4">
             {/* Search Bar */}
             <div className="relative mb-4">
               <FontAwesomeIcon 
@@ -277,8 +316,8 @@ export default function JobsPage(): JSX.Element {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="SEARCH OPPORTUNITIES..."
-                className="w-full bg-black text-white border-2 border-white rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+                placeholder="Search job titles, companies, or descriptions..."
+                className="w-full bg-black text-white border border-gray-600 rounded-lg p-3 pl-10 focus:outline-none focus:border-blue-400 shadow-lg"
               />
             </div>
 
@@ -286,22 +325,22 @@ export default function JobsPage(): JSX.Element {
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Location</label>
+                  <label className="block text-sm text-gray-300 mb-2">Location</label>
                   <input
                     type="text"
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
                     placeholder="Enter location..."
-                    className="w-full bg-black text-white border-2 border-gray-600 rounded-none p-2 focus:outline-none focus:border-white font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Job Type</label>
+                  <label className="block text-sm text-gray-300 mb-2">Job Type</label>
                   <select
                     value={jobTypeFilter}
                     onChange={(e) => setJobTypeFilter(e.target.value)}
-                    className="w-full bg-black text-white border-2 border-gray-600 rounded-none p-2 focus:outline-none focus:border-white font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   >
                     <option value="">All Types</option>
                     <option value="full-time">Full Time</option>
@@ -312,11 +351,11 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Experience</label>
+                  <label className="block text-sm text-gray-300 mb-2">Experience Level</label>
                   <select
                     value={experienceFilter}
                     onChange={(e) => setExperienceFilter(e.target.value)}
-                    className="w-full bg-black text-white border-2 border-gray-600 rounded-none p-2 focus:outline-none focus:border-white font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   >
                     <option value="">All Levels</option>
                     <option value="entry">Entry Level</option>
@@ -332,93 +371,136 @@ export default function JobsPage(): JSX.Element {
           {/* Job Listings */}
           <div className="space-y-4">
             {filteredJobs.length === 0 ? (
-              <div className="bg-black/80 border-2 border-white rounded-none shadow-lg p-8 text-center">
+              <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8 text-center">
                 <FontAwesomeIcon icon={faBriefcase} className="text-4xl text-gray-500 mb-4" />
-                <h3 className="text-xl font-mono text-gray-400 mb-2">NO ACTIVE OPPORTUNITIES</h3>
-                <p className="text-gray-500 font-mono">
+                <h3 className="text-xl text-gray-300 mb-2">No Jobs Found</h3>
+                <p className="text-gray-500">
                   {searchQuery || locationFilter || jobTypeFilter || experienceFilter 
-                    ? 'No jobs match your current filters.' 
-                    : 'No job postings available at this time.'}
+                    ? 'No jobs match your current search criteria.' 
+                    : 'No job postings are available at this time.'}
                 </p>
               </div>
             ) : (
-              filteredJobs.map((job) => (
-                <div key={job.job_id} className="bg-black/80 border-2 border-white rounded-none shadow-lg p-6">
-                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">{job.title}</h3>
-                      <div className="flex flex-wrap items-center gap-4 text-sm font-mono text-gray-300">
-                        <span className="flex items-center">
-                          <FontAwesomeIcon icon={faBuilding} className="mr-1 text-blue-400" />
-                          {job.company}
-                        </span>
-                        <span className="flex items-center">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1 text-green-400" />
-                          {job.location}
-                        </span>
-                        <span className="flex items-center">
-                          <FontAwesomeIcon icon={faClock} className="mr-1 text-yellow-400" />
-                          {getJobTypeLabel(job.job_type)}
-                        </span>
-                        <span className="flex items-center">
-                          <FontAwesomeIcon icon={faGraduationCap} className="mr-1 text-purple-400" />
-                          {getExperienceLabel(job.experience_level)}
-                        </span>
+              filteredJobs.map((job) => {
+                const isExpanded = expandedJobs.has(job.job_id);
+                
+                return (
+                  <div key={job.job_id} className="bg-black/80 border border-white rounded-lg shadow-lg">
+                    {/* Job Header - Always Visible - Clickable */}
+                    <div 
+                      className="p-6 cursor-pointer hover:bg-gray-900/50 transition-colors rounded-t-lg"
+                      onClick={() => toggleJobExpanded(job.job_id)}
+                    >
+                      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xl font-bold text-white">{job.title}</h3>
+                            <FontAwesomeIcon 
+                              icon={isExpanded ? faChevronUp : faChevronDown} 
+                              className="text-gray-400 ml-4 text-lg"
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+                            <span className="flex items-center">
+                              <FontAwesomeIcon icon={faBuilding} className="mr-1 text-blue-400" />
+                              {job.company}
+                            </span>
+                            <span className="flex items-center">
+                              <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1 text-green-400" />
+                              {job.location}
+                            </span>
+                            <span className="flex items-center">
+                              <FontAwesomeIcon icon={faClock} className="mr-1 text-yellow-400" />
+                              {getJobTypeLabel(job.job_type)}
+                            </span>
+                            <span className="flex items-center">
+                              <FontAwesomeIcon icon={faGraduationCap} className="mr-1 text-purple-400" />
+                              {getExperienceLabel(job.experience_level)}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-2 mt-4 lg:mt-0">
+                          {job.salary_range && (
+                            <span className="text-green-400 font-bold flex items-center">
+                              <FontAwesomeIcon icon={faDollarSign} className="mr-1" />
+                              {job.salary_range}
+                            </span>
+                          )}
+                          <div className="text-xs text-gray-400">
+                            Click to {isExpanded ? 'collapse' : 'expand'}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-col items-end gap-2 mt-4 lg:mt-0">
-                      {job.salary_range && (
-                        <span className="text-green-400 font-mono font-bold flex items-center">
-                          <FontAwesomeIcon icon={faDollarSign} className="mr-1" />
-                          {job.salary_range}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handleApplyToJob(job)}
-                        className="bg-green-900 text-white border-2 border-green-700 py-2 px-4 rounded-none hover:bg-green-800 transition-all shadow-lg font-mono uppercase tracking-wider"
-                        disabled={!currentUser || job.posted_by === currentUser?.user_id}
-                      >
-                        <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
-                        {job.posted_by === currentUser?.user_id ? 'YOUR POSTING' : 'APPLY NOW'}
-                      </button>
-                    </div>
-                  </div>
 
-                  <p className="text-gray-300 mb-4 leading-relaxed">{job.description}</p>
-                  
-                  {job.requirements.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-yellow-400 font-mono font-bold mb-2 uppercase tracking-wider">Requirements:</h4>
-                      <ul className="list-disc list-inside text-gray-300 space-y-1">
-                        {job.requirements.map((req, index) => (
-                          <li key={index} className="font-mono text-sm">{req}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    {/* Job Details - Collapsible Content */}
+                    {isExpanded && (
+                      <div className="px-6 pb-6 border-t border-gray-600">
+                        <div className="pt-4 space-y-4">
+                          <div>
+                            <h4 className="text-white font-bold mb-2">Description</h4>
+                            <p className="text-gray-300 leading-relaxed">{job.description}</p>
+                          </div>
+                          
+                          {job.requirements.length > 0 && (
+                            <div>
+                              <h4 className="text-yellow-400 font-bold mb-2">Requirements</h4>
+                              <ul className="list-disc list-inside text-gray-300 space-y-1">
+                                {job.requirements.map((req, index) => (
+                                  <li key={index} className="text-sm">{req}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
 
-                  <div className="flex flex-wrap justify-between items-center text-xs font-mono text-gray-500 border-t border-gray-600 pt-4">
-                    <div className="flex items-center space-x-4">
-                      <span className="flex items-center">
-                        <FontAwesomeIcon icon={faUser} className="mr-1" />
-                        Posted by: {job.posted_by_display_name || job.posted_by_username}
-                      </span>
-                      <span className="flex items-center">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
-                        Posted: {new Date(job.posted_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {job.application_deadline && (
-                      <span className="flex items-center text-red-400">
-                        <FontAwesomeIcon icon={faClock} className="mr-1" />
-                        Deadline: {new Date(job.application_deadline).toLocaleDateString()}
-                      </span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+                            <div>
+                              <p className="mb-2"><strong className="text-white">Industry:</strong> {job.industry}</p>
+                              <p className="mb-2"><strong className="text-white">Posted by:</strong> {job.posted_by_display_name || job.posted_by_username}</p>
+                              <p className="mb-2"><strong className="text-white">Posted:</strong> {new Date(job.posted_at).toLocaleDateString()}</p>
+                            </div>
+                            <div>
+                              {job.application_deadline && (
+                                <p className="mb-2"><strong className="text-red-400">Application Deadline:</strong> {new Date(job.application_deadline).toLocaleDateString()}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-4 border-t border-gray-600">
+                            {job.posted_by === currentUser?.user_id ? (
+                              // Show delete button for own postings
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteJob(job);
+                                }}
+                                className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-all shadow-lg flex items-center"
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="mr-2" />
+                                Delete Posting
+                              </button>
+                            ) : (
+                              // Show apply button for other's postings
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApplyToJob(job);
+                                }}
+                                className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center"
+                                disabled={!currentUser}
+                              >
+                                <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
+                                Apply Now
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -427,16 +509,16 @@ export default function JobsPage(): JSX.Element {
       {/* Create Job Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-black border border-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="bg-white text-black p-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold font-mono uppercase tracking-wider">
+            <div className="bg-black text-white p-4 rounded-t-lg flex items-center justify-between border-b border-gray-600">
+              <h2 className="text-lg font-bold">
                 <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                CREATE JOB POSTING
+                Create Job Posting
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
+                className="text-white hover:text-gray-300 transition-colors text-xl"
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -446,55 +528,55 @@ export default function JobsPage(): JSX.Element {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Job Title *</label>
+                  <label className="block text-sm text-gray-300 mb-2">Job Title *</label>
                   <input
                     type="text"
                     value={newJob.title}
                     onChange={(e) => setNewJob(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                     placeholder="Enter job title..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Company *</label>
+                  <label className="block text-sm text-gray-300 mb-2">Company *</label>
                   <input
                     type="text"
                     value={newJob.company}
                     onChange={(e) => setNewJob(prev => ({ ...prev, company: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                     placeholder="Enter company name..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Location *</label>
+                  <label className="block text-sm text-gray-300 mb-2">Location *</label>
                   <input
                     type="text"
                     value={newJob.location}
                     onChange={(e) => setNewJob(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                     placeholder="Enter location..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Salary Range</label>
+                  <label className="block text-sm text-gray-300 mb-2">Salary Range</label>
                   <input
                     type="text"
                     value={newJob.salary_range}
                     onChange={(e) => setNewJob(prev => ({ ...prev, salary_range: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                     placeholder="e.g. $50,000 - $70,000"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Job Type *</label>
+                  <label className="block text-sm text-gray-300 mb-2">Job Type *</label>
                   <select
                     value={newJob.job_type}
                     onChange={(e) => setNewJob(prev => ({ ...prev, job_type: e.target.value as JobPosting['job_type'] }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   >
                     <option value="full-time">Full Time</option>
                     <option value="part-time">Part Time</option>
@@ -504,11 +586,11 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Experience Level *</label>
+                  <label className="block text-sm text-gray-300 mb-2">Experience Level *</label>
                   <select
                     value={newJob.experience_level}
                     onChange={(e) => setNewJob(prev => ({ ...prev, experience_level: e.target.value as JobPosting['experience_level'] }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   >
                     <option value="entry">Entry Level</option>
                     <option value="mid">Mid Level</option>
@@ -518,45 +600,45 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Industry</label>
+                  <label className="block text-sm text-gray-300 mb-2">Industry</label>
                   <input
                     type="text"
                     value={newJob.industry}
                     onChange={(e) => setNewJob(prev => ({ ...prev, industry: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                     placeholder="e.g. Technology, Finance..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Application Deadline</label>
+                  <label className="block text-sm text-gray-300 mb-2">Application Deadline</label>
                   <input
                     type="date"
                     value={newJob.application_deadline}
                     onChange={(e) => setNewJob(prev => ({ ...prev, application_deadline: e.target.value }))}
-                    className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   />
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Job Description *</label>
+                <label className="block text-sm text-gray-300 mb-2">Job Description *</label>
                 <textarea
                   value={newJob.description}
                   onChange={(e) => setNewJob(prev => ({ ...prev, description: e.target.value }))}
                   rows={4}
-                  className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                  className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   placeholder="Describe the job role, responsibilities, and what you're looking for..."
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-mono text-gray-400 mb-2 uppercase">Requirements (one per line)</label>
+                <label className="block text-sm text-gray-300 mb-2">Requirements (one per line)</label>
                 <textarea
                   value={newJob.requirements}
                   onChange={(e) => setNewJob(prev => ({ ...prev, requirements: e.target.value }))}
                   rows={4}
-                  className="w-full bg-black text-white border-2 border-white rounded-none p-2 focus:outline-none focus:border-blue-400 font-mono"
+                  className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
                   placeholder={`Bachelor's degree required\n3+ years experience\nProficient in specific skills...`}
                 />
               </div>
@@ -565,16 +647,16 @@ export default function JobsPage(): JSX.Element {
               <div className="flex space-x-4 pt-4">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 bg-gray-800 text-white border-2 border-gray-600 py-3 px-4 rounded-none hover:bg-gray-700 hover:border-white transition-colors font-mono uppercase tracking-wider"
+                  className="flex-1 bg-gray-700 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors"
                 >
-                  CANCEL
+                  Cancel
                 </button>
                 <button
                   onClick={handleCreateJob}
-                  className="flex-1 bg-green-900 text-white border-2 border-green-700 py-3 px-4 rounded-none hover:bg-green-800 transition-colors font-mono uppercase tracking-wider"
+                  className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
                   disabled={!newJob.title || !newJob.company || !newJob.location || !newJob.description}
                 >
-                  POST JOB
+                  Post Job
                 </button>
               </div>
             </div>

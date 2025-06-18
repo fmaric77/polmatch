@@ -126,7 +126,8 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
           },
           timestamp: 1,
           attachments: 1,
-          sender_username: '$sender.username'
+          sender_username: '$sender.username',
+          reply_to: 1
         }
       },
       { $sort: { timestamp: 1 } } // Final sort ascending for display
@@ -183,12 +184,37 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     const params = await context.params;
     const groupId = params.id;
     const channelId = params.channelId;
-    const { content, attachments } = await req.json();
+    const { content, attachments, reply_to } = await req.json();
 
     if (!content || content.trim() === '') {
       return NextResponse.json({ 
         error: 'Message content is required' 
       }, { status: 400 });
+    }
+
+    // Validate reply_to if provided
+    if (reply_to !== undefined) {
+      if (typeof reply_to !== 'object' || reply_to === null) {
+        return NextResponse.json({ 
+          error: 'reply_to must be an object' 
+        }, { status: 400 });
+      }
+      
+      const requiredReplyFields = ['message_id', 'content', 'sender_name'];
+      for (const field of requiredReplyFields) {
+        if (!reply_to[field] || typeof reply_to[field] !== 'string') {
+          return NextResponse.json({ 
+            error: `reply_to.${field} is required and must be a string` 
+          }, { status: 400 });
+        }
+      }
+      
+      // Validate reply content length
+      if (reply_to.content.length > 500) {
+        return NextResponse.json({ 
+          error: 'reply_to.content too long (max 500 characters)' 
+        }, { status: 400 });
+      }
     }
 
     // OPTIMIZATION 3: Combine membership and channel checks in parallel
@@ -220,7 +246,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     // Create message
     const messageId = uuidv4();
-    const message = {
+    const message: Record<string, unknown> = {
       message_id: messageId,
       group_id: groupId,
       channel_id: channelId,
@@ -230,6 +256,15 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       edited: false,
       attachments: attachments || []
     };
+
+    // Add reply_to information if provided
+    if (reply_to) {
+      message.reply_to = {
+        message_id: reply_to.message_id,
+        content: reply_to.content,
+        sender_name: reply_to.sender_name
+      };
+    }
 
     await db.collection('group_messages').insertOne(message);
 
@@ -249,7 +284,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       channel_id: channelId,
       sender_id: auth.userId,
       content: content, // Use unencrypted content for notification
-      timestamp: message.timestamp,
+      timestamp: message.timestamp as string,
       attachments: attachments || [],
       sender_username: auth.user.username, // Keep username for backward compatibility
       sender_display_name: senderDisplayName // Always use basic profile display name

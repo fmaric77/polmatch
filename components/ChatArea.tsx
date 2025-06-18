@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPaperPlane,
@@ -9,13 +9,15 @@ import {
   faCheckDouble,
   faBars,
   faBan,
-  faEnvelope
+  faEnvelope,
+  faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
 import TypingIndicator from './TypingIndicator';
 import { TypingData } from './hooks/useTypingIndicator';
 import { profilePictureCache } from '../lib/profilePictureCache';
+import { getAnonymousDisplayName } from '../lib/anonymization';
 
 interface PrivateMessage {
   _id?: string;
@@ -30,6 +32,11 @@ interface PrivateMessage {
   sender_profile_data?: {
     display_name: string;
     profile_picture_url: string;
+  };
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
   };
 }
 
@@ -47,6 +54,11 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 interface Channel {
@@ -86,6 +98,8 @@ interface ChatAreaProps {
   setNewMessage: (message: string) => void;
   onSendMessage: () => void;
   onMessageContextMenu: (e: React.MouseEvent, message: PrivateMessage | GroupMessage) => void;
+  replyTo?: { id: string; content: string; sender_name: string } | null;
+  setReplyTo?: (reply: { id: string; content: string; sender_name: string } | null) => void;
   currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
   channelLoading: boolean;
   contextSwitchLoading: boolean;
@@ -117,6 +131,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   setNewMessage,
   onSendMessage,
   onMessageContextMenu,
+  replyTo,
+  setReplyTo,
   currentUser,
   channelLoading,
   contextSwitchLoading,
@@ -135,6 +151,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -207,20 +224,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             )}
             
             <div className="flex items-center space-x-2">
-              <div className="text-red-500 font-mono uppercase tracking-widest text-xs">CLASSIFIED</div>
-              <div className="w-px h-6 bg-white"></div>
-              <h2 className="text-lg font-mono uppercase tracking-wider">SECURE MESSAGING</h2>
+              <h2 className="text-lg font-mono uppercase tracking-wider">Messages</h2>
             </div>
           </div>
         </div>
         
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center bg-black border-2 border-white rounded-none p-8 shadow-2xl">
-            <div className="mb-4 text-red-500 font-mono uppercase tracking-widest text-xs">CLASSIFIED SYSTEM</div>
-            <h2 className="text-2xl mb-4 font-mono uppercase tracking-wider">POLMATCH COMMUNICATION NETWORK</h2>
+            <h2 className="text-2xl mb-4 font-mono uppercase tracking-wider">POLMATCH</h2>
             <div className="w-16 h-px bg-white mx-auto mb-4"></div>
-            <p className="text-gray-300 font-mono uppercase tracking-wide text-sm">SELECT CONVERSATION TO INITIATE SECURE TRANSMISSION</p>
-            <div className="mt-6 text-xs text-gray-500 font-mono uppercase tracking-wider">SECURITY CLEARANCE: AUTHORIZED</div>
+            <p className="text-gray-300 font-mono text-sm">Select a conversation to start messaging</p>
           </div>
         </div>
       </div>
@@ -233,8 +246,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       {contextSwitchLoading && (
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-50 border-2 border-white rounded-none">
           <div className="bg-black border-2 border-yellow-400 rounded-none p-4 shadow-2xl">
-            <div className="text-yellow-400 text-xl font-mono uppercase tracking-wider">ESTABLISHING SECURE CONNECTION...</div>
-            <div className="mt-2 text-xs text-gray-400 font-mono uppercase tracking-widest">ENCRYPTION PROTOCOL ACTIVE</div>
+            <div className="text-yellow-400 text-xl font-mono uppercase tracking-wider">Loading...</div>
           </div>
         </div>
       )}
@@ -293,12 +305,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           )}
           
           <div>
-            <div className="flex items-center space-x-2 mb-1">
-              <div className="text-red-500 font-mono uppercase tracking-widest text-xs">SECURE CHANNEL</div>
-              <div className="w-px h-4 bg-white"></div>
-            </div>
             <h2 className="text-lg font-mono uppercase tracking-wider">
-              {selectedConversationData?.name || 'UNKNOWN CONTACT'}
+              {selectedConversationData?.name || 'Unknown Contact'}
               {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
                 <>
                   <span className="text-gray-400 mx-2">/</span>
@@ -309,8 +317,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               )}
             </h2>
             {selectedConversationData?.members_count && (
-              <p className="text-sm text-gray-400 font-mono uppercase tracking-wide">
-                ACTIVE AGENTS: {selectedConversationData.members_count}
+              <p className="text-sm text-gray-400 font-mono">
+                {selectedConversationData.members_count} members
               </p>
             )}
           </div>
@@ -319,11 +327,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         {/* Group Actions */}
         {selectedConversationType === 'group' && (
           <div className="flex items-center space-x-3">
-            <div className="text-green-400 font-mono uppercase tracking-widest text-xs mr-4">OPERATIONS</div>
             <button
               onClick={onMembersClick}
               className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
-              title="VIEW AGENTS"
+              title="View Members"
             >
               <FontAwesomeIcon icon={faUsers} />
             </button>
@@ -332,14 +339,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   onClick={onInviteClick}
                   className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono"
-                  title="RECRUIT AGENT"
+                  title="Invite User"
                 >
                   <FontAwesomeIcon icon={faUserPlus} />
                 </button>
                 <button
                   onClick={onBannedUsersClick}
                   className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
-                  title="TERMINATED AGENTS"
+                  title="Banned Users"
                 >
                   <FontAwesomeIcon icon={faBan} />
                 </button>
@@ -349,39 +356,121 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      {/* FBI Group Channels Navigation */}
+      {/* Group Channels Navigation */}
       {selectedConversationType === 'group' && groupChannels.length > 0 && (
         <div className="px-4 py-3 border-b-2 border-gray-700 bg-black shadow-inner">
-          <div className="mb-2">
-            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs">SECURE CHANNELS</div>
-          </div>
-          <div className="flex items-center space-x-3 overflow-x-auto">
-            {groupChannels.map((channel) => (
-              <button
-                key={channel.channel_id}
-                onClick={() => setSelectedChannel(channel.channel_id)}
-                onContextMenu={e => onChannelContextMenu(e, channel)}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-none border-2 whitespace-nowrap transition-all shadow-lg font-mono uppercase tracking-wide ${
-                  selectedChannel === channel.channel_id
-                    ? 'bg-blue-600 border-blue-400 text-white shadow-blue-400/50'
-                    : 'bg-black border-gray-400 text-gray-300 hover:border-white hover:text-white'
-                }`}
-              >
-                <FontAwesomeIcon icon={faHashtag} className="text-xs" />
-                <span className="text-sm">{channel.name}</span>
-              </button>
-            ))}
-            {canManageMembers && (
-              <button
-                onClick={onCreateChannelClick}
-                className="flex items-center space-x-2 px-3 py-2 rounded-none border-2 bg-black border-green-400 text-green-400 hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide whitespace-nowrap"
-                title="CREATE CHANNEL"
-              >
-                <FontAwesomeIcon icon={faHashtag} className="text-xs" />
-                <span className="text-sm">NEW</span>
-              </button>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs">Channels</div>
+            {isMobile && groupChannels.length > 3 && (
+              <div className="text-xs text-gray-400 font-mono">
+                {groupChannels.findIndex(ch => ch.channel_id === selectedChannel) + 1}/{groupChannels.length}
+              </div>
             )}
           </div>
+          
+          {/* Mobile: Dropdown only */}
+          {isMobile ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowChannelDropdown(!showChannelDropdown)}
+                className="w-full flex items-center justify-between bg-blue-600 border-2 border-blue-400 px-3 py-2 rounded-none transition-all"
+              >
+                <div className="flex items-center space-x-2">
+                  <FontAwesomeIcon icon={faHashtag} className="text-xs text-white" />
+                  <span className="text-sm text-white font-mono uppercase tracking-wide">
+                    {groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
+                  </span>
+                </div>
+                <FontAwesomeIcon 
+                  icon={faChevronDown} 
+                  className={`text-xs text-white transition-transform ${showChannelDropdown ? 'rotate-180' : ''}`}
+                />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {showChannelDropdown && (
+                <>
+                  {/* Backdrop to close dropdown */}
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowChannelDropdown(false)}
+                  />
+                  
+                  {/* Dropdown Content */}
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-black border-2 border-white rounded-none shadow-2xl z-50 max-h-64 overflow-y-auto">
+                    {groupChannels.map((channel, index) => (
+                      <button
+                        key={channel.channel_id}
+                        onClick={() => {
+                          setSelectedChannel(channel.channel_id);
+                          setShowChannelDropdown(false);
+                        }}
+                        onContextMenu={e => {
+                          e.preventDefault();
+                          onChannelContextMenu(e, channel);
+                          setShowChannelDropdown(false);
+                        }}
+                        className={`w-full flex items-center space-x-2 px-3 py-2 border-b border-gray-600 transition-colors font-mono text-sm ${
+                          selectedChannel === channel.channel_id
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-black text-gray-300 hover:bg-gray-800 hover:text-white'
+                        } ${index === groupChannels.length - 1 && !canManageMembers ? 'border-b-0' : ''}`}
+                      >
+                        <FontAwesomeIcon icon={faHashtag} className="text-xs" />
+                        <span className="uppercase tracking-wide">{channel.name}</span>
+                        {channel.is_default && (
+                          <span className="ml-auto text-xs text-yellow-400">DEFAULT</span>
+                        )}
+                      </button>
+                    ))}
+                    
+                    {/* Create Channel Button in Dropdown */}
+                    {canManageMembers && (
+                      <button
+                        onClick={() => {
+                          onCreateChannelClick();
+                          setShowChannelDropdown(false);
+                        }}
+                        className="w-full flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white transition-colors font-mono text-sm border-b-0"
+                      >
+                        <FontAwesomeIcon icon={faHashtag} className="text-xs" />
+                        <span className="uppercase tracking-wide">CREATE NEW CHANNEL</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            /* Desktop and Mobile with few channels: Horizontal scroll */
+            <div className="flex items-center space-x-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-black">
+              {groupChannels.map((channel) => (
+                <button
+                  key={channel.channel_id}
+                  onClick={() => setSelectedChannel(channel.channel_id)}
+                  onContextMenu={e => onChannelContextMenu(e, channel)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-none border-2 whitespace-nowrap transition-all shadow-lg font-mono uppercase tracking-wide ${
+                    selectedChannel === channel.channel_id
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-blue-400/50'
+                      : 'bg-black border-gray-400 text-gray-300 hover:border-white hover:text-white'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faHashtag} className="text-xs" />
+                  <span className="text-sm">{channel.name}</span>
+                </button>
+              ))}
+              {canManageMembers && (
+                <button
+                  onClick={onCreateChannelClick}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-none border-2 bg-black border-green-400 text-green-400 hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide whitespace-nowrap"
+                  title="CREATE CHANNEL"
+                >
+                  <FontAwesomeIcon icon={faHashtag} className="text-xs" />
+                  <span className="text-sm">NEW</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -390,17 +479,15 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         {channelLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="bg-black border-2 border-yellow-400 rounded-none p-4 shadow-2xl">
-              <div className="text-yellow-400 font-mono uppercase tracking-wider">DECRYPTING MESSAGES...</div>
-              <div className="mt-2 text-xs text-gray-400 font-mono uppercase tracking-widest">SECURE PROTOCOL ACTIVE</div>
+              <div className="text-yellow-400 font-mono uppercase tracking-wider">Loading messages...</div>
             </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center bg-black border-2 border-white rounded-none p-6 shadow-2xl">
-              <div className="mb-3 text-red-500 font-mono uppercase tracking-widest text-xs">CLASSIFIED CHANNEL</div>
-              <p className="mb-2 font-mono uppercase tracking-wide">NO TRANSMISSIONS RECORDED</p>
+              <p className="mb-2 font-mono uppercase tracking-wide">No messages yet</p>
               <div className="w-12 h-px bg-white mx-auto mb-3"></div>
-              <p className="text-sm text-gray-400 font-mono uppercase tracking-wide">INITIATE SECURE COMMUNICATION</p>
+              <p className="text-sm text-gray-400 font-mono">Start the conversation</p>
             </div>
           </div>
         ) : (
@@ -442,9 +529,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           } else {
                             // For group messages, use proper fallback hierarchy
                             const groupMessage = message as GroupMessage;
-                            displayName = groupMessage.sender_display_name || 
-                                        groupMessage.sender_username || 
-                                        `AGENT-${groupMessage.sender_id.substring(0, 8).toUpperCase()}`;
+                            displayName = getAnonymousDisplayName(
+                              groupMessage.sender_display_name, 
+                              groupMessage.sender_username, 
+                              groupMessage.sender_id
+                            );
                           }
                           
                           return displayName ? (
@@ -457,10 +546,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                             </span>
                           );
                         })()}
-                        <div className="w-px h-3 bg-gray-500"></div>
-                        <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </span>
                       </div>
                     </div>
                   )}
@@ -472,6 +557,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         : 'bg-black border-gray-400 text-white shadow-gray-400/30'
                     }`}
                   >
+                    {/* Reply indicator */}
+                    {message.reply_to && (
+                      <div className="mb-3 p-2 bg-gray-800 border-l-4 border-blue-400 rounded-r text-sm">
+                        <div className="text-blue-400 text-xs font-mono uppercase tracking-wider mb-1">
+                          REPLYING TO {message.reply_to.sender_name}
+                        </div>
+                        <div className="text-gray-300 text-xs truncate">
+                          {message.reply_to.content}
+                        </div>
+                      </div>
+                    )}
+                    
                     <MessageContent content={message.content} />
                     
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-600">
@@ -516,9 +613,26 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* FBI Message Input */}
       <div className="p-4 border-t-2 border-white bg-black shadow-inner">
-        <div className="mb-2">
-          <div className="text-green-400 font-mono uppercase tracking-widest text-xs">SECURE INPUT TERMINAL</div>
-        </div>
+        {/* Reply indicator */}
+        {replyTo && (
+          <div className="mb-3 p-3 bg-gray-800 border-l-4 border-blue-400 rounded-r flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-blue-400 text-xs font-mono uppercase tracking-wider mb-1">
+                REPLYING TO {replyTo.sender_name}
+              </div>
+              <div className="text-gray-300 text-sm truncate">
+                {replyTo.content}
+              </div>
+            </div>
+            <button
+              onClick={() => setReplyTo && setReplyTo(null)}
+              className="ml-3 text-gray-400 hover:text-white transition-colors"
+              title="Cancel Reply"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="flex space-x-3">
           <textarea
             value={newMessage}
@@ -527,7 +641,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               onTyping(); // Emit typing indicator when user types
             }}
             onKeyPress={handleKeyPress}
-            placeholder={`TRANSMIT TO ${selectedConversationData?.name?.toUpperCase() || 'UNKNOWN'}...`}
+            placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
             className="flex-1 bg-black text-white border-2 border-white rounded-none p-3 resize-none focus:outline-none focus:border-blue-400 font-mono shadow-lg"
             rows={1}
             style={{ minHeight: '48px', maxHeight: '120px' }}
@@ -541,7 +655,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             SEND
           </button>
         </div>
-        <div className="mt-2 text-xs text-gray-500 font-mono uppercase tracking-widest">ENCRYPTION: AES-256 | STATUS: SECURE</div>
       </div>
     </div>
   );

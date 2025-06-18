@@ -84,17 +84,6 @@ export default function SearchUsersPage() {
     }
   }
 
-  async function fetchFriends() {
-    try {
-      const res = await fetch('/api/friends');
-      const data = await res.json();
-      if (data.success) {
-        setProfileFriends(data.friends);
-        setProfilePendingRequests([...data.incoming, ...data.outgoing]);
-      }
-    } catch {}
-  }
-
   async function fetchProfileFriends() {
     try {
       const res = await fetch(`/api/friends/profile?profile_type=${activeProfileType}`);
@@ -145,15 +134,15 @@ export default function SearchUsersPage() {
   async function removeFriend(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/remove', {
+      const res = await fetch('/api/friends/profile/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friend_id })
+        body: JSON.stringify({ friend_id, profile_type: activeProfileType })
       });
       const data = await res.json();
       setActionMessage(data.message);
       if (data.success) {
-        fetchFriends(); // Refresh friends list
+        fetchProfileFriends(); // Refresh profile-specific friends list
       }
     } catch {
       setActionMessage('Failed to remove friend');
@@ -195,11 +184,8 @@ export default function SearchUsersPage() {
       const res = await fetch('/api/groups/list');
       const data = await res.json();
       if (data.success) {
-        // Only include groups where user can invite (admin/owner)
-        const inviteableGroups = data.groups.filter((group: Group) => 
-          group.user_role === 'owner' || group.user_role === 'admin'
-        );
-        setUserGroups(inviteableGroups);
+        // Include all groups where user is a member (since any member can invite)
+        setUserGroups(data.groups);
       }
     } catch {
       setActionMessage('Failed to fetch your groups');
@@ -229,12 +215,12 @@ export default function SearchUsersPage() {
       const data = await res.json();
       
       if (data.success) {
-        setActionMessage(`Invitation sent to ${selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}!`);
+        setActionMessage(`Invitation sent to ${selectedUser.display_name ? selectedUser.display_name.toUpperCase() : `${activeProfileType} User`}!`);
         setShowInviteModal(false);
         setSelectedUser(null);
         setSelectedGroupId('');
       } else {
-        setActionMessage(data.error || 'Failed to send invitation');
+        setActionMessage(data.message || 'Failed to send invitation');
       }
     } catch {
       setActionMessage('Failed to send invitation');
@@ -272,12 +258,12 @@ export default function SearchUsersPage() {
       const data = await res.json();
       
       if (data.success) {
-        setActionMessage('Subject added to classified files');
+        setActionMessage('Added to collection successfully');
       } else {
-        setActionMessage(data.error || 'Failed to add subject to files');
+        setActionMessage(data.error || 'Failed to add to collection');
       }
     } catch {
-      setActionMessage('Failed to add subject to files');
+      setActionMessage('Failed to add to collection');
     } finally {
       setCatalogueLoading(false);
     }
@@ -309,18 +295,16 @@ export default function SearchUsersPage() {
       <Navigation currentPage="search" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
-          {/* FBI-Style Header */}
+          {/* Header */}
           <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
             <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-              <div className="font-mono text-xs mb-1 font-bold tracking-widest uppercase">CLASSIFIED</div>
-              <h1 className="text-lg md:text-2xl font-bold tracking-widest uppercase">SUBJECT SEARCH DATABASE</h1>
-              <div className="font-mono text-xs mt-1 tracking-widest uppercase">AUTHORIZED PERSONNEL ONLY</div>
+              <h1 className="text-lg md:text-2xl font-bold tracking-widest uppercase">Search Users</h1>
             </div>
             <div className="p-3 md:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">
                 <div>
-                  <div className="text-gray-400">ACTIVE SEARCH</div>
-                  <div className="text-lg md:text-xl font-bold">{search ? 'RUNNING' : 'STANDBY'}</div>
+                  <div className="text-gray-400">SEARCH STATUS</div>
+                  <div className="text-lg md:text-xl font-bold">{search ? 'RUNNING' : 'READY'}</div>
                 </div>
                 <div>
                   <div className="text-gray-400">RESULTS FOUND</div>
@@ -328,7 +312,7 @@ export default function SearchUsersPage() {
                 </div>
                 <div>
                   <div className="text-gray-400">ACCESS LEVEL</div>
-                  <div className="text-lg md:text-xl font-bold text-red-400">RESTRICTED</div>
+                  <div className="text-lg md:text-xl font-bold text-red-400">PUBLIC</div>
                 </div>
               </div>
               
@@ -354,12 +338,12 @@ export default function SearchUsersPage() {
 
               {/* Search Input */}
               <div className="mb-4">
-                <div className="text-xs font-mono text-gray-400 mb-2 text-center">ENTER SEARCH PARAMETERS:</div>
+                <div className="text-xs font-mono text-gray-400 mb-2 text-center">SEARCH USERS:</div>
                 <input
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="SUBJECT USERNAME OR DISPLAY NAME..."
+                  placeholder="USERNAME OR DISPLAY NAME..."
                   className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
                 />
               </div>
@@ -377,138 +361,123 @@ export default function SearchUsersPage() {
             {availableUsers.length === 0 && search && (
               <div className="text-center py-8 md:py-12 px-4">
                 <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  NO SUBJECTS FOUND MATCHING &quot;{search.toUpperCase()}&quot;
+                  NO USERS FOUND MATCHING &quot;{search.toUpperCase()}&quot;
                 </div>
                 <div className="text-xs md:text-sm text-gray-500 font-mono">
-                  REFINE SEARCH PARAMETERS OR CHECK SECURITY CLEARANCE
+                  Try a different search term
                 </div>
               </div>
             )}
             {availableUsers.length === 0 && !search && (
               <div className="text-center py-8 md:py-12 px-4">
                 <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  SEARCH DATABASE READY
+                  SEARCH READY
                 </div>
                 <div className="text-xs md:text-sm text-gray-500 font-mono">
-                  ENTER SUBJECT IDENTIFIERS TO BEGIN SEARCH
+                  ENTER SEARCH TERMS TO BEGIN
                 </div>
               </div>
             )}
             {availableUsers.length > 0 && (
               <div className="p-3 md:p-6">
-                <div className="grid gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                   {availableUsers.map((user, index) => (
                     <div key={user.user_id} className="border border-gray-600 bg-gray-900/50 relative">
-                      {/* File Header */}
+                      {/* User Header */}
                       <div className="bg-white text-black p-2 font-mono text-xs">
-                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                            <span className="font-bold">SEARCH RESULT #{(index + 1).toString().padStart(3, '0')}</span>
-                            <span className="hidden sm:inline">PROFILE: {categoryLabels[activeProfileType]}</span>
-                          </div>
-                          <div className="text-xs">
-                            STATUS: {isFriend(user.user_id) ? 'CONNECTED' : hasPendingRequest(user.user_id) ? 'PENDING' : 'UNCONNECTED'}
-                          </div>
-                        </div>
-                        <div className="sm:hidden text-xs mt-1">
-                          PROFILE: {categoryLabels[activeProfileType]}
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold">USER #{(index + 1).toString().padStart(3, '0')}</span>
+                          <span className="text-xs">
+                            {isFriend(user.user_id) ? 'CONNECTED' : hasPendingRequest(user.user_id) ? 'PENDING' : 'UNCONNECTED'}
+                          </span>
                         </div>
                       </div>
                       
-                      {/* File Content */}
-                      <div className="p-3 md:p-4">
-                        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                          {/* Subject Info */}
-                          <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
-                            {/* Photo Section */}
-                            <div className="border-2 border-white bg-gray-800 p-2 self-center sm:self-start">
-                              <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
-                              <ProfileAvatar userId={user.user_id} size={64} className="border border-gray-600" />
-                              <div className="text-xs font-mono text-gray-400 mt-1 text-center">ID: {user.user_id.substring(0, 8).toUpperCase()}</div>
-                            </div>
-                            
-                            {/* Subject Details */}
-                            <div className="flex-1 font-mono">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-2 text-sm">
-                                <div>
-                                  <span className="text-gray-400">SUBJECT NAME:</span>
-                                  <div className="text-white font-bold tracking-wider">
-                                    {(user.display_name || `AGENT-${user.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}
-                                  </div>
-                                </div>
-                                <div>
-                                  <span className="text-gray-400">RELATIONSHIP:</span>
-                                  <div className={`font-bold ${
-                                    isFriend(user.user_id) ? 'text-green-400' : 
-                                    hasPendingRequest(user.user_id) ? 'text-yellow-400' : 'text-red-400'
-                                  }`}>
-                                    {isFriend(user.user_id) ? 'ALLIED' : 
-                                     hasPendingRequest(user.user_id) ? 'PENDING' : 'UNKNOWN'}
-                                  </div>
+                      {/* User Content */}
+                      <div className="p-3">
+                        <div className="flex flex-col items-center text-center space-y-3">
+                          {/* Photo Section */}
+                          <div className="border-2 border-white bg-gray-800 p-2">
+                            <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
+                            <ProfileAvatar userId={user.user_id} size={64} className="border border-gray-600" />
+                          </div>
+                          
+                          {/* User Details */}
+                          <div className="w-full font-mono">
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                <span className="text-gray-400">USER NAME:</span>
+                                <div className="text-white font-bold tracking-wider">
+                                  {user.display_name ? user.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}
                                 </div>
                               </div>
-                              
-                              {/* Redacted Information Bar */}
-                              <div className="mt-3 p-2 bg-black border border-gray-600">
-                                <div className="text-xs text-gray-500 font-mono">
-                                  ADDITIONAL DATA: <span className="bg-black text-black border-b border-gray-600">█████████████████████</span>
+                              <div>
+                                <span className="text-gray-400">RELATIONSHIP:</span>
+                                <div className={`font-bold ${
+                                  isFriend(user.user_id) ? 'text-green-400' : 
+                                  hasPendingRequest(user.user_id) ? 'text-yellow-400' : 'text-red-400'
+                                }`}>
+                                  {isFriend(user.user_id) ? 'FRIEND' : 
+                                   hasPendingRequest(user.user_id) ? 'PENDING' : 'NONE'}
                                 </div>
                               </div>
                             </div>
                           </div>
                           
                           {/* Action Buttons */}
-                          <div className="flex flex-row lg:flex-col gap-2 lg:space-y-2 lg:space-x-0 flex-wrap lg:flex-nowrap lg:ml-4 lg:min-w-[140px]">
+                          <div className="flex flex-col gap-2 w-full">
                             <button 
                               onClick={() => handleViewProfile(user)} 
-                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
+                              className="w-full px-3 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
                             >
-                              VIEW DOSSIER
+                              VIEW PROFILE
                             </button>
                             
                             {isFriend(user.user_id) ? (
                               <button 
                                 onClick={() => removeFriend(user.user_id)} 
-                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+                                className="w-full px-3 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider"
                               >
-                                TERMINATE LINK
+                                REMOVE FRIEND
                               </button>
                             ) : hasPendingRequest(user.user_id) ? (
                               <button 
                                 disabled 
-                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-yellow-800 text-yellow-200 font-mono text-xs border-2 border-yellow-600 cursor-not-allowed tracking-wider"
+                                className="w-full px-3 py-2 bg-yellow-800 text-yellow-200 font-mono text-xs border-2 border-yellow-600 cursor-not-allowed tracking-wider"
                               >
                                 REQUEST PENDING
                               </button>
                             ) : (
                               <button 
                                 onClick={() => sendFriendRequest(user.user_id)} 
-                                className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-green-900 text-white font-mono text-xs border-2 border-green-700 hover:bg-green-800 transition-colors tracking-wider"
+                                className="w-full px-3 py-2 bg-green-900 text-white font-mono text-xs border-2 border-green-700 hover:bg-green-800 transition-colors tracking-wider"
                               >
-                                ESTABLISH LINK
+                                ADD FRIEND
                               </button>
                             )}
                             
-                            <button 
-                              onClick={() => handleDirectMessage(user)} 
-                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-blue-900 text-white font-mono text-xs border-2 border-blue-700 hover:bg-blue-800 transition-colors tracking-wider"
-                            >
-                              SECURE CHANNEL
-                            </button>
-                            
-                            <button 
-                              onClick={() => handleInviteToGroup(user)} 
-                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-purple-900 text-white font-mono text-xs border-2 border-purple-700 hover:bg-purple-800 transition-colors tracking-wider"
-                            >
-                              GROUP RECRUIT
-                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => handleDirectMessage(user)} 
+                                className="px-2 py-2 bg-blue-900 text-white font-mono text-xs border-2 border-blue-700 hover:bg-blue-800 transition-colors tracking-wider"
+                              >
+                                MESSAGE
+                              </button>
+                              
+                              <button 
+                                onClick={() => handleInviteToGroup(user)} 
+                                className="px-2 py-2 bg-purple-900 text-white font-mono text-xs border-2 border-purple-700 hover:bg-purple-800 transition-colors tracking-wider"
+                              >
+                                INVITE
+                              </button>
+                            </div>
                             
                             <button
                               onClick={() => addToCatalogue(user.user_id)}
                               disabled={catalogueLoading}
-                              className="flex-1 lg:flex-none px-3 md:px-4 py-2 bg-orange-900 text-white font-mono text-xs border-2 border-orange-700 hover:bg-orange-800 transition-colors tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-3 py-2 bg-orange-900 text-white font-mono text-xs border-2 border-orange-700 hover:bg-orange-800 transition-colors tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {catalogueLoading ? 'FILING...' : 'ADD TO FILES'}
+                              {catalogueLoading ? 'ADDING...' : 'ADD TO COLLECTION'}
                             </button>
                           </div>
                         </div>
@@ -525,7 +494,7 @@ export default function SearchUsersPage() {
         {selectedUser && (
           <ProfileModal
             userId={selectedUser.user_id}
-            username={selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`}
+            username={selectedUser.display_name ? selectedUser.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}
             isOpen={isProfileModalOpen}
             onClose={closeProfileModal}
             defaultActiveTab={activeProfileType}
@@ -539,36 +508,35 @@ export default function SearchUsersPage() {
             <div className="bg-black border-2 border-white rounded-none shadow-lg w-full max-w-md">
               {/* Modal Header */}
               <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-                <div className="font-mono text-xs mb-1">CLASSIFIED OPERATION</div>
-                <h2 className="text-lg font-bold tracking-wider">GROUP RECRUITMENT</h2>
-                <div className="font-mono text-xs mt-1">SUBJECT: {(selectedUser.display_name || `AGENT-${selectedUser.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}</div>
+                <h2 className="text-lg font-bold tracking-wider">Invite to Group</h2>
+                <div className="font-mono text-xs mt-1">User: {selectedUser.display_name ? selectedUser.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}</div>
               </div>
               
               <div className="p-6">
                 {userGroups.length === 0 ? (
                   <div className="text-center py-6">
                     <div className="font-mono text-gray-400 mb-4">
-                      NO AUTHORIZED GROUPS AVAILABLE
+                      NO GROUPS AVAILABLE
                     </div>
                     <div className="text-xs text-gray-500 font-mono">
-                      ADMINISTRATOR OR OWNER STATUS REQUIRED FOR RECRUITMENT
+                      ADMIN OR OWNER PERMISSIONS REQUIRED
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-mono text-gray-400 mb-2 tracking-wider">
-                        SELECT TARGET GROUP:
+                        SELECT GROUP:
                       </label>
                       <select
                         value={selectedGroupId}
                         onChange={(e) => setSelectedGroupId(e.target.value)}
                         className="w-full bg-black text-white border-2 border-white font-mono text-sm px-3 py-2 focus:outline-none focus:border-red-400"
                       >
-                        <option value="">CHOOSE OPERATION...</option>
+                        <option value="">CHOOSE GROUP...</option>
                         {userGroups.map(group => (
                           <option key={group.group_id} value={group.group_id}>
-                            {group.name.toUpperCase()} {group.is_private ? '[CLASSIFIED]' : '[PUBLIC]'}
+                            {group.name.toUpperCase()} {group.is_private ? '[PRIVATE]' : '[PUBLIC]'}
                           </option>
                         ))}
                       </select>
@@ -583,21 +551,16 @@ export default function SearchUsersPage() {
                       disabled={!selectedGroupId || inviteLoading}
                       className="flex-1 bg-white text-black py-2 font-mono text-xs tracking-wider hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {inviteLoading ? 'TRANSMITTING...' : 'EXECUTE RECRUITMENT'}
+                      {inviteLoading ? 'SENDING...' : 'SEND INVITATION'}
                     </button>
                   )}
                   <button
                     onClick={closeInviteModal}
                     className="flex-1 bg-red-900 text-white py-2 font-mono text-xs tracking-wider border border-red-700 hover:bg-red-800 transition-colors"
                   >
-                    ABORT MISSION
+                    Cancel
                   </button>
                 </div>
-              </div>
-              
-              {/* Security Footer */}
-              <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700">
-                ⚠ CLASSIFIED RECRUITMENT OPERATION ⚠
               </div>
             </div>
           </div>

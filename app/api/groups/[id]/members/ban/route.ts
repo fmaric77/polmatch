@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../../../../mongo-uri';
 import { cookies } from 'next/headers';
+import { 
+  validateGroupId, 
+  validateUserId, 
+  validateText, 
+  validateRequestBody,
+  createValidationErrorResponse,
+  checkRateLimit
+} from '../../../../../../lib/validation';
+import { validateSession } from '../../../../../../lib/auth';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -9,37 +18,75 @@ interface RouteContext {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
+    // Rate limiting
+    const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`ban_${clientIP}`, 10, 60000)) {
+      return createValidationErrorResponse('Too many ban requests. Please try again later.', 429);
+    }
+
     // Validate session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
-    
     if (!sessionToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createValidationErrorResponse('Unauthorized', 401);
+    }
+
+    // Validate session using new utility
+    const sessionResult = await validateSession(sessionToken);
+    if (!sessionResult.valid || !sessionResult.session) {
+      return createValidationErrorResponse('Invalid or expired session', 401);
+    }
+    const session = sessionResult.session;
+
+    // Validate route parameters
+    const params = await context.params;
+    const groupIdValidation = validateGroupId(params.id);
+    if (!groupIdValidation.isValid) {
+      return createValidationErrorResponse(groupIdValidation.error!, 400);
+    }
+    const groupId = params.id;
+
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return createValidationErrorResponse('Invalid JSON in request body', 400);
+    }
+
+    const bodyValidation = validateRequestBody(requestBody, ['user_id'], ['reason']);
+    if (!bodyValidation.isValid) {
+      return createValidationErrorResponse(bodyValidation.error!, 400);
+    }
+
+    const { user_id, reason } = requestBody;
+
+    // Validate user_id
+    const userIdValidation = validateUserId(user_id);
+    if (!userIdValidation.isValid) {
+      return createValidationErrorResponse(userIdValidation.error!, 400);
+    }
+
+    // Validate reason if provided
+    if (reason !== undefined) {
+      const reasonValidation = validateText(reason, 'Reason', { 
+        maxLength: 500,
+        pattern: /^[a-zA-Z0-9\s.,!?-]*$/ // Allow basic characters only
+      });
+      if (!reasonValidation.isValid) {
+        return createValidationErrorResponse(reasonValidation.error!, 400);
+      }
     }
 
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     const db = client.db('polmatch');
 
-    // Verify session
-    const session = await db.collection('sessions').findOne({ 
-      sessionToken: sessionToken 
-    });
-    
-    if (!session) {
+    // Verify session user exists
+    const sessionUser = await db.collection('users').findOne({ user_id: session.user_id });
+    if (!sessionUser) {
       await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-
-    const params = await context.params;
-    const groupId = params.id;
-    const { user_id, reason } = await req.json();
-
-    if (!user_id) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'User ID is required' 
-      }, { status: 400 });
+      return createValidationErrorResponse('Session user not found', 401);
     }
 
     // Check if group exists

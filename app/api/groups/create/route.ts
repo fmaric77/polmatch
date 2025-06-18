@@ -3,6 +3,14 @@ import { MongoClient, Db } from 'mongodb';
 import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  validateText, 
+  validateRequestBody,
+  createValidationErrorResponse,
+  checkRateLimit,
+  sanitizeText
+} from '../../../../lib/validation';
+import { validateSession } from '../../../../lib/auth';
 
 // Essential indexing function inlined to avoid import issues
 async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
@@ -25,50 +33,96 @@ async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`create_group_${clientIP}`, 5, 60000)) {
+      return createValidationErrorResponse('Too many group creation requests. Please try again later.', 429);
+    }
+
     // Validate session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     
     if (!sessionToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createValidationErrorResponse('Unauthorized', 401);
+    }
+
+    // Validate session using new utility
+    const sessionResult = await validateSession(sessionToken);
+    if (!sessionResult.valid || !sessionResult.session) {
+      return createValidationErrorResponse('Invalid or expired session', 401);
+    }
+    const session = sessionResult.session;
+
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return createValidationErrorResponse('Invalid JSON in request body', 400);
+    }
+
+    const bodyValidation = validateRequestBody(requestBody, ['name', 'description'], ['is_private', 'topic']);
+    if (!bodyValidation.isValid) {
+      return createValidationErrorResponse(bodyValidation.error!, 400);
+    }
+
+    const { name, description, is_private, topic } = requestBody;
+
+    // Validate name
+    const nameValidation = validateText(name, 'Group name', {
+      required: true,
+      minLength: 3,
+      maxLength: 50,
+      pattern: /^[a-zA-Z0-9\s\-_.]+$/
+    });
+    if (!nameValidation.isValid) {
+      return createValidationErrorResponse(nameValidation.error!, 400);
+    }
+
+    // Validate description
+    const descriptionValidation = validateText(description, 'Description', {
+      required: true,
+      minLength: 10,
+      maxLength: 500
+    });
+    if (!descriptionValidation.isValid) {
+      return createValidationErrorResponse(descriptionValidation.error!, 400);
+    }
+
+    // Validate topic if provided
+    if (topic !== undefined) {
+      const topicValidation = validateText(topic, 'Topic', {
+        maxLength: 100,
+        pattern: /^[a-zA-Z0-9\s\-_.]*$/
+      });
+      if (!topicValidation.isValid) {
+        return createValidationErrorResponse(topicValidation.error!, 400);
+      }
+    }
+
+    // Validate is_private if provided
+    if (is_private !== undefined && typeof is_private !== 'boolean') {
+      return createValidationErrorResponse('is_private must be a boolean', 400);
     }
 
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     const db = client.db('polmatch');
 
-    // Verify session
-    const session = await db.collection('sessions').findOne({ 
-      sessionToken: sessionToken 
-    });
-    
-    if (!session) {
-      await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-
-    const { name, description, is_private, topic } = await req.json();
-
-    if (!name || !description) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'Name and description are required' 
-      }, { status: 400 });
-    }
-
-    // Create group
+    // Create group with sanitized inputs
     const groupId = uuidv4();
     const now = new Date();
     
     const group = {
       group_id: groupId,
-      name,
-      description,
+      name: sanitizeText(name),
+      description: sanitizeText(description),
       creator_id: session.user_id,
       creation_date: now,
       is_private: is_private || false,
       members_count: 1,
-      topic: topic || '',
+      topic: topic ? sanitizeText(topic) : '',
       status: 'active',
       last_activity: now
     };
