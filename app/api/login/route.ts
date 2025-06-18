@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import { Db } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
-import { v4 as uuidv4 } from 'uuid';
 import { connectToDatabase } from '../../../lib/mongodb-connection';
+import { 
+  validateEmail, 
+  validatePassword, 
+  validateRequestBody,
+  createValidationErrorResponse
+} from '../../../lib/validation';
+import { createSession, cleanupExpiredSessions } from '../../../lib/auth';
 
 // Brute force protection configuration
 const BRUTE_FORCE_CONFIG = {
@@ -148,12 +154,38 @@ async function cleanupOldAttempts(db: Db) {
 export async function POST(request: Request) {
   console.log('API /api/login called');
   try {
-    const body = await request.json();
-    const { email, password } = body;
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+      console.log('Request body parsed:', { email: body.email ? 'provided' : 'missing', password: body.password ? 'provided' : 'missing' });
+    } catch {
+      console.log('Failed to parse JSON request body');
+      return createValidationErrorResponse('Invalid JSON in request body', 400);
+    }
 
-    // Input validation
-    if (!email || !password) {
-      return NextResponse.json({ success: false, message: 'Email and password are required' }, { status: 400 });
+    // Validate request structure
+    const bodyValidation = validateRequestBody(body, ['email', 'password'], []);
+    if (!bodyValidation.isValid) {
+      console.log('Body validation failed:', bodyValidation.error);
+      return createValidationErrorResponse(bodyValidation.error!, 400);
+    }
+
+    const { email, password } = body;
+    console.log('Email and password extracted from body');
+
+    // Validate email format
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      console.log('Email validation failed:', emailValidation.error);
+      return createValidationErrorResponse(emailValidation.error!, 400);
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      console.log('Password validation failed:', passwordValidation.error);
+      return createValidationErrorResponse(passwordValidation.error!, 400);
     }
 
     // Get client information
@@ -268,14 +300,11 @@ export async function POST(request: Request) {
     // Successful login - clear any failed attempts
     await clearFailedAttempts(db, email, ip_address);
 
-    // Create a session
-    const sessionToken = uuidv4();
-    await db.collection('sessions').insertOne({ 
-      sessionToken, 
+    // Create a session using the new auth utility
+    const sessionToken = await createSession({
       user_id: user.user_id,
-      created_at: new Date(),
       ip_address,
-      user_agent
+      user_agent: request.headers.get('User-Agent') || 'Unknown'
     });
 
     // Set the session cookie
@@ -287,6 +316,11 @@ export async function POST(request: Request) {
       sameSite: 'strict',
       maxAge: 24 * 60 * 60 // 24 hours
     });
+
+    // Clean up expired sessions periodically (optional)
+    if (Math.random() < 0.1) { // 10% chance to run cleanup
+      cleanupExpiredSessions().catch(console.error);
+    }
 
     // Update last_login and ip_address
     await db.collection('users').updateOne(

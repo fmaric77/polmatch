@@ -65,7 +65,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
           onClick={() => window.location.href = '/profile'}
-          title="AGENT DOSSIER"
+          title="Profile"
         >
           <FontAwesomeIcon icon={faUser} className="text-yellow-400 mb-1" />
           <div className="text-xs font-mono text-white">FILE</div>
@@ -85,7 +85,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
           onClick={() => window.location.href = '/catalogue'}
-          title="CLASSIFIED ARCHIVE"
+          title="Archive"
         >
           <FontAwesomeIcon icon={faBookmark} className="text-purple-400 mb-1" />
           <div className="text-xs font-mono text-white">ARCHIVE</div>
@@ -110,7 +110,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             selectedCategory === 'direct' ? 'bg-white text-black' : 'bg-black text-white'
           }`}
           onClick={() => onCategoryChange('direct')}
-          title="DIRECT CHANNELS"
+          title="Direct Messages"
         >
           <FontAwesomeIcon icon={faEnvelope} className={`mb-1 ${selectedCategory === 'direct' ? 'text-blue-600' : 'text-blue-400'}`} />
           <div className="text-xs font-mono font-bold">DIRECT</div>
@@ -135,7 +135,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <div 
           className="w-14 h-14 bg-green-900 border-2 border-green-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-green-800 transition-colors"
           onClick={onNewAction}
-          title={selectedCategory === 'direct' ? 'NEW SECURE CHANNEL' : 'CREATE OPERATION'}
+          title={selectedCategory === 'direct' ? 'New Message' : 'Create Group'}
         >
           <FontAwesomeIcon icon={faUserPlus} className="text-green-200 mb-1" />
           <div className="text-xs font-mono font-bold text-green-200">NEW</div>
@@ -145,7 +145,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <div 
           className="relative w-14 h-14 bg-blue-900 border-2 border-blue-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-800 transition-colors"
           onClick={onInvitationsClick}
-          title="PENDING CLEARANCES"
+          title="Invitations"
         >
           <FontAwesomeIcon icon={faBell} className="text-blue-200 mb-1" />
           <div className="text-xs font-mono font-bold text-blue-200">ALERTS</div>

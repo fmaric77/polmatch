@@ -135,10 +135,10 @@ const MembersModal: React.FC<MembersModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">PERSONNEL ROSTER</div>
+            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">GROUP MEMBERS</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faUsers} className="mr-3" />
-              ACTIVE AGENTS ({groupMembers.length})
+              MEMBERS ({groupMembers.length})
             </h2>
           </div>
           <button
@@ -153,7 +153,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
           {groupMembers.length === 0 ? (
             <div className="text-center py-8">
               <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
-                <div className="text-gray-400 font-mono uppercase tracking-wide">NO AGENTS ASSIGNED</div>
+                <div className="text-gray-400 font-mono uppercase tracking-wide">NO MEMBERS</div>
               </div>
             </div>
           ) : (
@@ -170,16 +170,16 @@ const MembersModal: React.FC<MembersModalProps> = ({
                       </div>
                       <div>
                         <div className="text-white font-mono uppercase tracking-wide">
-                          AGENT-{member.username}
+                          {member.username}
                         </div>
                         <div className={`text-sm font-mono uppercase tracking-widest ${getRoleColor(member.role)}`}>
-                          {member.role} | CLEARANCE: {member.role === 'owner' ? 'ALPHA' : member.role === 'admin' ? 'BETA' : 'GAMMA'}
+                          {member.role} | JOINED: {formatJoinDate(member.join_date)}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="text-gray-400 text-xs mr-2 font-mono uppercase tracking-widest">
-                        RECRUITED: {formatJoinDate(member.join_date)}
+                        JOINED: {formatJoinDate(member.join_date)}
                       </div>
                       {canManageMember(member) && (
                         <div className="flex space-x-1">
@@ -204,14 +204,14 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           <button
                             onClick={() => handleKickMember(member)}
                             className="p-1 bg-black text-orange-400 border border-orange-400 rounded-none hover:bg-orange-400 hover:text-black transition-all shadow-sm font-mono"
-                            title="REMOVE AGENT"
+                            title="KICK MEMBER"
                           >
                             <FontAwesomeIcon icon={faUserTimes} size="sm" />
                           </button>
                           <button
                             onClick={() => handleBanMember(member)}
                             className="p-1 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-sm font-mono"
-                            title="TERMINATE AGENT"
+                            title="BAN MEMBER"
                           >
                             <FontAwesomeIcon icon={faBan} size="sm" />
                           </button>
@@ -230,7 +230,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
             onClick={onClose}
             className="bg-black text-white border-2 border-white py-3 px-6 rounded-none hover:bg-white hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
           >
-            CLOSE ROSTER
+            CLOSE
           </button>
         </div>
       </div>

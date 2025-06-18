@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileModal from './ProfileModal';
 import { profilePictureCache } from '../lib/profilePictureCache';
+import { getAnonymousDisplayName, generateAnonymousId } from '../lib/anonymization';
 
 interface User {
   user_id: string;
@@ -312,12 +313,12 @@ export default function Friends() {
                             </div>
                             <div className="font-mono">
                               <button 
-                                onClick={() => openProfileModal(friendId, friendUser?.display_name || `AGENT-${friendId.substring(0, 8).toUpperCase()}`)}
+                                onClick={() => openProfileModal(friendId, getAnonymousDisplayName(friendUser?.display_name, friendUser?.username, friendId))}
                                 className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                               >
-                                {(friendUser?.display_name || `AGENT-${friendId.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                                {getAnonymousDisplayName(friendUser?.display_name, friendUser?.username, friendId)}
                               </button>
-                              <div className="text-xs text-gray-400">ID: {friendId.substring(0, 8).toUpperCase()}</div>
+                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(friendId)}</div>
                             </div>
                           </div>
                           <button 
@@ -366,12 +367,12 @@ export default function Friends() {
                             </div>
                             <div className="font-mono">
                               <button 
-                                onClick={() => openProfileModal(req.user_id, fromUser?.display_name || `AGENT-${req.user_id.substring(0, 8).toUpperCase()}`)}
+                                onClick={() => openProfileModal(req.user_id, getAnonymousDisplayName(fromUser?.display_name, fromUser?.username, req.user_id))}
                                 className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                               >
-                                {(fromUser?.display_name || `AGENT-${req.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                                {getAnonymousDisplayName(fromUser?.display_name, fromUser?.username, req.user_id)}
                               </button>
-                              <div className="text-xs text-gray-400">ID: {req.user_id.substring(0, 8).toUpperCase()}</div>
+                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(req.user_id)}</div>
                             </div>
                           </div>
                           <div className="flex flex-col sm:flex-row gap-2">
@@ -428,12 +429,12 @@ export default function Friends() {
                             </div>
                             <div className="font-mono">
                               <button 
-                                onClick={() => openProfileModal(req.friend_id, toUser?.display_name || `AGENT-${req.friend_id.substring(0, 8).toUpperCase()}`)}
+                                onClick={() => openProfileModal(req.friend_id, getAnonymousDisplayName(toUser?.display_name, toUser?.username, req.friend_id))}
                                 className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                               >
-                                {(toUser?.display_name || `AGENT-${req.friend_id.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                                {getAnonymousDisplayName(toUser?.display_name, toUser?.username, req.friend_id)}
                               </button>
-                              <div className="text-xs text-gray-400">ID: {req.friend_id.substring(0, 8).toUpperCase()}</div>
+                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(req.friend_id)}</div>
                             </div>
                           </div>
                           <div className="text-yellow-400 font-mono text-xs tracking-wider">
@@ -477,12 +478,12 @@ export default function Friends() {
                           </div>
                           <div className="font-mono">
                             <button 
-                              onClick={() => openProfileModal(u.user_id, u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`)}
+                              onClick={() => openProfileModal(u.user_id, getAnonymousDisplayName(u.display_name, u.username, u.user_id))}
                               className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                             >
-                              {(u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`).toUpperCase()}
+                              {getAnonymousDisplayName(u.display_name, u.username, u.user_id)}
                             </button>
-                            <div className="text-xs text-gray-400">ID: {u.user_id.substring(0, 8).toUpperCase()}</div>
+                            <div className="text-xs text-gray-400">ID: {generateAnonymousId(u.user_id)}</div>
                           </div>
                         </div>
                         <button 

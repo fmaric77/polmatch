@@ -1,6 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faBan, faUndo } from '@fortawesome/free-solid-svg-icons';
+import { getAnonymousDisplayName } from '../../lib/anonymization';
 
 interface BannedUser {
   user_id: string;
@@ -27,7 +28,7 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
   onClose
 }) => {
   const handleUnbanMember = async (bannedUser: BannedUser): Promise<void> => {
-    if (window.confirm(`Unban ${bannedUser.username || `AGENT-${bannedUser.user_id.substring(0, 8).toUpperCase()}`}? They will be able to join the group again.`)) {
+    if (window.confirm(`Unban ${getAnonymousDisplayName(bannedUser.username, bannedUser.username, bannedUser.user_id)}? They will be able to join the group again.`)) {
       try {
         await onUnbanMember(selectedConversation, bannedUser.user_id);
       } catch (error) {
@@ -46,10 +47,10 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">TERMINATION RECORDS</div>
+            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">BANNED USERS</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faBan} className="mr-3" />
-              TERMINATED AGENTS ({bannedUsers.length})
+              BANNED MEMBERS ({bannedUsers.length})
             </h2>
           </div>
           <button
@@ -64,8 +65,8 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
           {bannedUsers.length === 0 ? (
             <div className="text-center py-8">
               <div className="bg-black border-2 border-gray-400 rounded-none p-6 shadow-lg">
-                <div className="text-gray-400 font-mono uppercase tracking-wide">NO TERMINATION RECORDS</div>
-                <div className="text-xs text-gray-500 mt-2 font-mono uppercase tracking-widest">ALL AGENTS REMAIN ACTIVE</div>
+                <div className="text-gray-400 font-mono uppercase tracking-wide">NO BANNED USERS</div>
+                <div className="text-xs text-gray-500 mt-2 font-mono uppercase tracking-widest">ALL MEMBERS REMAIN ACTIVE</div>
               </div>
             </div>
           ) : (
@@ -83,16 +84,16 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
                         </div>
                         <div>
                           <div className="text-white font-mono uppercase tracking-wide">
-                            AGENT-{bannedUser.username}
+                            {getAnonymousDisplayName(bannedUser.username, bannedUser.username, bannedUser.user_id)}
                           </div>
                           <div className="text-gray-400 text-sm font-mono uppercase tracking-widest">
-                            TERMINATED BY: AGENT-{bannedUser.banned_by_username} | {formatBanDate(bannedUser.banned_at)}
+                            BANNED BY: {bannedUser.banned_by_username} | {formatBanDate(bannedUser.banned_at)}
                           </div>
                         </div>
                       </div>
                       {bannedUser.reason && (
                         <div className="bg-black border border-gray-500 rounded-none p-3 mt-3 shadow-inner">
-                          <div className="text-red-400 text-xs font-mono uppercase tracking-widest mb-1">TERMINATION REASON:</div>
+                          <div className="text-red-400 text-xs font-mono uppercase tracking-widest mb-1">BAN REASON:</div>
                           <div className="text-gray-300 text-sm font-mono">{bannedUser.reason}</div>
                         </div>
                       )}
@@ -103,10 +104,10 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
                         <button
                           onClick={() => handleUnbanMember(bannedUser)}
                           className="p-3 bg-black text-green-400 border-2 border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
-                          title="REINSTATE AGENT"
+                          title="UNBAN MEMBER"
                         >
                           <FontAwesomeIcon icon={faUndo} size="sm" className="mr-2" />
-                          REINSTATE
+                          UNBAN
                         </button>
                       </div>
                     )}

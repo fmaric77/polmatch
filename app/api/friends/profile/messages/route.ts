@@ -131,11 +131,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json();
-    const { receiver_id, content, profile_type, attachments = [] } = body as {
+    const { receiver_id, content, profile_type, attachments = [], reply_to } = body as {
       receiver_id: string;
       content: string;
       profile_type: 'basic' | 'love' | 'business';
       attachments?: string[];
+      reply_to?: {
+        message_id: string;
+        content: string;
+        sender_name: string;
+      };
     };
 
     if (!receiver_id || !content || !profile_type) {
@@ -201,7 +206,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Encrypt the message content before saving
     const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
-    const message = {
+    const message: Record<string, unknown> = {
       conversation_id: conversationResult._id,
       sender_id: userId,
       receiver_id,
@@ -211,6 +216,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       attachments,
       profile_type
     };
+
+    // Add reply_to information if provided
+    if (reply_to) {
+      message.reply_to = {
+        message_id: reply_to.message_id,
+        content: reply_to.content,
+        sender_name: reply_to.sender_name
+      };
+    }
 
     const messageResult = await db.collection('pm').insertOne(message);
 

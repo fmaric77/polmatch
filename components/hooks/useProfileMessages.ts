@@ -82,7 +82,7 @@ export const useProfileMessages = (
     }
   }, []); // No dependencies - uses refs instead
 
-  const sendMessage = useCallback(async (content: string): Promise<boolean> => {
+  const sendMessage = useCallback(async (content: string, replyTo?: { id: string; content: string; sender_name: string }): Promise<boolean> => {
     const user = currentUserRef.current;
     const otherId = otherUserIdRef.current;
     const pType = profileTypeRef.current;
@@ -95,16 +95,27 @@ export const useProfileMessages = (
       setSending(true);
       setError('');
 
+      const requestBody: Record<string, unknown> = {
+        receiver_id: otherId,
+        content: content.trim(),
+        profile_type: pType
+      };
+
+      // Add reply_to information if provided
+      if (replyTo) {
+        requestBody.reply_to = {
+          message_id: replyTo.id,
+          content: replyTo.content,
+          sender_name: replyTo.sender_name
+        };
+      }
+
       const res = await fetch('/api/messages/profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          receiver_id: otherId,
-          content: content.trim(),
-          profile_type: pType
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();

@@ -50,17 +50,28 @@ export async function GET() {
     const userIds = catalogueItems.map((item: CatalogueItemDocument) => item.catalogued_user_id);
     const usersRaw = await db.collection('users')
       .find({ user_id: { $in: userIds } })
-      .project({ user_id: 1, username: 1, display_name: 1 })
+      .project({ user_id: 1, username: 1 })
       .toArray();
-    const users = usersRaw as unknown as UserDocument[];
+    const users = usersRaw as unknown as Array<{ user_id: string; username: string }>;
 
-    // Combine catalogue data with user details
+    // Get profile-specific display names for each user
+    const profilePromises = catalogueItems.map(async (item: CatalogueItemDocument) => {
+      const profileCollectionName = `${item.category}profiles`; // Use 'basicprofiles', 'loveprofiles', 'businessprofiles'
+      const profile = await db.collection(profileCollectionName)
+        .findOne({ user_id: item.catalogued_user_id }, { projection: { display_name: 1 } });
+      return { user_id: item.catalogued_user_id, profile_display_name: profile?.display_name || null };
+    });
+    
+    const profileData = await Promise.all(profilePromises);
+
+    // Combine catalogue data with user details and profile-specific display names
     const enrichedItems = catalogueItems.map((item: CatalogueItemDocument) => {
       const user = users.find((u: UserDocument) => u.user_id === item.catalogued_user_id);
+      const profileInfo = profileData.find(p => p.user_id === item.catalogued_user_id);
       return {
         user_id: item.catalogued_user_id,
         username: user?.username || '',
-        display_name: user?.display_name || '',
+        display_name: profileInfo?.profile_display_name || null, // Use profile-specific display name
         category: item.category,
         added_at: item.added_at
       };

@@ -31,6 +31,11 @@ interface PrivateMessage {
   timestamp: string;
   read: boolean;
   attachments: string[];
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 interface GroupMessage {
@@ -47,6 +52,11 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 // Type for group message SSE payload
@@ -115,6 +125,9 @@ const UnifiedMessages: React.FC = () => {
 
   // Message input state
   const [newMessage, setNewMessage] = useState('');
+
+  // Reply state
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string; sender_name: string } | null>(null);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -398,6 +411,7 @@ const UnifiedMessages: React.FC = () => {
     
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
+    setReplyTo(null); // Clear any active reply when switching conversations
     
     if (conversation.type === 'group') {
       groupManagement.fetchGroupMembers(conversation.id);
@@ -528,17 +542,29 @@ const UnifiedMessages: React.FC = () => {
   const handleSendMessage = useCallback(async () => {
     let success = false;
     
+    console.log('🚀 SEND MESSAGE DEBUG:', {
+      selectedConversationType,
+      selectedCategory,
+      condition: selectedConversationType === 'direct' && selectedCategory === 'direct',
+      newMessage,
+      replyTo,
+      selectedConversation
+    });
+    
     // Use profile messages for direct conversations, regular messages for groups
     if (selectedConversationType === 'direct' && selectedCategory === 'direct') {
-      success = await profileMessages.sendMessage(selectedConversation, newMessage);
+      console.log('📨 Using profileMessages.sendMessage');
+      success = await profileMessages.sendMessage(selectedConversation, newMessage, replyTo || undefined);
     } else {
-      success = await messages.sendMessage(newMessage);
+      console.log('📨 Using messages.sendMessage');
+      success = await messages.sendMessage(newMessage, replyTo || undefined);
     }
     
     if (success) {
       setNewMessage('');
+      setReplyTo(null); // Clear reply after sending
     }
-  }, [selectedConversationType, selectedCategory, profileMessages, messages, newMessage]);
+  }, [selectedConversationType, selectedCategory, profileMessages, messages, newMessage, replyTo]);
 
   // Context menu handlers
   const handleConversationContextMenu = (e: React.MouseEvent, conversation: Conversation) => {
@@ -566,10 +592,6 @@ const UnifiedMessages: React.FC = () => {
 
   const handleChannelContextMenu = (e: React.MouseEvent, channel: Channel) => {
     e.preventDefault();
-    const currentUserMember = groupManagement.groupMembers.find(m => m.user_id === currentUser?.user_id);
-    const isOwner = currentUserMember?.role === 'owner';
-    
-    if (!isOwner || channel.is_default) return;
     
     setContextMenu({
       x: e.clientX,
@@ -766,6 +788,8 @@ const UnifiedMessages: React.FC = () => {
         typingUsers={typingIndicator.typingUsers}
         onTyping={typingIndicator.emitTyping}
         sessionToken={sessionToken}
+        replyTo={replyTo}
+        setReplyTo={setReplyTo}
       />
 
       {/* Context Menu */}
@@ -825,7 +849,8 @@ const UnifiedMessages: React.FC = () => {
           messages={{ 
             deleteMessage: selectedCategory === 'direct' && selectedConversationType === 'direct' 
               ? profileMessages.deleteMessage 
-              : messages.deleteMessage 
+              : messages.deleteMessage,
+            setReplyTo: setReplyTo
           }}
           currentUser={currentUser}
           selectedChannel={selectedChannel}

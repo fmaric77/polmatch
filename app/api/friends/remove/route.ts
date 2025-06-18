@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
 import { cookies } from 'next/headers';
-import MONGODB_URI from '../../mongo-uri';
-
-const client = new MongoClient(MONGODB_URI);
+import { connectToDatabase } from '../../../../lib/mongodb-connection';
 
 // POST: Remove a friend (unfriend)
 export async function POST(req: NextRequest) {
@@ -13,8 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
   try {
-    await client.connect();
-    const db = client.db('polmatch');
+    const { db } = await connectToDatabase();
     const session = await db.collection('sessions').findOne({ sessionToken });
     if (!session) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     const user_id = session.user_id;
@@ -34,7 +30,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, message: 'Friend removed' });
   } catch (err) {
     return NextResponse.json({ success: false, message: 'Failed to remove friend', error: String(err) });
-  } finally {
-    // Do not close client to preserve connection pool
   }
 }

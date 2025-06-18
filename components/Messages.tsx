@@ -3,6 +3,7 @@ import ProfileAvatar from './ProfileAvatar';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
 import TypingIndicator from './TypingIndicator';
+import { getAnonymousDisplayName } from '../lib/anonymization';
 //d
 interface Message {
   _id?: string;
@@ -366,7 +367,7 @@ const Messages = () => {
                 onClick={() => setSelectedUser(u.user_id)}
               >
                 <ProfileAvatar userId={u.user_id} size={32} />
-                <span>{u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`}</span>
+                <span>{getAnonymousDisplayName(u.display_name, u.username, u.user_id)}</span>
               </button>
             </li>
           ))}
@@ -383,7 +384,7 @@ const Messages = () => {
                       className="w-full text-left p-2 rounded mb-2 bg-white text-black hover:bg-gray-200 flex items-center space-x-3"
                       onClick={() => handleSelectNewUser(u.user_id)}
                     >                <ProfileAvatar userId={u.user_id} size={32} />
-                <span>{u.display_name || `AGENT-${u.user_id.substring(0, 8).toUpperCase()}`}</span>
+                <span>{getAnonymousDisplayName(u.display_name, u.username, u.user_id)}</span>
               </button>
                   </li>
                 ))}
@@ -401,7 +402,10 @@ const Messages = () => {
             {selectedUser ? (
               <>
                 <ProfileAvatar userId={selectedUser} size={32} />
-                <span>{users.find(u => u.user_id === selectedUser)?.display_name || `AGENT-${selectedUser.substring(0, 8).toUpperCase()}`}</span>
+                <span>{(() => {
+                  const user = users.find(u => u.user_id === selectedUser);
+                  return getAnonymousDisplayName(user?.display_name, user?.username, selectedUser);
+                })()}</span>
               </>
             ) : (
               'Select a chat'

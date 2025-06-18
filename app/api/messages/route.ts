@@ -4,6 +4,15 @@ import CryptoJS from 'crypto-js';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../../../lib/mongodb-connection';
 import { notifyNewMessage, notifyNewConversation } from '../../../lib/sse-notifications';
+import { 
+  validateUserId, 
+  validateProfileType, 
+  validateText,
+  validateRequestBody,
+  createValidationErrorResponse,
+  checkRateLimit,
+  sanitizeText
+} from '../../../lib/validation';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -302,25 +311,116 @@ export async function GET(request: Request): Promise<NextResponse> {
 // POST: Send a new message
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`send_message_${clientIP}`, 60, 60000)) {
+      return createValidationErrorResponse('Too many messages. Please try again later.', 429);
+    }
+
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     if (!sessionToken) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return createValidationErrorResponse('Unauthorized', 401);
     }
     
     // Fast authentication
     const auth = await getAuthenticatedUser(sessionToken);
     if (!auth) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return createValidationErrorResponse('Unauthorized', 401);
+    }
+
+    // Parse and validate request body
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return createValidationErrorResponse('Invalid JSON in request body', 400);
+    }
+
+    const bodyValidation = validateRequestBody(body, ['receiver_id', 'content'], ['attachments', 'sender_profile_type', 'receiver_profile_type', 'reply_to']);
+    if (!bodyValidation.isValid) {
+      console.error('⚠️ /api/messages validation error:', bodyValidation.error);
+      console.error('📋 Request body:', body);
+      return createValidationErrorResponse(bodyValidation.error!, 400);
+    }
+
+    const { receiver_id, content, attachments, sender_profile_type, receiver_profile_type, reply_to } = body;
+
+    console.log('📨 /api/messages POST request:', {
+      receiver_id,
+      content: content?.substring(0, 50) + '...',
+      sender_profile_type,
+      receiver_profile_type,
+      has_reply_to: !!reply_to,
+      auth_user: auth.userId
+    });
+
+    // Validate receiver_id
+    const receiverIdValidation = validateUserId(receiver_id);
+    if (!receiverIdValidation.isValid) {
+      return createValidationErrorResponse(receiverIdValidation.error!, 400);
+    }
+
+    // Validate content
+    const contentValidation = validateText(content, 'Message content', {
+      required: true,
+      minLength: 1,
+      maxLength: 2000
+    });
+    if (!contentValidation.isValid) {
+      return createValidationErrorResponse(contentValidation.error!, 400);
+    }
+
+    // Validate profile types if provided
+    if (sender_profile_type) {
+      const senderProfileValidation = validateProfileType(sender_profile_type);
+      if (!senderProfileValidation.isValid) {
+        return createValidationErrorResponse(senderProfileValidation.error!, 400);
+      }
+    }
+
+    if (receiver_profile_type) {
+      const receiverProfileValidation = validateProfileType(receiver_profile_type);
+      if (!receiverProfileValidation.isValid) {
+        return createValidationErrorResponse(receiverProfileValidation.error!, 400);
+      }
+    }
+
+    // Validate attachments if provided
+    if (attachments !== undefined) {
+      if (!Array.isArray(attachments)) {
+        return createValidationErrorResponse('Attachments must be an array', 400);
+      }
+      if (attachments.length > 5) {
+        return createValidationErrorResponse('Maximum 5 attachments allowed', 400);
+      }
+    }
+
+    // Validate reply_to if provided
+    if (reply_to !== undefined) {
+      if (typeof reply_to !== 'object' || reply_to === null) {
+        return createValidationErrorResponse('reply_to must be an object', 400);
+      }
+      
+      const requiredReplyFields = ['message_id', 'content', 'sender_name'];
+      for (const field of requiredReplyFields) {
+        if (!reply_to[field] || typeof reply_to[field] !== 'string') {
+          return createValidationErrorResponse(`reply_to.${field} is required and must be a string`, 400);
+        }
+      }
+      
+      // Validate reply content length
+      if (reply_to.content.length > 500) {
+        return createValidationErrorResponse('reply_to.content too long (max 500 characters)', 400);
+      }
+    }
+
+    // Prevent self-messaging
+    if (receiver_id === auth.userId) {
+      return createValidationErrorResponse('Cannot send message to yourself', 400);
     }
 
     const { db } = await connectToDatabase();
-    
-    const body = await request.json();
-    const { receiver_id, content, attachments, sender_profile_type, receiver_profile_type } = body;
-    if (!receiver_id || !content) {
-      return NextResponse.json({ success: false, message: 'Missing fields' }, { status: 400 });
-    }
     
     // Verify receiver exists (with projection to only get user_id)
     const receiver = await db.collection('users').findOne(
@@ -378,8 +478,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       { upsert: true, returnDocument: 'after' }
     );
     
+    // Sanitize content before encryption
+    const sanitizedContent = sanitizeText(content);
+    
     // Encrypt the message content before saving
-    const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
+    const encryptedContent = CryptoJS.AES.encrypt(sanitizedContent, SECRET_KEY).toString();
     const message: Record<string, unknown> = {
       participant_ids: sortedParticipants,
       sender_id: auth.userId,
@@ -389,6 +492,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       is_read: false,
       attachments: attachments || [],
     };
+
+    // Add reply_to information if provided
+    if (reply_to) {
+      message.reply_to = {
+        message_id: reply_to.message_id,
+        content: reply_to.content,
+        sender_name: reply_to.sender_name
+      };
+    }
     
     // Determine which collection to use based on profile context
     let collectionName = 'pm'; // Default fallback for legacy messages
@@ -440,7 +552,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       // Don't fail the request if notification fails
     }
     
-    return NextResponse.json({ success: true, message: { ...message, content, encrypted_content: undefined } });
+    // Prepare the response message with decrypted content and proper fields
+    const responseMessage = {
+      _id: insertResult.insertedId,
+      sender_id: auth.userId,
+      receiver_id,
+      content: sanitizedContent, // Return the original unencrypted content
+      timestamp: now.toISOString(),
+      is_read: false,
+      attachments: attachments || [],
+      ...(reply_to && { reply_to })
+    };
+
+    return NextResponse.json({ success: true, message: responseMessage });
   } catch (err) {
     console.error('Messages POST error:', err);
     return NextResponse.json({ success: false, message: 'Server error', error: String(err) }, { status: 500 });

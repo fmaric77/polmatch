@@ -151,7 +151,7 @@ export const useMessages = (
     }
   }, [selectedConversation, selectedChannel, selectedConversationType]); // Remove groupChannels dependency
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, replyTo?: { id: string; content: string; sender_name: string }) => {
     if (!content.trim() || !selectedConversation || !currentUser) return false;
 
     try {
@@ -163,7 +163,14 @@ export const useMessages = (
         body = {
           receiver_id: selectedConversation,
           content: content,
-          attachments: []
+          attachments: [],
+          ...(replyTo && { 
+            reply_to: {
+              message_id: replyTo.id,
+              content: replyTo.content,
+              sender_name: replyTo.sender_name
+            }
+          })
         };
       } else {
         if (selectedChannel) {
@@ -173,7 +180,14 @@ export const useMessages = (
         }
         body = {
           content: content,
-          attachments: []
+          attachments: [],
+          ...(replyTo && { 
+            reply_to: {
+              message_id: replyTo.id,
+              content: replyTo.content,
+              sender_name: replyTo.sender_name
+            }
+          })
         };
       }
 

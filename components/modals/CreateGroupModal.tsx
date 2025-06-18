@@ -100,10 +100,10 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CLASSIFIED OPERATION</div>
+            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CREATE GROUP</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faUsers} className="mr-3" />
-              ESTABLISH TASK FORCE
+              CREATE GROUP
             </h2>
           </div>
           <button
@@ -117,13 +117,13 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
-              TASK FORCE DESIGNATION
+              GROUP NAME
             </label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="ENTER TASK FORCE NAME"
+              placeholder="ENTER GROUP NAME"
               className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
               required
@@ -132,12 +132,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
           <div>
             <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
-              MISSION DESCRIPTION
+              DESCRIPTION
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="ENTER MISSION OBJECTIVES AND SCOPE"
+              placeholder="ENTER GROUP DESCRIPTION"
               className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg"
               rows={3}
               disabled={loading}
@@ -147,13 +147,13 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
           <div>
             <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
-              OPERATIONAL TOPIC (OPTIONAL)
+              TOPIC (OPTIONAL)
             </label>
             <input
               type="text"
               value={form.topic}
               onChange={(e) => handleInputChange('topic', e.target.value)}
-              placeholder="ENTER OPERATION TOPIC"
+              placeholder="ENTER GROUP TOPIC"
               className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
               disabled={loading}
             />
@@ -170,7 +170,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             />
             <label htmlFor="is_private" className="text-white text-sm flex items-center font-mono uppercase tracking-wide">
               <FontAwesomeIcon icon={faLock} className="mr-2 text-red-400" />
-              CLASSIFIED TASK FORCE
+              PRIVATE GROUP
             </label>
           </div>
 
@@ -187,14 +187,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
               disabled={loading}
             >
-              ABORT MISSION
+              CANCEL
             </button>
             <button
               type="submit"
               className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
               disabled={loading || !form.name.trim() || !form.description.trim()}
             >
-              {loading ? 'ESTABLISHING...' : 'ESTABLISH TASK FORCE'}
+              {loading ? 'CREATING...' : 'CREATE GROUP'}
             </button>
           </div>
         </form>

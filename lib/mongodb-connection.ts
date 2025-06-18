@@ -21,11 +21,11 @@ export async function connectToDatabase(): Promise<CachedConnection> {
   const client = new MongoClient(MONGODB_URI, {
     // Connection pooling options for performance
     maxPoolSize: 10, // Maintain up to 10 socket connections
-    serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+    serverSelectionTimeoutMS: 10000, // Increase timeout to 10 seconds
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
     maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-    // Compression for faster data transfer
-    compressors: ['snappy', 'zlib'],
+    // SSL/TLS configuration for MongoDB Atlas
+    tls: true,
   });
 
   await client.connect();
@@ -63,9 +63,19 @@ export async function getAuthenticatedUser(sessionToken: string): Promise<{ user
 
   const { db } = await connectToDatabase();
 
-  // Verify session
-  const session = await db.collection('sessions').findOne({ sessionToken });
+  // Verify session with expiration check
+  const now = new Date();
+  const session = await db.collection('sessions').findOne({ 
+    sessionToken,
+    expires: { $gt: now } // Check if session hasn't expired
+  });
+  
   if (!session) {
+    // Clean up this specific expired session if it exists
+    await db.collection('sessions').deleteOne({ 
+      sessionToken,
+      expires: { $lte: now }
+    });
     return null;
   }
 
@@ -159,7 +169,8 @@ export async function getPrivateMessages(userId1: string, userId2: string, limit
     encrypted_content: 1,
     timestamp: 1,
     is_read: 1,
-    profile_context: 1
+    profile_context: 1,
+    reply_to: 1
   })
   .toArray();
 }
@@ -202,7 +213,8 @@ export async function getGroupMessages(groupId: string, channelId?: string, limi
         },
         timestamp: 1,
         channel_id: 1,
-        sender_username: '$sender.username'
+        sender_username: '$sender.username',
+        reply_to: 1
       }
     },
     { $sort: { timestamp: 1 } } // Final sort for display order

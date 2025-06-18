@@ -87,10 +87,9 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
       <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CLASSIFIED OPERATION</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faHashtag} className="mr-3" />
-              CREATE SECURE CHANNEL
+              Create Channel
             </h2>
           </div>
           <button
@@ -128,12 +127,12 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
           <div>
             <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
-              OPERATIONAL DESCRIPTION (OPTIONAL)
+              DESCRIPTION (OPTIONAL)
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="CHANNEL PURPOSE AND CLASSIFICATION..."
+              placeholder="Channel purpose..."
               className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg"
               rows={3}
               disabled={loading}
