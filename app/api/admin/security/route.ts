@@ -3,6 +3,10 @@ import { MongoClient } from 'mongodb';
 import { cookies } from 'next/headers';
 import MONGODB_URI from '../../mongo-uri';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 // GET: Fetch security data (login attempts, locks, etc.)

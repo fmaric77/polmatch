@@ -12,6 +12,10 @@ import {
 } from '../../../../../../lib/validation';
 import { validateSession } from '../../../../../../lib/auth';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 interface RouteContext {
   params: Promise<{ id: string }>;
 }

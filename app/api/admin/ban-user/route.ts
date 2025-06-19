@@ -3,6 +3,10 @@ import MONGODB_URI from '../../mongo-uri';
 import { MongoClient } from 'mongodb';
 import { cookies } from 'next/headers';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 export async function POST(request: Request) {

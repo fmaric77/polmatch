@@ -9,6 +9,10 @@ import {
 } from '../../../../lib/validation';
 import { validateSession } from '../../../../lib/auth';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Rate limiting

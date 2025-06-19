@@ -10,6 +10,10 @@ import {
 } from '../../../../lib/validation';
 import { validateSession } from '../../../../lib/auth';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 // POST: Send a friend request

@@ -12,6 +12,14 @@ import {
 } from '../../../../lib/validation';
 import { validateSession } from '../../../../lib/auth';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 // Essential indexing function inlined to avoid import issues
 async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);

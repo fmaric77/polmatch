@@ -4,6 +4,10 @@ import MONGODB_URI from '../../../mongo-uri';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 interface RouteContext {

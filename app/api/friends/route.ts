@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../mongo-uri';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 // GET: List friends and friend requests for the current user

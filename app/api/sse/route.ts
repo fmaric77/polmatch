@@ -91,7 +91,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
+        ? process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'
+        : 'http://localhost:3000',
       'Access-Control-Allow-Headers': 'Cache-Control',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'X-Accel-Buffering': 'no' // Disable nginx buffering
@@ -104,7 +106,9 @@ export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
+        ? process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'
+        : 'http://localhost:3000',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Cache-Control, Content-Type',
       'Access-Control-Max-Age': '86400'

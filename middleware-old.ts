@@ -23,41 +23,6 @@ function getClientIP(request: NextRequest): string {
   return ip_address;
 }
 
-// Security headers to add to all responses
-function addSecurityHeaders(response: NextResponse): NextResponse {
-  // XSS Protection
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  
-  // Prevent MIME type sniffing
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  
-  // Clickjacking protection
-  response.headers.set('X-Frame-Options', 'DENY');
-  
-  // Content Security Policy
-  response.headers.set('Content-Security-Policy', 
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: https:; " +
-    "connect-src 'self' ws: wss:; " +
-    "font-src 'self'; " +
-    "object-src 'none'; " +
-    "media-src 'self'; " +
-    "frame-ancestors 'none';"
-  );
-  
-  // Referrer Policy
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // Strict Transport Security (HTTPS only)
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  
-  return response;
-}
-
 // Check if cached entry is still valid
 function isCacheValid(entry: BanCacheEntry): boolean {
   return (Date.now() - entry.timestamp) < CACHE_DURATION;
@@ -151,8 +116,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     pathname.includes('.') && !pathname.startsWith('/api/') ||
     pathname.startsWith('/sounds/') // Skip audio files
   ) {
-    const response = NextResponse.next();
-    return addSecurityHeaders(response);
+    return NextResponse.next();
   }
   
   // Skip only specific internal API routes that are needed for the ban check itself
@@ -161,8 +125,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/_next/')
   ) {
-    const response = NextResponse.next();
-    return addSecurityHeaders(response);
+    return NextResponse.next();
   }
 
   // Get client IP address
@@ -170,8 +133,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // Skip ban check for localhost/development IPs
   if (clientIP === '127.0.0.1' || clientIP === '::1' || clientIP.startsWith('192.168.') || clientIP.startsWith('10.') || clientIP === 'unknown') {
-    const response = NextResponse.next();
-    return addSecurityHeaders(response);
+    return NextResponse.next();
   }
 
   // Check if IP is banned (with caching)
@@ -216,16 +178,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         status: 403,
         headers: {
           'Content-Type': 'text/html',
-          'X-XSS-Protection': '1; mode=block',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'DENY',
         },
       }
     );
   }
 
-  const response = NextResponse.next();
-  return addSecurityHeaders(response);
+  return NextResponse.next();
 }
 
 // Configure which paths the middleware should run on

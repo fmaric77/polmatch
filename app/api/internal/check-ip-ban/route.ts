@@ -5,7 +5,11 @@ import {
   isServerCacheValid
 } from '../ban-cache-utils';
 
-const MONGODB_URI = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -31,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Connect to MongoDB and check ban status
-    const client = new MongoClient(MONGODB_URI);
+    const client = new MongoClient(MONGODB_URI as string);
     
     try {
       await client.connect();
