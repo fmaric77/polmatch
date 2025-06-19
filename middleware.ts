@@ -34,18 +34,18 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // Clickjacking protection
   response.headers.set('X-Frame-Options', 'DENY');
   
-  // Content Security Policy
-  response.headers.set('Content-Security-Policy', 
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: https:; " +
-    "connect-src 'self' ws: wss:; " +
-    "font-src 'self'; " +
-    "object-src 'none'; " +
-    "media-src 'self'; " +
-    "frame-ancestors 'none';"
-  );
+  // Content Security Policy is now handled in next.config.ts to avoid conflicts
+  // response.headers.set('Content-Security-Policy', 
+  //   "default-src 'self'; " +
+  //   "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+  //   "style-src 'self' 'unsafe-inline'; " +
+  //   "img-src 'self' data: https:; " +
+  //   "connect-src 'self' ws: wss: https://*.agora.io https://*.sd-rtn.com; " +
+  //   "font-src 'self'; " +
+  //   "object-src 'none'; " +
+  //   "media-src 'self'; " +
+  //   "frame-ancestors 'none';"
+  // );
   
   // Referrer Policy
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');

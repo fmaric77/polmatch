@@ -32,6 +32,28 @@ export function removeSSEConnection(userId: string, writer: WritableStreamDefaul
   }
 }
 
+// Debug function to check active connections
+export function getActiveConnections(): Map<string, number> {
+  const connectionCounts = new Map<string, number>();
+  for (const [userId, connections] of sseConnections.entries()) {
+    connectionCounts.set(userId, connections.length);
+  }
+  return connectionCounts;
+}
+
+// Debug function to log all active connections
+export function logActiveConnections(): void {
+  console.log('📊 Active SSE Connections:');
+  if (sseConnections.size === 0) {
+    console.log('  No active connections');
+    return;
+  }
+  
+  for (const [userId, connections] of sseConnections.entries()) {
+    console.log(`  User ${userId}: ${connections.length} connection(s)`);
+  }
+}
+
 // Send data to all connections for a specific user
 async function sendToUser(userId: string, data: string): Promise<void> {
   const userConnections = sseConnections.get(userId);
@@ -232,4 +254,41 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
   } catch (error) {
     console.error('Error sending group message notification:', error);
   }
+}
+
+// Voice call notification interfaces and functions
+export interface VoiceCallData {
+  call_id: string;
+  caller_id: string;
+  caller_username: string;
+  caller_display_name?: string;
+  recipient_id: string;
+  channel_name: string;
+  call_type: 'voice' | 'video';
+  status: 'calling' | 'accepted' | 'declined' | 'ended' | 'missed';
+  created_at: string;
+}
+
+// Notify about an incoming voice call
+export async function notifyIncomingCall(data: VoiceCallData): Promise<void> {
+  console.log(`📞 Attempting to send incoming call notification to user ${data.recipient_id}`);
+  console.log(`📞 Call data:`, data);
+  
+  // Log current connections
+  logActiveConnections();
+  
+  const sseData = formatSSEData('INCOMING_CALL', data);
+  await sendToUser(data.recipient_id, sseData);
+  console.log(`📞 Sent incoming call notification to user ${data.recipient_id}`);
+}
+
+// Notify about call status updates (accepted, declined, ended)
+export async function notifyCallStatusUpdate(data: VoiceCallData): Promise<void> {
+  const sseData = formatSSEData('CALL_STATUS_UPDATE', data);
+  
+  // Send to both caller and recipient
+  await sendToUser(data.caller_id, sseData);
+  await sendToUser(data.recipient_id, sseData);
+  
+  console.log(`Sent call status update (${data.status}) to caller ${data.caller_id} and recipient ${data.recipient_id}`);
 }

@@ -101,7 +101,9 @@ const Header = () => {
           onClick={async (e) => {
             e.preventDefault();
             await fetch('/api/logout', { method: 'POST' });
-            window.location.href = '/';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
           }}
         >
           <FontAwesomeIcon icon={faSignOutAlt} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-red-400 group-hover:text-red-200 transition-colors" />

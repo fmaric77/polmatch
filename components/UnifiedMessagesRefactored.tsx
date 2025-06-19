@@ -1,14 +1,15 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useConversations } from './hooks/useConversations';
 import { useProfileConversations, useProfileMessages } from './hooks/useProfileMessaging';
 import type { ProfileMessage } from './hooks/useProfileMessaging';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
-import { useWebSocket } from './hooks/useWebSocket';
+import { useWebSocket, VoiceCallEventData } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
-import { useTypingIndicator } from './hooks/useTypingIndicator';
+import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
 import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
@@ -20,6 +21,15 @@ import InviteModal from './modals/InviteModal';
 import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
 import ContextMenu from './modals/ContextMenu';
+
+// Dynamically import VoiceCall to prevent SSR issues
+const VoiceCall = dynamic(() => import('./VoiceCall'), {
+  ssr: false,
+  loading: () => null
+});
+
+// Import the type separately for TypeScript
+import type { VoiceCallRef } from './VoiceCall';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -155,6 +165,33 @@ const UnifiedMessages: React.FC = () => {
   // Session token for SSE
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
+  // Voice call state management using SSE
+  const [incomingCalls, setIncomingCalls] = useState<{
+    incomingCalls: VoiceCallEventData[];
+    declineCall: (callId: string) => void;
+    endCall: (callId: string) => void;
+    initiateCall: (otherUser: { user_id: string; username: string; display_name?: string }) => void;
+  }>({
+    incomingCalls: [],
+    declineCall: () => {},
+    endCall: () => {},
+    initiateCall: () => {},
+  });
+
+  // Voice call refs and state management
+  const voiceCallRef = useRef<VoiceCallRef>(null);
+  const callSoundRef = useRef<HTMLAudioElement | null>(null);
+  const isCallSoundPlayingRef = useRef<boolean>(false);
+  const [outgoingCall, setOutgoingCall] = useState<{
+    isActive: boolean;
+    otherUser: { user_id: string; username: string; display_name?: string } | null;
+    callId: string | null;
+  }>({
+    isActive: false,
+    otherUser: null,
+    callId: null,
+  });
+
   // Typing indicator hook
   const typingIndicator = useTypingIndicator({
     currentUser,
@@ -170,7 +207,138 @@ const UnifiedMessages: React.FC = () => {
   }, [sessionToken]);
 
   // Real-time messaging integration
-  const { isConnected, connectionError } = useWebSocket(sessionToken, {
+  // Define call management functions
+  useEffect(() => {
+    // Setup call management functions
+    const declineCall = async (callId: string): Promise<void> => {
+      try {
+        console.log('Declining call:', callId);
+        const response = await fetch('/api/voice-calls', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            call_id: callId, 
+            status: 'declined' 
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to decline call: ${response.status}`);
+        }
+        
+        // Remove from local state immediately for UI responsiveness
+        setIncomingCalls(prev => ({
+          ...prev,
+          incomingCalls: prev.incomingCalls.filter(call => call.call_id !== callId)
+        }));
+      } catch (error) {
+        console.error('Error declining call:', error);
+      }
+    };
+
+    const endCall = async (callId: string): Promise<void> => {
+      try {
+        console.log('Ending call:', callId);
+        const response = await fetch('/api/voice-calls', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            call_id: callId, 
+            status: 'ended' 
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to end call: ${response.status}`);
+        }
+        
+        // Remove from local state immediately for UI responsiveness
+        setIncomingCalls(prev => ({
+          ...prev,
+          incomingCalls: prev.incomingCalls.filter(call => call.call_id !== callId)
+        }));
+      } catch (error) {
+        console.error('Error ending call:', error);
+      }
+    };
+
+    const initiateCall = (otherUser: { user_id: string; username: string; display_name?: string }): void => {
+      // Prevent starting multiple calls
+      if (outgoingCall.isActive) {
+        console.log('❌ Cannot initiate call - already have an active outgoing call');
+        return;
+      }
+      
+      console.log('📞 Initiating call to:', otherUser.username);
+      setOutgoingCall({
+        isActive: true,
+        otherUser,
+        callId: null // Will be set when the call notification is sent
+      });
+    };
+    
+    // Set call management functions
+    setIncomingCalls(prev => ({
+      ...prev,
+      declineCall,
+      endCall,
+      initiateCall
+    }));
+  }, []);
+
+  // Initialize call sound
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      callSoundRef.current = new Audio('/sounds/call.mp3');
+      callSoundRef.current.loop = true;
+      callSoundRef.current.volume = 0.7;
+    }
+    
+    return () => {
+      // Cleanup audio when component unmounts
+      if (callSoundRef.current) {
+        callSoundRef.current.pause();
+        callSoundRef.current = null;
+      }
+    };
+  }, []);
+
+  // Function to play call sound
+  const playCallSound = useCallback(() => {
+    if (callSoundRef.current && !isCallSoundPlayingRef.current) {
+      isCallSoundPlayingRef.current = true;
+      callSoundRef.current.currentTime = 0;
+      callSoundRef.current.play().catch(error => {
+        console.error('Failed to play call sound:', error);
+        isCallSoundPlayingRef.current = false;
+      });
+    }
+  }, []);
+
+  // Function to stop call sound
+  const stopCallSound = useCallback(() => {
+    if (callSoundRef.current && isCallSoundPlayingRef.current) {
+      callSoundRef.current.pause();
+      callSoundRef.current.currentTime = 0;
+      isCallSoundPlayingRef.current = false;
+    }
+  }, []);
+
+  // Stop call sound when there are no incoming calls
+  useEffect(() => {
+    if (incomingCalls.incomingCalls.length === 0) {
+      stopCallSound();
+    }
+  }, [incomingCalls.incomingCalls.length, stopCallSound]);
+
+  // Memoize the WebSocket options to prevent excessive re-renders
+  const webSocketOptions = useMemo(() => ({
     onNewMessage: (data: NewMessageData) => {
       console.log('Received new message via SSE:', data);
       
@@ -306,16 +474,143 @@ const UnifiedMessages: React.FC = () => {
       console.log('SSE connection established successfully');
     },
     
-    onTypingStart: (data) => {
+    onTypingStart: (data: TypingData) => {
       console.log('Received typing start via SSE:', data);
       typingIndicator.handleTypingReceived(data);
     },
     
-    onTypingStop: (data) => {
+    onTypingStop: (data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => {
       console.log('Received typing stop via SSE:', data);
       typingIndicator.handleStoppedTyping(data);
+    },
+
+    onIncomingCall: (data: VoiceCallEventData) => {
+      console.log('Received incoming call via SSE:', data);
+      // Only show incoming call if it's for this user
+      if (data.recipient_id === currentUser?.user_id && data.status === 'calling') {
+        setIncomingCalls(prev => ({
+          ...prev,
+          incomingCalls: [...prev.incomingCalls, data]
+        }));
+        
+        // Play call sound for incoming call
+        playCallSound();
+      }
+    },
+
+    onCallStatusUpdate: (data: VoiceCallEventData) => {
+      console.log('Received call status update via SSE:', data);
+      
+      // Handle outgoing call status updates (for calls we initiated)
+      if (data.caller_id === currentUser?.user_id && outgoingCall.isActive) {
+        if (data.status === 'accepted') {
+          console.log('📞 Outgoing call was accepted');
+          voiceCallRef.current?.handleCallAccepted();
+        } else if (data.status === 'declined') {
+          console.log('📞 Outgoing call was declined');
+          voiceCallRef.current?.handleCallDeclined();
+          setOutgoingCall({ isActive: false, otherUser: null, callId: null });
+        } else if (data.status === 'ended') {
+          console.log('📞 Outgoing call ended by other participant');
+          voiceCallRef.current?.handleCallEndedByOther();
+          setOutgoingCall({ isActive: false, otherUser: null, callId: null });
+        } else if (data.status === 'missed') {
+          console.log('📞 Outgoing call was missed/cancelled');
+          voiceCallRef.current?.handleCallDeclined(); // Treat missed like declined for outgoing calls
+          setOutgoingCall({ isActive: false, otherUser: null, callId: null });
+        }
+        return;
+      }
+      
+      // Handle call end/missed when we are the recipient
+      if (data.recipient_id === currentUser?.user_id && (data.status === 'ended' || data.status === 'missed')) {
+        console.log(`📞 Caller ${data.status} the call - checking if we have an active call`);
+        
+        // Stop the ringing sound if it's playing
+        stopCallSound();
+        
+        // Check if we have an active incoming call that matches this call_id
+        const hasActiveCall = incomingCalls.incomingCalls.some(call => call.call_id === data.call_id);
+        
+        if (hasActiveCall) {
+          console.log('📞 Active call found, ending it');
+          // If there's an active voice call modal, close it
+          if (data.status === 'missed') {
+            voiceCallRef.current?.handleCallMissed();
+          } else {
+            voiceCallRef.current?.handleCallEndedByOther();
+          }
+        }
+        
+        // Remove from incoming calls list if it exists there
+        setIncomingCalls(prev => ({
+          ...prev,
+          incomingCalls: prev.incomingCalls.filter(call => call.call_id !== data.call_id)
+        }));
+        return;
+      }
+      
+      // Handle incoming call status updates
+      setIncomingCalls(prev => {
+        // Find call in our list
+        const existingCallIndex = prev.incomingCalls.findIndex(call => call.call_id === data.call_id);
+        
+        // If call not found, nothing to do
+        if (existingCallIndex === -1) return prev;
+
+        // If call is accepted, stop the ringing sound
+        if (data.status === 'accepted') {
+          stopCallSound();
+        }
+
+        // If call is ended/declined/missed, remove it from our list and stop sound
+        if (data.status === 'declined' || data.status === 'ended' || data.status === 'missed') {
+          stopCallSound();
+          const updatedCalls = [...prev.incomingCalls];
+          updatedCalls.splice(existingCallIndex, 1);
+          return {
+            ...prev,
+            incomingCalls: updatedCalls
+          };
+        }
+
+        // Otherwise update call status
+        const updatedCalls = [...prev.incomingCalls];
+        updatedCalls[existingCallIndex] = data;
+        return {
+          ...prev,
+          incomingCalls: updatedCalls
+        };
+      });
     }
-  });
+  }), [currentUser, selectedConversation, selectedConversationType, selectedCategory, activeProfileType, profileMessages, incomingCalls, outgoingCall, voiceCallRef, playCallSound, stopCallSound]);
+
+  const { isConnected, connectionError, reconnect } = useWebSocket(sessionToken, webSocketOptions);
+
+  // Ensure SSE reconnection after calls end or any call state changes
+  useEffect(() => {
+    // If we don't have an outgoing call and no incoming calls, but we have a session token and we're not connected
+    if (sessionToken && !isConnected && !outgoingCall && incomingCalls.incomingCalls.length === 0) {
+      console.log('🔄 No active calls and SSE disconnected, attempting reconnection...');
+      const reconnectTimer = setTimeout(() => {
+        reconnect();
+      }, 2000); // Small delay to avoid rapid reconnections
+      
+      return () => clearTimeout(reconnectTimer);
+    }
+  }, [sessionToken, isConnected, outgoingCall, incomingCalls.incomingCalls.length, reconnect]);
+
+  // Force reconnection after any call status changes (more aggressive)
+  useEffect(() => {
+    if (sessionToken && !isConnected) {
+      console.log('🔄 SSE disconnected, forcing reconnection attempt...');
+      const forceReconnectTimer = setTimeout(() => {
+        reconnect();
+      }, 1000);
+      
+      return () => clearTimeout(forceReconnectTimer);
+    }
+  }, [sessionToken, isConnected, reconnect]);
 
   // Debug SSE connection status
   useEffect(() => {
@@ -385,7 +680,7 @@ const UnifiedMessages: React.FC = () => {
 
   // Clear URL parameters after auto-select to prevent forced navigation
   useEffect(() => {
-    if (hasAutoSelected) {
+    if (hasAutoSelected && typeof window !== 'undefined') {
       // Use router.replace to update URL without page reload and without adding to history
       const currentUrl = new URL(window.location.href);
       if (currentUrl.searchParams.has('user') || currentUrl.searchParams.has('profile')) {
@@ -443,7 +738,7 @@ const UnifiedMessages: React.FC = () => {
   // Auto-select conversation from URL params (only once)
   useEffect(() => {
     // Only auto-select once to prevent forced navigation back
-    if (hasAutoSelected) return;
+    if (hasAutoSelected || !searchParams) return;
     
     const dmUserId = searchParams.get('user');
     const profileParam = searchParams.get('profile') as ProfileType;
@@ -486,7 +781,7 @@ const UnifiedMessages: React.FC = () => {
   // Auto-select conversation after profile conversations are loaded (for business/love profiles)
   useEffect(() => {
     // Only auto-select if we haven't already done so
-    if (hasAutoSelected) return;
+    if (hasAutoSelected || !searchParams) return;
     
     const dmUserId = searchParams.get('user');
     const profileParam = searchParams.get('profile') as ProfileType;
@@ -515,6 +810,8 @@ const UnifiedMessages: React.FC = () => {
   // Reset auto-select flag when user manually changes profiles or conversations
   useEffect(() => {
     // If user manually changes profile type, allow them to navigate freely
+    if (!searchParams) return;
+    
     const profileParam = searchParams.get('profile') as ProfileType;
     if (hasAutoSelected && profileParam && activeProfileType !== profileParam) {
       setHasAutoSelected(false);
@@ -523,6 +820,11 @@ const UnifiedMessages: React.FC = () => {
 
   // Reset auto-select flag when user manually selects a different conversation
   const selectConversationWithReset = useCallback((conversation: Conversation) => {
+    if (!searchParams) {
+      selectConversation(conversation);
+      return;
+    }
+    
     const dmUserId = searchParams.get('user');
     // If user manually selects a different conversation than the URL one, reset auto-select
     if (hasAutoSelected && dmUserId && conversation.id !== dmUserId) {
@@ -604,6 +906,8 @@ const UnifiedMessages: React.FC = () => {
 
   // Handle window resize for mobile responsiveness
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -677,6 +981,29 @@ const UnifiedMessages: React.FC = () => {
     return `${symbol} ${username}`;
   };
 
+  // Handle declining an incoming call
+  const handleDeclineCall = useCallback((call: VoiceCallEventData) => {
+    stopCallSound(); // Stop the ringing sound
+    
+    // Send decline notification to server
+    fetch('/api/voice-calls', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        call_id: call.call_id,
+        status: 'declined'
+      })
+    }).catch(error => {
+      console.error('Failed to decline call:', error);
+    });
+    
+    // Remove from incoming calls
+    setIncomingCalls(prev => ({
+      ...prev,
+      incomingCalls: prev.incomingCalls.filter(c => c.call_id !== call.call_id)
+    }));
+  }, [stopCallSound]);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-black text-white">
@@ -746,6 +1073,7 @@ const UnifiedMessages: React.FC = () => {
         isConnected={isConnected}
         connectionError={connectionError}
         sessionToken={sessionToken}
+        onReconnect={reconnect}
         currentUser={currentUser}
         // Profile switcher props
         activeProfileType={activeProfileType}
@@ -790,6 +1118,7 @@ const UnifiedMessages: React.FC = () => {
         sessionToken={sessionToken}
         replyTo={replyTo}
         setReplyTo={setReplyTo}
+        onInitiateCall={incomingCalls.initiateCall}
       />
 
       {/* Context Menu */}
@@ -966,6 +1295,39 @@ const UnifiedMessages: React.FC = () => {
             }
           }}
           onClose={() => modals.closeModal('showBannedUsersModal')}
+        />
+      )}
+
+      {/* Incoming Call Modal */}
+      {incomingCalls.incomingCalls.length > 0 && currentUser && (
+        <VoiceCall
+          isOpen={true}
+          onClose={() => handleDeclineCall(incomingCalls.incomingCalls[0])}
+          currentUser={currentUser}
+          otherUser={{
+            user_id: incomingCalls.incomingCalls[0].caller_id,
+            username: incomingCalls.incomingCalls[0].caller_username,
+            display_name: incomingCalls.incomingCalls[0].caller_display_name
+          }}
+          isIncoming={true}
+          onCallEnd={() => {
+            stopCallSound();
+            incomingCalls.endCall(incomingCalls.incomingCalls[0].call_id);
+          }}
+          callId={incomingCalls.incomingCalls[0].call_id}
+        />
+      )}
+
+      {/* Outgoing Call Modal */}
+      {outgoingCall.isActive && outgoingCall.otherUser && currentUser && (
+        <VoiceCall
+          ref={voiceCallRef}
+          isOpen={true}
+          onClose={() => setOutgoingCall({ isActive: false, otherUser: null, callId: null })}
+          currentUser={currentUser}
+          otherUser={outgoingCall.otherUser}
+          isIncoming={false}
+          onCallEnd={() => setOutgoingCall({ isActive: false, otherUser: null, callId: null })}
         />
       )}
       </div>

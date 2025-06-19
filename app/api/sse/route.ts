@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '../../../lib/mongodb-connection';
 import { addSSEConnection, removeSSEConnection } from '../../../lib/sse-notifications';
 
 interface SSEMessage {
-  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP';
+  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP' | 'INCOMING_CALL' | 'CALL_STATUS_UPDATE';
   data: unknown;
 }
 
@@ -57,6 +57,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       // Register connection with notification system
       addSSEConnection(userId, writer);
       
+      // Track connection start time
+      const connectionStartTime = Date.now();
+      
       console.log(`SSE: Added connection for user ${userId}`);
       
       // Send connection established message
@@ -79,7 +82,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       
       // Handle connection close
       request.signal.addEventListener('abort', () => {
-        console.log(`User ${userId} disconnected from SSE`);
+        console.log(`🔌 User ${userId} disconnected from SSE (reason: ${request.signal.reason || 'unknown'})`);
+        console.log(`🔌 Connection lasted: ${Date.now() - connectionStartTime}ms`);
         clearInterval(pingInterval);
         removeSSEConnection(userId, writer);
       });

@@ -54,7 +54,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Home Navigation */}
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
-          onClick={() => window.location.href = '/'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
+          }}
           title="HOME BASE"
         >
           <FontAwesomeIcon icon={faHome} className="text-green-400 mb-1" />
@@ -64,7 +68,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Profile Navigation */}
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
-          onClick={() => window.location.href = '/profile'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/profile';
+            }
+          }}
           title="Profile"
         >
           <FontAwesomeIcon icon={faUser} className="text-yellow-400 mb-1" />
@@ -74,7 +82,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Search Navigation */}
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
-          onClick={() => window.location.href = '/search'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/search';
+            }
+          }}
           title="SUBJECT SEARCH"
         >
           <FontAwesomeIcon icon={faSearch} className="text-pink-400 mb-1" />
@@ -84,7 +96,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Catalogue Navigation */}
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
-          onClick={() => window.location.href = '/catalogue'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/catalogue';
+            }
+          }}
           title="Archive"
         >
           <FontAwesomeIcon icon={faBookmark} className="text-purple-400 mb-1" />
@@ -94,7 +110,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Jobs Navigation */}
         <div 
           className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
-          onClick={() => window.location.href = '/jobs'}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/jobs';
+            }
+          }}
           title="JOB OPERATIONS"
         >
           <FontAwesomeIcon icon={faBriefcase} className="text-orange-400 mb-1" />
@@ -160,7 +180,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {currentUser?.is_admin && (
           <div 
             className="w-14 h-14 bg-red-900 border-2 border-red-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
-            onClick={() => window.location.href = '/admindashboard'}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/admindashboard';
+              }
+            }}
             title="COMMAND CENTER"
           >
             <FontAwesomeIcon icon={faKey} className="text-red-200 mb-1" />
@@ -192,7 +216,9 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           className="w-14 h-14 bg-red-900 border-2 border-red-500 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
           onClick={async () => {
             await fetch('/api/logout', { method: 'POST' });
-            window.location.href = '/';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
           }}
           title="TERMINATE SESSION"
         >
