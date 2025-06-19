@@ -1,6 +1,6 @@
 import { MongoClient, Db } from 'mongodb';
 
-const MONGODB_URI = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
@@ -18,7 +18,7 @@ export async function connectToDatabase(): Promise<CachedConnection> {
     return cachedConnection;
   }
 
-  const client = new MongoClient(MONGODB_URI, {
+  const client = new MongoClient(MONGODB_URI as string, {
     // Connection pooling options for performance
     maxPoolSize: 10, // Maintain up to 10 socket connections
     serverSelectionTimeoutMS: 10000, // Increase timeout to 10 seconds

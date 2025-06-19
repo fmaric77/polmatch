@@ -14,7 +14,14 @@ import {
   sanitizeText
 } from '../../../lib/validation';
 
-const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
+const SECRET_KEY = process.env.MESSAGE_SECRET_KEY;
+
+if (!SECRET_KEY) {
+  throw new Error('MESSAGE_SECRET_KEY environment variable is not defined');
+}
+
+// Type assertion since we've verified it's defined
+const CRYPTO_SECRET = SECRET_KEY as string;
 
 interface PrivateMessage {
   _id?: unknown;
@@ -200,7 +207,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         // Decrypt messages
         for (const pm of allMessages as PrivateMessage[]) {
           try {
-            const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content || pm.content, SECRET_KEY);
+            const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content || pm.content, CRYPTO_SECRET);
             pm.content = decryptedBytes.toString(CryptoJS.enc.Utf8);
             delete pm.encrypted_content;
           } catch {
@@ -219,7 +226,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         // Decrypt messages
         for (const pm of pms as PrivateMessage[]) {
           try {
-            const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content || pm.content, SECRET_KEY);
+            const decryptedBytes = CryptoJS.AES.decrypt(pm.encrypted_content || pm.content, CRYPTO_SECRET);
             pm.content = decryptedBytes.toString(CryptoJS.enc.Utf8);
             delete pm.encrypted_content;
           } catch {
@@ -270,7 +277,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             if (latestMessage) {
               // Decrypt the latest message
               try {
-                const decryptedBytes = CryptoJS.AES.decrypt(latestMessage.encrypted_content || latestMessage.content, SECRET_KEY);
+                const decryptedBytes = CryptoJS.AES.decrypt(latestMessage.encrypted_content || latestMessage.content, CRYPTO_SECRET);
                 latestMessage.content = decryptedBytes.toString(CryptoJS.enc.Utf8);
                 delete latestMessage.encrypted_content;
               } catch {
@@ -482,7 +489,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const sanitizedContent = sanitizeText(content);
     
     // Encrypt the message content before saving
-    const encryptedContent = CryptoJS.AES.encrypt(sanitizedContent, SECRET_KEY).toString();
+    const encryptedContent = CryptoJS.AES.encrypt(sanitizedContent, CRYPTO_SECRET).toString();
     const message: Record<string, unknown> = {
       participant_ids: sortedParticipants,
       sender_id: auth.userId,

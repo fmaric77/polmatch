@@ -3,6 +3,10 @@ import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../../../../../mongo-uri';
 import { cookies } from 'next/headers';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
+
 const client = new MongoClient(MONGODB_URI);
 
 type QuestionInput = {

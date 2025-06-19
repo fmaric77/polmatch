@@ -22,7 +22,6 @@
 
 # misc
 .DS_Store
-*.pem
 
 # debug
 npm-debug.log*
@@ -31,6 +30,24 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+
+# Security files
+*.key
+*.crt
+*.p12
+*.pfx
+*.pem
+cookies.txt
+*.backup
+*.bak
+
+# Database dumps
+*.sql
+*.dump
+
+# Logs that might contain sensitive information
+*.log
+logs/
 
 # vercel
 .vercel

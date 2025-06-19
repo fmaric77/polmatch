@@ -5,6 +5,11 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
 // Essential indexing function inlined to avoid import issues
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {

@@ -3,6 +3,11 @@ import { MongoClient } from 'mongodb';
 import MONGODB_URI from '../../mongo-uri';
 import { cookies } from 'next/headers';
 
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
 export async function GET(req: NextRequest) {
   try {
     // Validate session

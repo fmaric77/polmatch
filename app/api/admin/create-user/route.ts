@@ -5,6 +5,12 @@ import bcrypt from 'bcryptjs';
 import MONGODB_URI from '../../mongo-uri';
 import { v4 as uuidv4 } from 'uuid';
 
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
+const mongoUri = MONGODB_URI as string;
+
 export async function POST(request: Request) {
   // Auth check
   const cookieStore = await cookies();
@@ -12,7 +18,7 @@ export async function POST(request: Request) {
   if (!sessionToken) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(mongoUri);
   try {
     await client.connect();
     const db = client.db('polmatch');

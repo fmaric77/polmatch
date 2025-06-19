@@ -1,7 +1,11 @@
 import { MongoClient } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 
-const MONGODB_URI = 'mongodb+srv://filip:ezxMAOvcCtHk1Zsk@cluster0.9wkt8p3.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not defined');
+}
 
 interface CreateSessionData {
   user_id: string;
@@ -23,7 +27,7 @@ export async function createSession(data: CreateSessionData): Promise<string> {
   const now = new Date();
   const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
   
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI as string);
   
   try {
     await client.connect();
@@ -51,7 +55,7 @@ export async function validateSession(sessionToken: string): Promise<{ valid: bo
     return { valid: false };
   }
   
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI as string);
   
   try {
     await client.connect();
@@ -75,7 +79,7 @@ export async function validateSession(sessionToken: string): Promise<{ valid: bo
 }
 
 export async function deleteSession(sessionToken: string): Promise<void> {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI as string);
   
   try {
     await client.connect();
@@ -88,7 +92,7 @@ export async function deleteSession(sessionToken: string): Promise<void> {
 }
 
 export async function cleanupExpiredSessions(): Promise<number> {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI as string);
   
   try {
     await client.connect();
