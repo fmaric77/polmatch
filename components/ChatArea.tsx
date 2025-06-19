@@ -10,7 +10,8 @@ import {
   faBars,
   faBan,
   faEnvelope,
-  faChevronDown
+  faChevronDown,
+  faPhone
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
@@ -117,6 +118,8 @@ interface ChatAreaProps {
   typingUsers: TypingData[];
   onTyping: () => void;
   sessionToken: string | null;
+  // Voice call props
+  onInitiateCall?: (otherUser: { user_id: string; username: string; display_name?: string }) => void;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -148,13 +151,27 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   canManageMembers,
   typingUsers,
   onTyping,
-
+  onInitiateCall
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Start voice call
+  const startVoiceCall = async () => {
+    if (!selectedConversationData?.user_id || selectedConversationType !== 'direct' || !currentUser || !onInitiateCall) {
+      return;
+    }
+
+    // Use the new approach: initiate call through parent component
+    onInitiateCall({
+      user_id: selectedConversationData.user_id,
+      username: selectedConversationData.name,
+      display_name: selectedConversationData.name
+    });
   };
 
   // Prefetch profile pictures for all message senders to reduce API spam
@@ -352,6 +369,19 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Direct Message Actions */}
+        {selectedConversationType === 'direct' && selectedConversationData?.user_id && (
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={startVoiceCall}
+              className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono"
+              title="Start Voice Call"
+            >
+              <FontAwesomeIcon icon={faPhone} />
+            </button>
           </div>
         )}
       </div>

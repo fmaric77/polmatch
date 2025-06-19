@@ -43,6 +43,7 @@ interface ConversationsListProps {
   isConnected: boolean;
   connectionError: string | null;
   sessionToken: string | null;
+  onReconnect?: () => void;
   currentUser: { user_id: string; username: string } | null;
   // Profile switcher props
   activeProfileType: 'basic' | 'love' | 'business';
@@ -61,6 +62,11 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   isConversationsSidebarHidden,
   setIsConversationsSidebarHidden,
   setIsSidebarVisible,
+  // SSE status props
+  isConnected,
+  connectionError,
+  sessionToken,
+  onReconnect,
   // Profile switcher props
   activeProfileType,
   setActiveProfileType
@@ -168,6 +174,34 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           )}
 
           
+          {/* Connection Status Indicator */}
+          {sessionToken && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between p-2 rounded border border-gray-600 bg-gray-800/50">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-xs font-mono text-gray-300 uppercase tracking-wider">
+                    {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                  </span>
+                </div>
+                {!isConnected && onReconnect && (
+                  <button
+                    onClick={onReconnect}
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-mono uppercase tracking-wider border border-blue-500 transition-colors"
+                    title="Reconnect to receive notifications"
+                  >
+                    RECONNECT
+                  </button>
+                )}
+              </div>
+              {connectionError && (
+                <div className="mt-1 text-xs text-red-400 font-mono">
+                  {connectionError}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Search Bar */}
           <div className="relative">
             <input
