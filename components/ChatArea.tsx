@@ -545,7 +545,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   </div>
                 )}
                 
-                <div className={`max-w-md ${!isCurrentUser && !showAvatar ? 'ml-12' : ''}`}>
+                <div className={`max-w-md break-words ${!isCurrentUser && !showAvatar ? 'ml-12' : ''}`}>
                   {!isCurrentUser && showAvatar && (
                     <div className="mb-2 bg-black border border-gray-500 rounded-none p-2 shadow-lg">
                       <div className="flex items-center space-x-2">
@@ -581,7 +581,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   )}
                   
                   <div
-                    className={`p-4 rounded-none border-2 shadow-lg font-mono ${
+                    className={`p-4 rounded-none border-2 shadow-lg font-mono break-words ${
                       isCurrentUser
                         ? 'bg-black border-blue-400 text-white shadow-blue-400/30'
                         : 'bg-black border-gray-400 text-white shadow-gray-400/30'
@@ -593,13 +593,15 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         <div className="text-blue-400 text-xs font-mono uppercase tracking-wider mb-1">
                           REPLYING TO {message.reply_to.sender_name}
                         </div>
-                        <div className="text-gray-300 text-xs truncate">
+                        <div className="text-gray-300 text-xs break-words">
                           {message.reply_to.content}
                         </div>
                       </div>
                     )}
                     
-                    <MessageContent content={message.content} />
+                    <div className="break-words">
+                      <MessageContent content={message.content} />
+                    </div>
                     
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-600">
                       <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
