@@ -4,7 +4,7 @@ import { connectToDatabase } from '../../../lib/mongodb-connection';
 
 interface CatalogueItemDocument {
   catalogued_user_id: string;
-  category: string;
+  profile_type: string;
   added_at: string;
   owner_user_id: string;
 }
@@ -21,6 +21,7 @@ interface EnrichedCatalogueItem {
   display_name: string;
   category: string;
   added_at: string;
+  ai_excluded?: boolean;
 }
 
 export async function GET() {
@@ -56,10 +57,15 @@ export async function GET() {
 
     // Get profile-specific display names for each user
     const profilePromises = catalogueItems.map(async (item: CatalogueItemDocument) => {
-      const profileCollectionName = `${item.category}profiles`; // Use 'basicprofiles', 'loveprofiles', 'businessprofiles'
+      const profileCollectionName = `${item.profile_type}profiles`; // Use 'basicprofiles', 'loveprofiles', 'businessprofiles'
       const profile = await db.collection(profileCollectionName)
-        .findOne({ user_id: item.catalogued_user_id }, { projection: { display_name: 1 } });
-      return { user_id: item.catalogued_user_id, profile_display_name: profile?.display_name || null };
+        .findOne({ user_id: item.catalogued_user_id }, { projection: { display_name: 1, ai_excluded: 1 } });
+      return { 
+        user_id: item.catalogued_user_id, 
+        profile_type: item.profile_type,
+        profile_display_name: profile?.display_name || null,
+        ai_excluded: profile?.ai_excluded || false
+      };
     });
     
     const profileData = await Promise.all(profilePromises);
@@ -67,13 +73,14 @@ export async function GET() {
     // Combine catalogue data with user details and profile-specific display names
     const enrichedItems = catalogueItems.map((item: CatalogueItemDocument) => {
       const user = users.find((u: UserDocument) => u.user_id === item.catalogued_user_id);
-      const profileInfo = profileData.find(p => p.user_id === item.catalogued_user_id);
+      const profileInfo = profileData.find(p => p.user_id === item.catalogued_user_id && p.profile_type === item.profile_type);
       return {
         user_id: item.catalogued_user_id,
         username: user?.username || '',
         display_name: profileInfo?.profile_display_name || null, // Use profile-specific display name
-        category: item.category,
-        added_at: item.added_at
+        category: item.profile_type,
+        added_at: item.added_at,
+        ai_excluded: profileInfo?.ai_excluded || false
       };
     }).filter((item: EnrichedCatalogueItem) => item.username); // Filter out items where user no longer exists
 
@@ -140,37 +147,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is already in catalogue
+    // Check if this specific user+category combination already exists
     const existingEntry = await db.collection('user_catalogues').findOne({
       owner_user_id: session.user_id,
-      catalogued_user_id: user_id
+      catalogued_user_id: user_id,
+      profile_type: category
     });
 
     if (existingEntry) {
-      // Update category if user already exists
-      await db.collection('user_catalogues').updateOne(
-        {
-          owner_user_id: session.user_id,
-          catalogued_user_id: user_id
-        },
-        {
-          $set: {
-            category: category,
-            updated_at: new Date().toISOString()
-          }
-        }
-      );
-
+      // Entry already exists for this specific category
       return NextResponse.json({
         success: true,
-        message: `User moved to ${category} catalogue`
+        message: `User already in ${category} catalogue`
       });
     } else {
-      // Add new entry
+      // Add new entry (allows multiple categories for same user)
       await db.collection('user_catalogues').insertOne({
         owner_user_id: session.user_id,
         catalogued_user_id: user_id,
-        category: category,
+        profile_type: category,
         added_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });

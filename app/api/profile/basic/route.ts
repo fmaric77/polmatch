@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       bio: data.bio || '',
       profile_picture_url: data.profile_picture_url || '',
       visibility: data.visibility || 'public',
+      ai_excluded: data.ai_excluded || false,
       last_updated: new Date().toISOString(),
       assigned_questionnaires: data.assigned_questionnaires || {},
       completed_questionnaires: data.completed_questionnaires || {},
