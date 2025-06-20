@@ -93,21 +93,13 @@ export default function Login() {
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 xs:p-6 sm:p-8">
         {/* FBI Header */}
         <div className="mb-6 sm:mb-12 text-center animate-pulse">
-          <div className="text-red-500 text-xs font-mono uppercase tracking-widest mb-2 animate-pulse">CLASSIFIED ACCESS TERMINAL</div>
-          <div className="w-12 sm:w-16 h-px bg-white mx-auto mb-3 sm:mb-4"></div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-widest uppercase text-white animate-pulse">POLMATCH</h1>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-white">MESSINGER</h2>
-          <div className="w-12 sm:w-16 h-px bg-white mx-auto mt-3 sm:mt-4"></div>
-          <div className="text-green-400 text-xs font-mono uppercase tracking-widest mt-2">SECURITY CLEARANCE REQUIRED</div>
         </div>
 
         {/* Login Form Container */}
         <div className="bg-black border-2 border-white rounded-none shadow-2xl p-6 sm:p-8 w-full max-w-md relative">
           {/* Form Header */}
           <div className="border-b-2 border-white bg-white text-black p-2 sm:p-3 text-center mb-6 -mx-6 sm:-mx-8 -mt-6 sm:-mt-8">
-            <div className="font-mono text-xs font-bold tracking-widest uppercase">RESTRICTED ACCESS</div>
-            <div className="text-base sm:text-lg font-bold tracking-widest uppercase">AGENT AUTHENTICATION</div>
-            <div className="font-mono text-xs tracking-widest uppercase">CLEARANCE LEVEL: GAMMA</div>
+            <div className="text-base sm:text-lg font-bold tracking-widest uppercase">polmatch messigner</div>
           </div>
 
           {/* Pulsing Status Indicator */}

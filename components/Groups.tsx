@@ -559,12 +559,12 @@ const Groups = () => {
                         </div>
                       )}
                       <div
-                        className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
+                        className={`max-w-sm px-4 py-2 rounded-lg shadow text-sm mb-1 break-words ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                       >
                         {msg.sender_id !== currentUser?.user_id && (
                           <div className="font-semibold text-xs mb-1">{getAnonymousDisplayName(msg.sender_display_name, msg.sender_username, msg.sender_id)}</div>
                         )}
-                        <div>{msg.content}</div>
+                        <div className="break-words">{msg.content}</div>
                         <div className="text-xs opacity-75 mt-1">
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>

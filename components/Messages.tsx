@@ -501,9 +501,9 @@ const Messages = () => {
                       </div>
                     )}
                     <div
-                      className={`max-w-xs px-4 py-2 rounded-lg shadow text-sm mb-1 relative ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
+                      className={`max-w-sm px-4 py-2 rounded-lg shadow text-sm mb-1 relative break-words ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                     >
-                      <div>{msg.content}</div>
+                      <div className="break-words">{msg.content}</div>
                       <div className="text-xs text-right text-gray-300 mt-1 flex items-center gap-2">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {msg.sender_id === currentUser?.user_id && (
