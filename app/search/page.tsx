@@ -9,6 +9,7 @@ interface User {
   user_id: string;
   username: string;
   display_name?: string;
+  similarity_score?: number;
 }
 
 interface Group {
@@ -22,6 +23,21 @@ interface Friend {
   user_id: string;
   friend_id: string;
   status: string;
+}
+
+interface QuestionnaireFilter {
+  question_id: string;
+  question_text: string;
+  question_type: string;
+  options: string[];
+  profile_display_text?: string;
+  questionnaire_title: string;
+  group_title: string;
+}
+
+interface SelectedFilter {
+  question_id: string;
+  selected_answers: string[];
 }
 
 export default function SearchUsersPage() {
@@ -44,6 +60,15 @@ export default function SearchUsersPage() {
   const [profileFriends, setProfileFriends] = useState<Friend[]>([]);
   const [profilePendingRequests, setProfilePendingRequests] = useState<Friend[]>([]);
 
+  // Questionnaire filters state
+  const [availableFilters, setAvailableFilters] = useState<QuestionnaireFilter[]>([]);
+  const [selectedFilters, setSelectedFilters] = useState<SelectedFilter[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filtersLoading, setFiltersLoading] = useState(false);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<'none' | 'similarity'>('none');
+
   // Fetch current user ID and validate session
   useEffect(() => {
     async function fetchSession() {
@@ -60,19 +85,27 @@ export default function SearchUsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchQuestionnaireFilters();
     if (currentUserId) {
       fetchProfileFriends();
     }
+    // Reset filters and sorting when profile type changes
+    setSelectedFilters([]);
+    setSortBy('none');
   }, [currentUserId, activeProfileType]);
 
   useEffect(() => {
-    setFiltered(
-      users.filter(u =>
-        u.username.toLowerCase().includes(search.toLowerCase()) ||
-        (u.display_name || '').toLowerCase().includes(search.toLowerCase())
-      )
-    );
-  }, [search, users]);
+    if (selectedFilters.length > 0 || sortBy === 'similarity') {
+      fetchUsersWithFilters();
+    } else {
+      setFiltered(
+        users.filter(u =>
+          u.username.toLowerCase().includes(search.toLowerCase()) ||
+          (u.display_name || '').toLowerCase().includes(search.toLowerCase())
+        )
+      );
+    }
+  }, [search, users, selectedFilters, sortBy]);
 
   async function fetchUsers() {
     try {
@@ -81,6 +114,35 @@ export default function SearchUsersPage() {
       if (data.success) setUsers(data.users);
     } catch {
       console.error('Failed to fetch users');
+    }
+  }
+
+  async function fetchQuestionnaireFilters() {
+    setFiltersLoading(true);
+    try {
+      const res = await fetch(`/api/users/questionnaire-filters?profile_type=${activeProfileType}`);
+      const data = await res.json();
+      if (data.success) {
+        setAvailableFilters(data.filters);
+      }
+    } catch {
+      console.error('Failed to fetch questionnaire filters');
+    } finally {
+      setFiltersLoading(false);
+    }
+  }
+
+  async function fetchUsersWithFilters() {
+    try {
+      const filtersParam = selectedFilters.length > 0 ? JSON.stringify(selectedFilters) : '';
+      const sortParam = sortBy !== 'none' ? `&sort_by=${sortBy}` : '';
+      const res = await fetch(`/api/users/search-with-filters?profile_type=${activeProfileType}&search=${encodeURIComponent(search)}&filters=${encodeURIComponent(filtersParam)}${sortParam}`);
+      const data = await res.json();
+      if (data.success) {
+        setFiltered(data.users);
+      }
+    } catch {
+      console.error('Failed to fetch users with filters');
     }
   }
 
@@ -111,6 +173,45 @@ export default function SearchUsersPage() {
       (request.user_id === currentUserId && request.friend_id === userId) ||
       (request.user_id === userId && request.friend_id === currentUserId)
     );
+  }
+
+  function handleFilterChange(questionId: string, answer: string, checked: boolean) {
+    setSelectedFilters(prev => {
+      const existingFilterIndex = prev.findIndex(f => f.question_id === questionId);
+      
+      if (existingFilterIndex >= 0) {
+        const existingFilter = prev[existingFilterIndex];
+        let newAnswers;
+        
+        if (checked) {
+          newAnswers = [...existingFilter.selected_answers, answer];
+        } else {
+          newAnswers = existingFilter.selected_answers.filter(a => a !== answer);
+        }
+        
+        if (newAnswers.length === 0) {
+          return prev.filter((_, index) => index !== existingFilterIndex);
+        } else {
+          const newFilters = [...prev];
+          newFilters[existingFilterIndex] = { ...existingFilter, selected_answers: newAnswers };
+          return newFilters;
+        }
+      } else if (checked) {
+        return [...prev, { question_id: questionId, selected_answers: [answer] }];
+      }
+      
+      return prev;
+    });
+  }
+
+  function clearAllFilters() {
+    setSelectedFilters([]);
+    setSortBy('none');
+  }
+
+  function isFilterSelected(questionId: string, answer: string): boolean {
+    const filter = selectedFilters.find(f => f.question_id === questionId);
+    return filter ? filter.selected_answers.includes(answer) : false;
   }
 
   async function sendFriendRequest(friend_id: string) {
@@ -280,8 +381,8 @@ export default function SearchUsersPage() {
   // Category labels matching catalogue style
   const categoryLabels = {
     basic: 'GENERAL',
-    love: 'PERSONAL', 
-    business: 'CORPORATE'
+    love: 'DATING', 
+    business: 'BUSINESS'
   };
 
   const categoryColors = {
@@ -346,6 +447,132 @@ export default function SearchUsersPage() {
                   placeholder="USERNAME OR DISPLAY NAME..."
                   className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
                 />
+              </div>
+
+              {/* Questionnaire Filters */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-xs font-mono text-gray-400">QUESTIONNAIRE FILTERS:</div>
+                  <div className="flex gap-2">
+                    {(selectedFilters.length > 0 || sortBy !== 'none') && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="px-2 py-1 bg-red-600 text-white font-mono text-xs border border-red-400 hover:bg-red-700 transition-colors"
+                      >
+                        CLEAR ALL ({selectedFilters.length + (sortBy !== 'none' ? 1 : 0)})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`px-2 py-1 font-mono text-xs border transition-colors ${
+                        showFilters 
+                          ? 'bg-white text-black border-white'
+                          : 'bg-black text-white border-white hover:bg-white hover:text-black'
+                      }`}
+                    >
+                      {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'} ({availableFilters.length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sorting Options */}
+                <div className="mb-3">
+                  <div className="text-xs font-mono text-gray-400 mb-2">SORT BY:</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSortBy('none')}
+                      className={`px-3 py-2 font-mono text-xs border transition-colors ${
+                        sortBy === 'none'
+                          ? 'bg-white text-black border-white'
+                          : 'bg-black text-white border-gray-400 hover:border-white'
+                      }`}
+                    >
+                      DEFAULT
+                    </button>
+                    <button
+                      onClick={() => setSortBy('similarity')}
+                      className={`px-3 py-2 font-mono text-xs border transition-colors ${
+                        sortBy === 'similarity'
+                          ? 'bg-blue-600 text-white border-blue-400'
+                          : 'bg-black text-white border-gray-400 hover:border-blue-400'
+                      }`}
+                    >
+                      SIMILARITY TO ME
+                    </button>
+                  </div>
+                  {sortBy === 'similarity' && (
+                    <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400">
+                      <div className="text-xs font-mono text-blue-400">
+                        ℹ Users are sorted by how similar their questionnaire answers are to yours
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {showFilters && (
+                  <div className="border border-white bg-gray-900/50 p-3">
+                    {filtersLoading ? (
+                      <div className="text-center py-4 text-gray-400 font-mono text-xs">
+                        LOADING FILTERS...
+                      </div>
+                    ) : availableFilters.length === 0 ? (
+                      <div className="text-center py-4 text-gray-400 font-mono text-xs">
+                        NO QUESTIONNAIRE FILTERS AVAILABLE FOR {categoryLabels[activeProfileType]} PROFILE
+                      </div>
+                    ) : (
+                      <div className="space-y-4 max-h-60 overflow-y-auto">
+                        {availableFilters.map((filter, filterIndex) => (
+                          <div key={`filter-container-${filter.question_id}-${filterIndex}`} className="border-l-2 border-white pl-3">
+                            <div className="text-xs font-mono text-gray-300 mb-2">
+                              {filter.group_title} → {filter.questionnaire_title}
+                            </div>
+                            <div className="text-sm font-mono text-white mb-2 font-bold">
+                              {filter.profile_display_text || filter.question_text}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {filter.options.map((option, optionIndex) => (
+                                <label key={`${filter.question_id}-${option}-${optionIndex}`} className="flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isFilterSelected(filter.question_id, option)}
+                                    onChange={(e) => handleFilterChange(filter.question_id, option, e.target.checked)}
+                                    className="mr-2"
+                                  />
+                                  <span className={`px-2 py-1 border font-mono text-xs transition-colors ${
+                                    isFilterSelected(filter.question_id, option)
+                                      ? 'bg-white text-black border-white'
+                                      : 'bg-black text-white border-gray-400 hover:border-white'
+                                  }`}>
+                                    {option.toUpperCase()}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedFilters.length > 0 && (
+                  <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400">
+                    <div className="text-xs font-mono text-blue-400 mb-1">ACTIVE FILTERS:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedFilters.flatMap((selectedFilter, filterIndex) => {
+                        const filterInfo = availableFilters.find(f => f.question_id === selectedFilter.question_id);
+                        return selectedFilter.selected_answers.map((answer, answerIndex) => (
+                          <span
+                            key={`filter-${filterIndex}-${selectedFilter.question_id}-${answer}-${answerIndex}`}
+                            className="px-2 py-1 bg-blue-600 text-white font-mono text-xs border border-blue-400"
+                          >
+                            {filterInfo?.profile_display_text || filterInfo?.question_text}: {answer}
+                          </span>
+                        ));
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {actionMessage && (
@@ -421,6 +648,18 @@ export default function SearchUsersPage() {
                                    hasPendingRequest(user.user_id) ? 'PENDING' : 'NONE'}
                                 </div>
                               </div>
+                              {sortBy === 'similarity' && user.similarity_score !== undefined && (
+                                <div>
+                                  <span className="text-gray-400">SIMILARITY:</span>
+                                  <div className={`font-bold ${
+                                    user.similarity_score >= 0.8 ? 'text-green-400' :
+                                    user.similarity_score >= 0.6 ? 'text-yellow-400' :
+                                    user.similarity_score >= 0.4 ? 'text-orange-400' : 'text-red-400'
+                                  }`}>
+                                    {Math.round(user.similarity_score * 100)}% MATCH
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                           
@@ -569,3 +808,4 @@ export default function SearchUsersPage() {
     </div>
   );
 }
+
