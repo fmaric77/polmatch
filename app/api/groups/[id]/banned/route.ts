@@ -39,8 +39,24 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const params = await context.params;
     const groupId = params.id;
 
+    // Get profile_type from query parameters
+    const url = new URL(req.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const bansCollection = profile_type === 'basic' ? 'group_bans' : `group_bans_${profile_type}`;
+
     // Check if user is a member of the group with admin privileges
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -53,7 +69,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     // Check if user has admin privileges
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     const isAdmin = group && (group.creator_id === session.user_id || 
                               (membership && (membership.role === 'owner' || membership.role === 'admin')));
 
@@ -65,7 +82,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     // Get banned users with user details
-    const bannedUsers = await db.collection('group_bans').aggregate([
+    const bannedUsers = await db.collection(bansCollection).aggregate([
       { $match: { group_id: groupId } },
       {
         $lookup: {

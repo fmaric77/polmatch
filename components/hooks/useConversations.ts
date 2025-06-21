@@ -46,7 +46,11 @@ interface Group {
   user_role?: string;
 }
 
-export const useConversations = (currentUser: { user_id: string; username: string } | null, profileType?: string) => {
+export const useConversations = (
+  currentUser: { user_id: string; username: string } | null, 
+  profileType?: string,
+  conversationType: 'all' | 'direct' | 'groups' = 'all'
+) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,60 +59,61 @@ export const useConversations = (currentUser: { user_id: string; username: strin
     if (!currentUser) return;
 
     try {
-      console.log('Fetching conversations for user:', currentUser.user_id, 'profile type:', profileType);
+      console.log('Fetching conversations for user:', currentUser.user_id, 'profile type:', profileType, 'conversation type:', conversationType);
+      console.log('🔍 CONVERSATION FETCH - Type:', conversationType, 'Profile:', profileType);
       
-      // Build URL with optional profile type filter
-      let dmsUrl = '/api/private-conversations';
-      if (profileType) {
-        dmsUrl += `?profile_type=${profileType}`;
-      }
-      
-      // Fetch DMs and groups in parallel
-      const [dmsRes, groupsRes] = await Promise.all([
-        fetch(dmsUrl),
-        fetch(`/api/groups/list?profile_type=${profileType}`)
-      ]);
-
-      const [dmsData, groupsData] = await Promise.all([
-        dmsRes.json(),
-        groupsRes.json()
-      ]);
-
       const dmConversations: Conversation[] = [];
       const groupConversations: Conversation[] = [];
 
-      // Process DM conversations
-      if (dmsData.success && Array.isArray(dmsData.conversations)) {
-        dmsData.conversations.forEach((conv: PrivateConversationFromAPI) => {
-          if (conv.other_user) {
-            dmConversations.push({
-              id: conv.other_user.user_id,
-              name: conv.other_user.username,
-              type: 'direct' as const,
-              user_id: conv.other_user.user_id,
-              last_message: conv.latest_message?.content,
-              last_activity: conv.latest_message?.timestamp || conv.created_at,
-              unread_count: 0
-            });
-          }
-        });
+      // Conditionally fetch based on conversation type
+      if (conversationType === 'all' || conversationType === 'direct') {
+        // Build URL with optional profile type filter
+        let dmsUrl = '/api/private-conversations';
+        if (profileType) {
+          dmsUrl += `?profile_type=${profileType}`;
+        }
+        
+        const dmsRes = await fetch(dmsUrl);
+        const dmsData = await dmsRes.json();
+
+        // Process DM conversations
+        if (dmsData.success && Array.isArray(dmsData.conversations)) {
+          dmsData.conversations.forEach((conv: PrivateConversationFromAPI) => {
+            if (conv.other_user) {
+              dmConversations.push({
+                id: conv.other_user.user_id,
+                name: conv.other_user.username,
+                type: 'direct' as const,
+                user_id: conv.other_user.user_id,
+                last_message: conv.latest_message?.content,
+                last_activity: conv.latest_message?.timestamp || conv.created_at,
+                unread_count: 0
+              });
+            }
+          });
+        }
       }
 
-      // Process group conversations
-      if (groupsData.success && groupsData.groups) {
-        groupsData.groups.forEach((group: Group) => {
-          groupConversations.push({
-            id: group.group_id,
-            name: group.name,
-            type: 'group',
-            is_private: group.is_private,
-            last_activity: group.last_activity,
-            members_count: group.members_count,
-            creator_id: group.creator_id,
-            user_role: group.user_role,
-            unread_count: 0
+      if (conversationType === 'all' || conversationType === 'groups') {
+        const groupsRes = await fetch(`/api/groups/list?profile_type=${profileType}`);
+        const groupsData = await groupsRes.json();
+
+        // Process group conversations
+        if (groupsData.success && groupsData.groups) {
+          groupsData.groups.forEach((group: Group) => {
+            groupConversations.push({
+              id: group.group_id,
+              name: group.name,
+              type: 'group',
+              is_private: group.is_private,
+              last_activity: group.last_activity,
+              members_count: group.members_count,
+              creator_id: group.creator_id,
+              user_role: group.user_role,
+              unread_count: 0
+            });
           });
-        });
+        }
       }
 
       // Sort by last activity
@@ -123,7 +128,7 @@ export const useConversations = (currentUser: { user_id: string; username: strin
       setError('Failed to load conversations');
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, profileType, conversationType]);
 
   const deleteConversation = useCallback(async (conv: Conversation) => {
     if (conv.type === 'direct') {
@@ -151,7 +156,12 @@ export const useConversations = (currentUser: { user_id: string; username: strin
         console.error('Failed to delete conversation:', await response.text());
       }
     } else if (conv.type === 'group') {
-      const response = await fetch(`/api/groups/${conv.id}`, { method: 'DELETE' });
+      // Include profile_type in the query parameters for group deletion
+      const deleteUrl = profileType ? 
+        `/api/groups/${conv.id}?profile_type=${profileType}` : 
+        `/api/groups/${conv.id}`;
+      
+      const response = await fetch(deleteUrl, { method: 'DELETE' });
       if (response.ok) {
         setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'group')));
       } else {

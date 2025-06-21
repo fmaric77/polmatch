@@ -149,17 +149,18 @@ const UnifiedMessages: React.FC = () => {
   } | null>(null);
 
   // Custom hooks
-  const conversations = useConversations(currentUser, activeProfileType);
-  const profileConversations = useProfileConversations(currentUser, activeProfileType, selectedCategory === 'direct');
+  const conversations = useConversations(currentUser, activeProfileType, selectedCategory === 'groups' ? 'groups' : 'all');
+  const profileConversations = useProfileConversations(activeProfileType);
   const profileMessages = useProfileMessages(activeProfileType);
-  const groupManagement = useGroupManagement(currentUser);
+  const groupManagement = useGroupManagement(currentUser, activeProfileType);
   const modals = useModalStates();
   const messages = useMessages(
     currentUser,
     selectedConversation,
     selectedConversationType,
     selectedChannel,
-    groupManagement.groupChannels
+    groupManagement.groupChannels,
+    activeProfileType
   );
 
   // Session token for SSE
@@ -667,6 +668,7 @@ const UnifiedMessages: React.FC = () => {
     if (currentUser) {
       conversations.fetchConversations();
       groupManagement.fetchInvitations();
+      groupManagement.fetchInvitationSummary(); // Fetch summary of all profile invitations
       profileConversations.fetchConversations();
     }
   }, [currentUser]); // Only depend on currentUser to prevent infinite loops
@@ -679,6 +681,15 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [activeProfileType, currentUser, selectedCategory]);
 
+  // Refresh invitations when profile type changes (for all categories)
+  useEffect(() => {
+    if (currentUser) {
+      console.log('🔔 Profile type changed, refreshing invitations for:', activeProfileType);
+      groupManagement.fetchInvitations();
+      groupManagement.fetchInvitationSummary(); // Also refresh the summary
+    }
+  }, [activeProfileType, currentUser]);
+
   // Clear selected group/channel when profile type changes and we're in groups category
   useEffect(() => {
     if (selectedCategory === 'groups') {
@@ -689,10 +700,16 @@ const UnifiedMessages: React.FC = () => {
       setReplyTo(null);
       // Clear any loading states
       messages.setContextSwitchLoading(false);
-      // Refresh groups for the new profile type
+      // Refresh groups and invitations for the new profile type
       conversations.fetchConversations();
+      groupManagement.fetchInvitations();
     }
   }, [activeProfileType, selectedCategory]);
+
+  // Log when category changes
+  useEffect(() => {
+    console.log('📂 CATEGORY CHANGED to:', selectedCategory);
+  }, [selectedCategory]);
 
   // Clear URL parameters after auto-select to prevent forced navigation
   useEffect(() => {
@@ -758,10 +775,16 @@ const UnifiedMessages: React.FC = () => {
     
     const dmUserId = searchParams.get('user');
     const profileParam = searchParams.get('profile') as ProfileType;
+    const categoryParam = searchParams.get('category') as 'direct' | 'groups';
     
     // Set profile type from URL parameter if provided
     if (profileParam && ['basic', 'love', 'business'].includes(profileParam)) {
       setActiveProfileType(profileParam);
+    }
+    
+    // Set category from URL parameter if provided
+    if (categoryParam && ['direct', 'groups'].includes(categoryParam)) {
+      setSelectedCategory(categoryParam);
     }
     
     if (dmUserId) {
@@ -852,7 +875,7 @@ const UnifiedMessages: React.FC = () => {
   // Fetch messages when channel changes
   useEffect(() => {
     if (selectedConversation && selectedConversationType === 'group' && selectedChannel) {
-      messages.fetchChannelMessages(selectedConversation, selectedChannel, activeProfileType);
+      messages.fetchChannelMessages(selectedConversation, selectedChannel);
     }
   }, [selectedChannel, selectedConversation, selectedConversationType, activeProfileType]); // Added activeProfileType dependency
 
@@ -876,7 +899,7 @@ const UnifiedMessages: React.FC = () => {
       success = await profileMessages.sendMessage(selectedConversation, newMessage, replyTo || undefined);
     } else if (selectedConversationType === 'group') {
       console.log('📨 Using messages.sendMessage with profile type for group');
-      success = await messages.sendMessage(newMessage, replyTo || undefined, activeProfileType);
+      success = await messages.sendMessage(newMessage, replyTo || undefined);
     } else {
       console.log('📨 Using messages.sendMessage');
       success = await messages.sendMessage(newMessage, replyTo || undefined);
@@ -1077,7 +1100,7 @@ const UnifiedMessages: React.FC = () => {
                 unread_count: 0,
                 user_id: pc.other_user.user_id,
               }))
-            : conversations.conversations
+            : conversations.conversations.filter(c => c.type === 'group')
         }
         selectedCategory={selectedCategory}
         selectedConversation={selectedConversation}
@@ -1098,6 +1121,8 @@ const UnifiedMessages: React.FC = () => {
         // Profile switcher props
         activeProfileType={activeProfileType}
         setActiveProfileType={setActiveProfileType}
+        // Invitation summary prop
+        invitationSummary={groupManagement.invitationSummary}
       />
 
       {/* Chat area */}
@@ -1169,7 +1194,10 @@ const UnifiedMessages: React.FC = () => {
                 const res = await fetch('/api/groups/leave', {
                   method: 'DELETE',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ group_id: id })
+                  body: JSON.stringify({ 
+                    group_id: id,
+                    profile_type: activeProfileType
+                  })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -1243,6 +1271,7 @@ const UnifiedMessages: React.FC = () => {
             groupManagement.fetchChannels(selectedConversation);
             modals.closeModal('showCreateChannelModal');
           }}
+          profileType={activeProfileType}
         />
       )}
 

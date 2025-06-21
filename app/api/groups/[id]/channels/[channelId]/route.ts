@@ -28,8 +28,24 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const groupId = params.id;
     const channelId = params.channelId;
 
+    // Get profile_type from query parameters
+    const url = new URL(req.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
+    const channelsCollection = profile_type === 'basic' ? 'group_channels' : `group_channels_${profile_type}`;
+
     // Check if user is a member of the group with admin privileges
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: auth.user.user_id
     });
@@ -48,7 +64,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     }
 
     // Get the channel to verify it exists and check if it's default
-    const channel = await db.collection('group_channels').findOne({
+    const channel = await db.collection(channelsCollection).findOne({
       channel_id: channelId,
       group_id: groupId
     });
@@ -67,13 +83,13 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     }
 
     // Delete all messages in the channel first
-    const deletedMessages = await db.collection('group_messages').deleteMany({
+    const deletedMessages = await db.collection(messagesCollection).deleteMany({
       group_id: groupId,
       channel_id: channelId
     });
 
     // Delete the channel
-    const deletedChannel = await db.collection('group_channels').deleteOne({
+    const deletedChannel = await db.collection(channelsCollection).deleteOne({
       channel_id: channelId,
       group_id: groupId
     });
@@ -87,7 +103,8 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     return NextResponse.json({ 
       success: true, 
       message: 'Channel deleted successfully',
-      deletedMessages: deletedMessages.deletedCount
+      deletedMessages: deletedMessages.deletedCount,
+      profile_type
     });
 
   } catch (error) {

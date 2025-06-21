@@ -43,12 +43,27 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
     const group_id = id;
 
+    // Get profile_type from query parameters  
+    const url = new URL(req.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return createValidationErrorResponse('Invalid profile_type. Must be basic, love, or business', 400);
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
+    const invitationsCollection = profile_type === 'basic' ? 'group_invitations' : `group_invitations_${profile_type}`;
+
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     const db = client.db('polmatch');
 
     // Check if group exists and user is the creator
-    const group = await db.collection('groups').findOne({ group_id });
+    const group = await db.collection(groupsCollection).findOne({ group_id });
     
     if (!group) {
       await client.close();
@@ -58,7 +73,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // Check if user is creator (either by creator_id or by having owner/admin role)
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id,
       user_id: session.user_id
     });
@@ -76,13 +91,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Delete group and all related data
     await Promise.all([
       // Delete the group
-      db.collection('groups').deleteOne({ group_id }),
+      db.collection(groupsCollection).deleteOne({ group_id }),
       // Delete all group members
-      db.collection('group_members').deleteMany({ group_id }),
+      db.collection(membersCollection).deleteMany({ group_id }),
       // Delete all group messages
-      db.collection('group_messages').deleteMany({ group_id }),
+      db.collection(messagesCollection).deleteMany({ group_id }),
       // Delete all group invitations
-      db.collection('group_invitations').deleteMany({ group_id })
+      db.collection(invitationsCollection).deleteMany({ group_id })
     ]);
 
     await client.close();

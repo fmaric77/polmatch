@@ -144,7 +144,7 @@ const Groups = () => {
   // Fetch group members
   const fetchMembers = useCallback(() => {
     if (!selectedGroup) return;
-    fetch(`/api/groups/${selectedGroup}/members`)
+    fetch(`/api/groups/${selectedGroup}/members?profile_type=${activeProfileType}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -156,11 +156,11 @@ const Groups = () => {
       .catch(() => {
         setError('Failed to load members');
       });
-  }, [selectedGroup]);
+  }, [selectedGroup, activeProfileType]);
 
   // Fetch group invitations
   const fetchInvitations = useCallback(() => {
-    fetch('/api/invitations')
+    fetch(`/api/invitations?profile_type=${activeProfileType}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -172,13 +172,13 @@ const Groups = () => {
       .catch(() => {
         setError('Failed to load invitations');
       });
-  }, []);
+  }, [activeProfileType]);
 
   // Fetch available users for invitation
   const fetchAvailableUsers = useCallback(() => {
     if (!selectedGroup) return;
     
-    fetch(`/api/users/available?group_id=${selectedGroup}`)
+    fetch(`/api/users/available?group_id=${selectedGroup}&profile_type=${activeProfileType}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -190,7 +190,7 @@ const Groups = () => {
       .catch(() => {
         setError('Failed to load users');
       });
-  }, [selectedGroup]);
+  }, [selectedGroup, activeProfileType]);
 
   useEffect(() => {
     // Clear previous group data immediately when switching groups
@@ -218,6 +218,19 @@ const Groups = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Update create form profile type when activeProfileType changes
+  useEffect(() => {
+    setCreateForm(prev => ({
+      ...prev,
+      profile_type: activeProfileType
+    }));
+  }, [activeProfileType]);
+
+  // Refresh invitations when profile type changes
+  useEffect(() => {
+    fetchInvitations();
+  }, [activeProfileType, fetchInvitations]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,7 +289,10 @@ const Groups = () => {
     const res = await fetch('/api/groups/leave', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group_id: groupId }),
+      body: JSON.stringify({ 
+        group_id: groupId,
+        profile_type: activeProfileType
+      }),
     });
     
     const data = await res.json();
@@ -300,7 +316,10 @@ const Groups = () => {
     const res = await fetch(`/api/groups/${selectedGroup}/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invited_user_id: selectedUserToInvite }),
+      body: JSON.stringify({ 
+        invited_user_id: selectedUserToInvite,
+        profile_type: activeProfileType
+      }),
     });
     
     const data = await res.json();
@@ -319,7 +338,10 @@ const Groups = () => {
     const res = await fetch(`/api/invitations/${invitationId}/respond`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ 
+        action,
+        profile_type: activeProfileType 
+      }),
     });
     
     const data = await res.json();
@@ -343,7 +365,10 @@ const Groups = () => {
       const res = await fetch(`/api/groups/${selectedGroup}/members/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: memberId })
+        body: JSON.stringify({ 
+          user_id: memberId,
+          profile_type: activeProfileType
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -366,7 +391,11 @@ const Groups = () => {
       const res = await fetch(`/api/groups/${selectedGroup}/members/ban`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: memberId, reason })
+        body: JSON.stringify({ 
+          user_id: memberId, 
+          reason,
+          profile_type: activeProfileType
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -389,7 +418,10 @@ const Groups = () => {
       const res = await fetch(`/api/groups/${selectedGroup}/members/${memberId}/role`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole })
+        body: JSON.stringify({ 
+          role: newRole,
+          profile_type: activeProfileType
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -629,7 +661,7 @@ const Groups = () => {
                         className={`max-w-sm px-4 py-2 rounded-lg shadow text-sm mb-1 break-words ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                       >
                         {msg.sender_id !== currentUser?.user_id && (
-                          <div className="font-semibold text-xs mb-1">{getAnonymousDisplayName(msg.sender_display_name, msg.sender_username, msg.sender_id)}</div>
+                          <div className="font-semibold text-xs mb-1">{msg.sender_display_name || '[NO PROFILE NAME]'}</div>
                         )}
                         <div className="break-words">{msg.content}</div>
                         <div className="text-xs opacity-75 mt-1">

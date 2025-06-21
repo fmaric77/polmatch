@@ -5,6 +5,7 @@ import { faTimes, faUserPlus, faSearch } from '@fortawesome/free-solid-svg-icons
 interface User {
   user_id: string;
   username: string;
+  display_name?: string;
 }
 
 interface InviteModalProps {
@@ -32,8 +33,17 @@ const InviteModal: React.FC<InviteModalProps> = ({
     onFetchUsers();
   }, []); // Empty dependency array to run only once when modal opens
 
-  const filteredUsers = availableUsers.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.toLowerCase())
+  // Only show users who have actual profile display names (not fallback to username)
+  const usersWithProfiles = availableUsers.filter(user => 
+    user.display_name && 
+    user.display_name.trim() && 
+    user.display_name !== '[NO PROFILE NAME]' &&
+    user.display_name !== user.username // Exclude users where display_name equals username (fallback)
+  );
+
+  const filteredUsers = usersWithProfiles.filter(user =>
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.display_name && user.display_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleUserToggle = (userId: string): void => {
@@ -176,7 +186,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
                     <div className="flex items-center space-x-3">
                       <FontAwesomeIcon icon={faUserPlus} className="text-green-400" />
                       <div>
-                        <div className="uppercase tracking-wide">{user.username}</div>
+                        <div className="uppercase tracking-wide">{user.display_name}</div>
                         <div className="text-xs text-gray-400 uppercase tracking-widest">
                           STATUS: {selectedUsers.has(user.user_id) ? 'SELECTED' : 'AVAILABLE'}
                         </div>

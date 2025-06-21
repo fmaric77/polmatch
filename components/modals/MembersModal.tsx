@@ -1,10 +1,12 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUsers, faCrown, faUserShield, faUser, faUserPlus, faUserMinus, faUserTimes, faBan } from '@fortawesome/free-solid-svg-icons';
+import { getAnonymousDisplayName } from '../../lib/anonymization';
 
 interface GroupMember {
   user_id: string;
   username: string;
+  display_name?: string;
   role: string;
   join_date: string;
 }
@@ -77,7 +79,8 @@ const MembersModal: React.FC<MembersModalProps> = ({
   };
 
   const handlePromoteToAdmin = async (member: GroupMember): Promise<void> => {
-    if (window.confirm(`Promote ${member.username} to admin?`)) {
+    const displayName = getAnonymousDisplayName(member.display_name, member.username, member.user_id);
+    if (window.confirm(`Promote ${displayName} to admin?`)) {
       try {
         await onPromoteToAdmin(selectedConversation, member.user_id);
       } catch (error) {
@@ -87,7 +90,8 @@ const MembersModal: React.FC<MembersModalProps> = ({
   };
 
   const handleDemoteToMember = async (member: GroupMember): Promise<void> => {
-    if (window.confirm(`Demote ${member.username} to regular member?`)) {
+    const displayName = getAnonymousDisplayName(member.display_name, member.username, member.user_id);
+    if (window.confirm(`Demote ${displayName} to regular member?`)) {
       try {
         await onDemoteToMember(selectedConversation, member.user_id);
       } catch (error) {
@@ -97,7 +101,8 @@ const MembersModal: React.FC<MembersModalProps> = ({
   };
 
   const handleKickMember = async (member: GroupMember): Promise<void> => {
-    if (window.confirm(`Kick ${member.username} from the group?`)) {
+    const displayName = getAnonymousDisplayName(member.display_name, member.username, member.user_id);
+    if (window.confirm(`Kick ${displayName} from the group?`)) {
       try {
         await onKickMember(selectedConversation, member.user_id);
       } catch (error) {
@@ -107,7 +112,8 @@ const MembersModal: React.FC<MembersModalProps> = ({
   };
 
   const handleBanMember = async (member: GroupMember): Promise<void> => {
-    if (window.confirm(`Ban ${member.username} from the group? This action cannot be undone.`)) {
+    const displayName = getAnonymousDisplayName(member.display_name, member.username, member.user_id);
+    if (window.confirm(`Ban ${displayName} from the group? This action cannot be undone.`)) {
       try {
         await onBanMember(selectedConversation, member.user_id);
       } catch (error) {
@@ -170,7 +176,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                       </div>
                       <div>
                         <div className="text-white font-mono uppercase tracking-wide">
-                          {member.username}
+                          {getAnonymousDisplayName(member.display_name, member.username, member.user_id)}
                         </div>
                         <div className={`text-sm font-mono uppercase tracking-widest ${getRoleColor(member.role)}`}>
                           {member.role} | JOINED: {formatJoinDate(member.join_date)}

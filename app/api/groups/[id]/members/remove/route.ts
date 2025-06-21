@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
-    const { user_id } = await req.json();
+    const { user_id, profile_type } = await req.json();
 
     if (!user_id) {
       await client.close();
@@ -47,8 +47,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }, { status: 400 });
     }
 
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -57,7 +70,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if requester is admin/owner
-    const requesterMembership = await db.collection('group_members').findOne({
+    const requesterMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -73,7 +86,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if target user is a member
-    const targetMembership = await db.collection('group_members').findOne({
+    const targetMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -93,14 +106,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }, { status: 400 });
     }
 
-    // Remove user from group
-    await db.collection('group_members').deleteOne({
+    // Remove user from group using profile-specific collections
+    await db.collection(membersCollection).deleteOne({
       group_id: groupId,
       user_id: user_id
     });
 
-    // Update group member count
-    await db.collection('groups').updateOne(
+    // Update group member count using profile-specific collections
+    await db.collection(groupsCollection).updateOne(
       { group_id: groupId },
       { 
         $inc: { members_count: -1 },

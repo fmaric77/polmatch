@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const params = await context.params;
     const groupId = params.id;
     const memberId = params.memberId;
-    const { role } = await req.json();
+    const { role, profile_type = 'basic' } = await req.json();
 
     if (!role) {
       await client.close();
@@ -47,6 +47,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         error: 'Role is required' 
       }, { status: 400 });
     }
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
 
     if (!['admin', 'member'].includes(role)) {
       await client.close();
@@ -56,7 +68,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -65,7 +77,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Check if requester is admin/owner
-    const requesterMembership = await db.collection('group_members').findOne({
+    const requesterMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -81,7 +93,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Check if target user is a member
-    const targetMembership = await db.collection('group_members').findOne({
+    const targetMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: memberId
     });
@@ -120,7 +132,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Update user role
-    await db.collection('group_members').updateOne(
+    await db.collection(membersCollection).updateOne(
       {
         group_id: groupId,
         user_id: memberId
@@ -135,7 +147,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     );
 
     // Update group last activity
-    await db.collection('groups').updateOne(
+    await db.collection(groupsCollection).updateOne(
       { group_id: groupId },
       { $set: { last_activity: new Date() } }
     );
@@ -144,7 +156,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Member ${role === 'admin' ? 'promoted to' : 'demoted to'} ${role} successfully` 
+      message: `Member ${role === 'admin' ? 'promoted to' : 'demoted to'} ${role} successfully`,
+      profile_type
     });
 
   } catch (error) {

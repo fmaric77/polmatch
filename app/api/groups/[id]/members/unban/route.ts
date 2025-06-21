@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
-    const { user_id } = await req.json();
+    const { user_id, profile_type } = await req.json();
 
     if (!user_id) {
       await client.close();
@@ -47,8 +47,22 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }, { status: 400 });
     }
 
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+    const bansCollection = groupProfileType === 'basic' ? 'group_bans' : `group_bans_${groupProfileType}`;
+
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -57,7 +71,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if requester is admin/owner
-    const requesterMembership = await db.collection('group_members').findOne({
+    const requesterMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -73,7 +87,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if user is actually banned
-    const banRecord = await db.collection('group_bans').findOne({
+    const banRecord = await db.collection(bansCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -86,13 +100,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Remove ban record
-    await db.collection('group_bans').deleteOne({
+    await db.collection(bansCollection).deleteOne({
       group_id: groupId,
       user_id: user_id
     });
 
     // Update group last activity
-    await db.collection('groups').updateOne(
+    await db.collection(groupsCollection).updateOne(
       { group_id: groupId },
       { $set: { last_activity: new Date() } }
     );

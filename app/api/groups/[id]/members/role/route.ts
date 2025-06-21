@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
-    const { user_id, role } = await req.json();
+    const { user_id, role, profile_type } = await req.json();
 
     if (!user_id || !role) {
       await client.close();
@@ -46,6 +46,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
         error: 'User ID and role are required' 
       }, { status: 400 });
     }
+
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
 
     if (!['admin', 'member'].includes(role)) {
       await client.close();
@@ -55,7 +68,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -72,7 +85,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if target user is a member
-    const targetMembership = await db.collection('group_members').findOne({
+    const targetMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -93,7 +106,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Update user role
-    await db.collection('group_members').updateOne(
+    await db.collection(membersCollection).updateOne(
       {
         group_id: groupId,
         user_id: user_id
@@ -108,7 +121,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     );
 
     // Update group last activity
-    await db.collection('groups').updateOne(
+    await db.collection(groupsCollection).updateOne(
       { group_id: groupId },
       { $set: { last_activity: new Date() } }
     );

@@ -6,8 +6,8 @@ export default function GroupsRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the new unified chat page
-    router.replace('/chat');
+    // Redirect to the new unified chat page with groups category
+    router.replace('/chat?category=groups');
   }, [router]);
 
   return (

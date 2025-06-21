@@ -36,10 +36,11 @@ interface User {
   display_name?: string;
 }
 
-export const useGroupManagement = (currentUser: { user_id: string; username: string } | null) => {
+export const useGroupManagement = (currentUser: { user_id: string; username: string } | null, profileType?: string) => {
   const [groupChannels, setGroupChannels] = useState<Channel[]>([]);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
+  const [invitationSummary, setInvitationSummary] = useState<Record<string, number>>({});
   const [bannedUsers, setBannedUsers] = useState<{ user_id: string; username: string; banned_at: string; banned_by: string; banned_by_username: string; reason: string }[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
 
@@ -48,7 +49,8 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
 
   const fetchChannels = useCallback(async (groupId: string) => {
     try {
-      const res = await fetch(`/api/groups/${groupId}/channels`);
+      const profileParam = profileType ? `?profile_type=${profileType}` : '';
+      const res = await fetch(`/api/groups/${groupId}/channels${profileParam}`);
       const data = await res.json();
       if (data.success) {
         setGroupChannels(data.channels);
@@ -59,11 +61,12 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to fetch channels:', err);
       return [];
     }
-  }, []);
+  }, [profileType]);
 
   const fetchGroupMembers = useCallback(async (groupId: string) => {
     try {
-      const res = await fetch(`/api/groups/${groupId}/members`);
+      const profileParam = profileType ? `?profile_type=${profileType}` : '';
+      const res = await fetch(`/api/groups/${groupId}/members${profileParam}`);
       const data = await res.json();
       if (data.success) {
         setGroupMembers(data.members);
@@ -71,11 +74,12 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
     } catch (err) {
       console.error('Failed to fetch group members:', err);
     }
-  }, []);
+  }, [profileType]);
 
   const fetchBannedUsers = useCallback(async (groupId: string) => {
     try {
-      const res = await fetch(`/api/groups/${groupId}/banned`);
+      const profileParam = profileType ? `?profile_type=${profileType}` : '';
+      const res = await fetch(`/api/groups/${groupId}/banned${profileParam}`);
       const data = await res.json();
       if (data.success) {
         setBannedUsers(data.banned_users || []);
@@ -84,17 +88,33 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to fetch banned users:', err);
       setBannedUsers([]);
     }
-  }, []);
+  }, [profileType]);
 
   const fetchInvitations = useCallback(async () => {
     try {
-      const res = await fetch('/api/invitations');
+      console.log('🔔 Fetching invitations for profile type:', profileType);
+      const res = await fetch(`/api/invitations?profile_type=${profileType}`);
       const data = await res.json();
       if (data.success) {
+        console.log('🔔 Found invitations:', data.invitations.length);
         setInvitations(data.invitations);
       }
     } catch (err) {
       console.error('Failed to fetch invitations:', err);
+    }
+  }, [profileType]);
+
+  const fetchInvitationSummary = useCallback(async () => {
+    try {
+      console.log('🔔 Fetching invitation summary across all profile types');
+      const res = await fetch('/api/invitations/summary');
+      const data = await res.json();
+      if (data.success) {
+        console.log('🔔 Invitation summary:', data.summary);
+        setInvitationSummary(data.summary);
+      }
+    } catch (err) {
+      console.error('Failed to fetch invitation summary:', err);
     }
   }, []);
 
@@ -108,7 +128,7 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
     fetchAvailableUsersTimeoutRef.current = setTimeout(async () => {
       try {
         console.log('Fetching available users for group:', groupId); // Debug log
-        const res = await fetch(`/api/users/available?group_id=${groupId}`);
+        const res = await fetch(`/api/users/available?group_id=${groupId}&profile_type=${profileType}`);
         const data = await res.json();
         if (data.success) {
           setAvailableUsers(data.users);
@@ -117,14 +137,17 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
         console.error('Failed to fetch available users:', err);
       }
     }, 300);
-  }, []);
+  }, [profileType]);
 
   const createChannel = useCallback(async (groupId: string, channelData: { name: string; description: string }) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/channels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(channelData)
+        body: JSON.stringify({
+          ...channelData,
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -132,11 +155,12 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Error creating channel:', err);
       return { success: false, error: 'Failed to create channel' };
     }
-  }, []);
+  }, [profileType]);
 
   const deleteChannel = useCallback(async (groupId: string, channelId: string) => {
     try {
-      const res = await fetch(`/api/groups/${groupId}/channels/${channelId}`, {
+      const profileParam = profileType ? `?profile_type=${profileType}` : '';
+      const res = await fetch(`/api/groups/${groupId}/channels/${channelId}${profileParam}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -145,14 +169,17 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Error deleting channel:', error);
       return { success: false, error: 'Failed to delete channel' };
     }
-  }, []);
+  }, [profileType]);
 
   const inviteUser = useCallback(async (groupId: string, userId: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/groups/${groupId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invited_user_id: userId })
+        body: JSON.stringify({ 
+          invited_user_id: userId,
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       
@@ -168,14 +195,17 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to send invitation:', err);
       return false;
     }
-  }, [fetchAvailableUsers]);
+  }, [fetchAvailableUsers, profileType]);
 
   const respondToInvitation = useCallback(async (invitationId: string, action: 'accept' | 'decline'): Promise<boolean> => {
     try {
       const res = await fetch(`/api/invitations/${invitationId}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ 
+          action,
+          profile_type: profileType 
+        })
       });
       const data = await res.json();
       
@@ -198,7 +228,10 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       const res = await fetch(`/api/groups/${groupId}/members/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({ 
+          user_id: userId,
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -206,14 +239,18 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to remove group member:', err);
       return { success: false, error: 'Failed to remove member' };
     }
-  }, []);
+  }, [profileType]);
 
   const promoteToAdmin = useCallback(async (groupId: string, userId: string) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/members/role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, role: 'admin' })
+        body: JSON.stringify({ 
+          user_id: userId, 
+          role: 'admin',
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -221,14 +258,18 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to promote member:', err);
       return { success: false, error: 'Failed to promote member' };
     }
-  }, []);
+  }, [profileType]);
 
   const demoteToMember = useCallback(async (groupId: string, userId: string) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/members/role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, role: 'member' })
+        body: JSON.stringify({ 
+          user_id: userId, 
+          role: 'member',
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -236,14 +277,18 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to demote member:', err);
       return { success: false, error: 'Failed to demote member' };
     }
-  }, []);
+  }, [profileType]);
 
   const banMember = useCallback(async (groupId: string, userId: string, reason?: string) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/members/ban`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, reason: reason || '' })
+        body: JSON.stringify({ 
+          user_id: userId, 
+          reason: reason || '',
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -251,14 +296,17 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to ban member:', err);
       return { success: false, error: 'Failed to ban member' };
     }
-  }, []);
+  }, [profileType]);
 
   const unbanMember = useCallback(async (groupId: string, userId: string) => {
     try {
       const res = await fetch(`/api/groups/${groupId}/members/unban`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({ 
+          user_id: userId,
+          ...(profileType && { profile_type: profileType })
+        })
       });
       const data = await res.json();
       return data;
@@ -266,7 +314,7 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
       console.error('Failed to unban member:', err);
       return { success: false, error: 'Failed to unban member' };
     }
-  }, []);
+  }, [profileType]);
 
   // Permission checking functions
   const canManageMembers = useCallback((groupId: string): boolean => {
@@ -313,6 +361,8 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
     setGroupMembers,
     invitations,
     setInvitations,
+    invitationSummary,
+    setInvitationSummary,
     bannedUsers,
     setBannedUsers,
     availableUsers,
@@ -321,6 +371,7 @@ export const useGroupManagement = (currentUser: { user_id: string; username: str
     fetchGroupMembers,
     fetchBannedUsers,
     fetchInvitations,
+    fetchInvitationSummary,
     fetchAvailableUsers,
     createChannel,
     deleteChannel,

@@ -42,7 +42,8 @@ export const useMessages = (
   selectedConversation: string,
   selectedConversationType: 'direct' | 'group',
   selectedChannel: string,
-  groupChannelsParam?: Channel[]
+  groupChannelsParam?: Channel[],
+  profileType?: string
 ) => {
   const groupChannels: Channel[] = useMemo(() => groupChannelsParam ?? [], [groupChannelsParam]);
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
@@ -67,10 +68,11 @@ export const useMessages = (
       if (type === 'direct') {
         url = `/api/messages?user_id=${conversationId}`;
       } else {
+        const profileParam = profileType ? `?profile_type=${profileType}` : '';
         if (selectedChannel && groupChannels.length > 0) {
-          url = `/api/groups/${conversationId}/channels/${selectedChannel}/messages`;
+          url = `/api/groups/${conversationId}/channels/${selectedChannel}/messages${profileParam}`;
         } else {
-          url = `/api/groups/${conversationId}/messages`;
+          url = `/api/groups/${conversationId}/messages${profileParam}`;
         }
       }
 
@@ -109,7 +111,7 @@ export const useMessages = (
       setMessages([]);
       throw err; // Re-throw to allow caller to handle the error
     }
-  }, [currentUser?.user_id, selectedChannel, groupChannels]);
+  }, [currentUser?.user_id, selectedChannel, groupChannels, profileType]);
 
   // Fetch messages for selected channel
   const fetchChannelMessages = useCallback(async (groupId: string, channelId: string) => {
@@ -118,7 +120,8 @@ export const useMessages = (
       console.log(`Starting fetchChannelMessages (session ${currentSessionId}) for channel:`, channelId, 'in group:', groupId);
       
       setChannelLoading(true);
-      const url = `/api/groups/${groupId}/channels/${channelId}/messages`;
+      const profileParam = profileType ? `?profile_type=${profileType}` : '';
+      const url = `/api/groups/${groupId}/channels/${channelId}/messages${profileParam}`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -149,7 +152,7 @@ export const useMessages = (
     } finally {
       setChannelLoading(false);
     }
-  }, [selectedConversation, selectedChannel, selectedConversationType]); // Remove groupChannels dependency
+  }, [selectedConversation, selectedChannel, selectedConversationType, profileType]); // Remove groupChannels dependency
 
   const sendMessage = useCallback(async (content: string, replyTo?: { id: string; content: string; sender_name: string }) => {
     if (!content.trim() || !selectedConversation || !currentUser) return false;
@@ -181,6 +184,7 @@ export const useMessages = (
         body = {
           content: content,
           attachments: [],
+          ...(profileType && { profile_type: profileType }),
           ...(replyTo && { 
             reply_to: {
               message_id: replyTo.id,
@@ -245,7 +249,7 @@ export const useMessages = (
       console.error('Failed to send message:', err);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, profileType]);
 
   // Auto-refresh effect - DISABLED to prevent excessive API calls
   useEffect(() => {
@@ -332,6 +336,9 @@ export const useMessages = (
           fetch(`/api/groups/${selectedConversation}/messages/read`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...(profileType && { profile_type: profileType })
+            })
           }).then((res) => {
             if (res.ok) {
               // Update read status locally instead of refetching
@@ -404,7 +411,10 @@ export const useMessages = (
         const response = await fetch(deleteUrl, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messageId })
+          body: JSON.stringify({ 
+            messageId,
+            ...(profileType && { profile_type: profileType })
+          })
         });
         
         if (!response.ok) {
@@ -433,7 +443,7 @@ export const useMessages = (
       console.error('Error deleting message:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType]);
 
   return {
     messages,

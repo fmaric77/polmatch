@@ -39,8 +39,23 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const params = await context.params;
     const groupId = params.id;
 
+    // Get profile_type from query parameters
+    const url = new URL(req.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+
     // Check if user is a member of the group
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -52,8 +67,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
       }, { status: 403 });
     }
 
-    // Get group members with user details
-    const members = await db.collection('group_members').aggregate([
+    // Get group members with user details and profile-specific display names
+    const members = await db.collection(membersCollection).aggregate([
       { $match: { group_id: groupId } },
       {
         $lookup: {
@@ -65,11 +80,30 @@ export async function GET(req: NextRequest, context: RouteContext) {
       },
       { $unwind: '$user' },
       {
+        $lookup: {
+          from: `${profile_type}profiles`,
+          localField: 'user_id',
+          foreignField: 'user_id',
+          as: 'profile'
+        }
+      },
+      {
         $project: {
           user_id: 1,
           role: 1,
           join_date: 1,
-          username: '$user.username'
+          username: '$user.username',
+          display_name: { 
+            $cond: { 
+              if: { $and: [
+                { $gt: [{ $size: '$profile' }, 0] },
+                { $ne: [{ $arrayElemAt: ['$profile.display_name', 0] }, null] },
+                { $ne: [{ $arrayElemAt: ['$profile.display_name', 0] }, ''] }
+              ] }, 
+              then: { $arrayElemAt: ['$profile.display_name', 0] }, 
+              else: '[NO PROFILE NAME]'
+            } 
+          }
         }
       },
       { $sort: { join_date: 1 } }

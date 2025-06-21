@@ -48,6 +48,8 @@ interface ConversationsListProps {
   // Profile switcher props
   activeProfileType: 'basic' | 'love' | 'business';
   setActiveProfileType: (type: 'basic' | 'love' | 'business') => void;
+  // Invitation summary prop
+  invitationSummary?: Record<string, number>;
 }
 
 const ConversationsList: React.FC<ConversationsListProps> = ({
@@ -69,7 +71,9 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   onReconnect,
   // Profile switcher props
   activeProfileType,
-  setActiveProfileType
+  setActiveProfileType,
+  // Invitation summary prop
+  invitationSummary
 }) => {
   // Prefetch profile pictures for all direct conversations to reduce spam
   useEffect(() => {
@@ -155,19 +159,27 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           <div className="mb-4">
             <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Profile Type:</div>
             <div className="flex gap-1 p-1 bg-gray-800 border border-white rounded-none">
-              {(['basic', 'love', 'business'] as const).map((profileType) => (
-                <button
-                  key={profileType}
-                  onClick={() => setActiveProfileType(profileType)}
-                  className={`flex-1 px-2 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
-                    activeProfileType === profileType
-                      ? 'bg-white text-black font-bold'
-                      : 'bg-transparent text-white hover:bg-white/20'
-                  }`}
-                >
-                  {profileType === 'basic' ? 'GENERAL' : profileType === 'love' ? 'DATING' : 'BUSINESS'}
-                </button>
-              ))}
+              {(['basic', 'love', 'business'] as const).map((profileType) => {
+                const invitationCount = invitationSummary?.[profileType] || 0;
+                return (
+                  <button
+                    key={profileType}
+                    onClick={() => setActiveProfileType(profileType)}
+                    className={`relative flex-1 px-2 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
+                      activeProfileType === profileType
+                        ? 'bg-white text-black font-bold'
+                        : 'bg-transparent text-white hover:bg-white/20'
+                    }`}
+                  >
+                    {profileType === 'basic' ? 'GENERAL' : profileType === 'love' ? 'DATING' : 'BUSINESS'}
+                    {invitationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {invitationCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

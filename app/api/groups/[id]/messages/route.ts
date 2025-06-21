@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import CryptoJS from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
-import { getAuthenticatedUser, connectToDatabase, getGroupMessages } from '../../../../../lib/mongodb-connection';
+import { getAuthenticatedUser, connectToDatabase } from '../../../../../lib/mongodb-connection';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -57,7 +57,6 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Use profile-specific collections
     const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
     const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
-    const channelsCollection = profile_type === 'basic' ? 'group_channels' : `group_channels_${profile_type}`;
 
     // Check if user is a member of the group (optimized query)
     const membership = await db.collection(membersCollection).findOne({
@@ -76,25 +75,58 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     }
 
     // Get messages from profile-specific collection
-    const messages = await db.collection(messagesCollection)
+    const messagesRaw = await db.collection(messagesCollection)
       .find(messageQuery)
       .sort({ timestamp: -1 })
       .limit(limit)
       .toArray();
 
-    // Decrypt messages
-    const decryptedMessages = (messages as MessageDocument[]).map((msg: MessageDocument) => {
+    const messages = messagesRaw as MessageDocument[];
+
+    // Get unique sender IDs to fetch user information
+    const senderIds = [...new Set(messages.map((msg: MessageDocument) => msg.sender_id))];
+    
+    // Fetch usernames from users collection
+    const users = await db.collection('users')
+      .find({ user_id: { $in: senderIds } })
+      .project({ user_id: 1, username: 1 })
+      .toArray();
+    
+    // Fetch profile-specific display names
+    const profileCollectionName = `${profile_type}profiles`;
+    const profiles = await db.collection(profileCollectionName)
+      .find({ user_id: { $in: senderIds } })
+      .project({ user_id: 1, display_name: 1 })
+      .toArray();
+
+    // Create lookup maps
+    const userMap = new Map(users.map(u => [u.user_id, u.username]));
+    const profileMap = new Map(profiles.map(p => [p.user_id, p.display_name]));
+
+    // Decrypt messages and enrich with user information
+    const decryptedMessages = messages.map((msg: MessageDocument) => {
       try {
         const decryptedBytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
         const content = decryptedBytes.toString(CryptoJS.enc.Utf8);
+        const username = userMap.get(msg.sender_id) || 'Unknown';
+        const profileDisplayName = profileMap.get(msg.sender_id);
+        
         return {
           ...msg,
-          content: content || '[Decryption failed]'
+          content: content || '[Decryption failed]',
+          sender_username: username,
+          // Always use profile display name, never username
+          sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
         };
       } catch {
+        const username = userMap.get(msg.sender_id) || 'Unknown';
+        const profileDisplayName = profileMap.get(msg.sender_id);
         return {
           ...msg,
-          content: '[Decryption failed]'
+          content: '[Decryption failed]',
+          sender_username: username,
+          // Always use profile display name, never username
+          sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
         };
       }
     });

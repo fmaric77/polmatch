@@ -53,14 +53,27 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     const url = new URL(req.url);
     const lastCheck = url.searchParams.get('last_check');
     const countOnly = url.searchParams.get('count_only') === 'true';
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
+    const channelsCollection = profile_type === 'basic' ? 'group_channels' : `group_channels_${profile_type}`;
 
     // OPTIMIZATION 3: Combine membership and channel checks in parallel
     const [membership, channel] = await Promise.all([
-      db.collection('group_members').findOne({
+      db.collection(membersCollection).findOne({
         group_id: groupId,
         user_id: auth.userId
       }, { projection: { _id: 1 } }),
-      db.collection('group_channels').findOne({
+      db.collection(channelsCollection).findOne({
         channel_id: channelId,
         group_id: groupId
       }, { projection: { _id: 1 } })
@@ -86,7 +99,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
         query.timestamp = { $gt: new Date(lastCheck) };
       }
       
-      const newMessageCount = await db.collection('group_messages').countDocuments(query);
+      const newMessageCount = await db.collection(messagesCollection).countDocuments(query);
       
       return NextResponse.json({ 
         success: true, 
@@ -96,7 +109,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     }
 
     // OPTIMIZATION 4: Simplified aggregation pipeline (removed complex read status lookup)
-    const messages = await db.collection('group_messages').aggregate([
+    const messages = await db.collection(messagesCollection).aggregate([
       { $match: { group_id: groupId, channel_id: channelId } },
       { $sort: { timestamp: -1 } },
       { $limit: 50 },
@@ -148,9 +161,25 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       }
     });
 
+    // Enrich channel messages with profile-specific display names
+    const channelSenderIds = [...new Set(decryptedMessages.map(msg => msg.sender_id))];
+    const profileCollectionName = `${profile_type}profiles`;
+    const channelProfiles = await db.collection(profileCollectionName)
+      .find({ user_id: { $in: channelSenderIds } })
+      .project({ user_id: 1, display_name: 1 })
+      .toArray();
+    const channelProfileMap = new Map(channelProfiles.map(p => [p.user_id, p.display_name]));
+    const enrichedMessages = decryptedMessages.map(msg => ({
+      ...msg,
+      sender_display_name: channelProfileMap.get(msg.sender_id) && channelProfileMap.get(msg.sender_id).trim()
+        ? channelProfileMap.get(msg.sender_id)
+        : '[NO PROFILE NAME]'
+    }));
+
     return NextResponse.json({ 
       success: true, 
-      messages: decryptedMessages 
+      messages: enrichedMessages,
+      profile_type
     });
 
   } catch (error) {
@@ -184,13 +213,25 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     const params = await context.params;
     const groupId = params.id;
     const channelId = params.channelId;
-    const { content, attachments, reply_to } = await req.json();
+    const { content, attachments, reply_to, profile_type = 'basic' } = await req.json();
 
     if (!content || content.trim() === '') {
       return NextResponse.json({ 
         error: 'Message content is required' 
       }, { status: 400 });
     }
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
+    const channelsCollection = profile_type === 'basic' ? 'group_channels' : `group_channels_${profile_type}`;
 
     // Validate reply_to if provided
     if (reply_to !== undefined) {
@@ -219,11 +260,11 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     // OPTIMIZATION 3: Combine membership and channel checks in parallel
     const [membership, channel] = await Promise.all([
-      db.collection('group_members').findOne({
+      db.collection(membersCollection).findOne({
         group_id: groupId,
         user_id: auth.userId
       }, { projection: { _id: 1 } }),
-      db.collection('group_channels').findOne({
+      db.collection(channelsCollection).findOne({
         channel_id: channelId,
         group_id: groupId
       }, { projection: { _id: 1 } })
@@ -266,16 +307,16 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       };
     }
 
-    await db.collection('group_messages').insertOne(message);
+    await db.collection(messagesCollection).insertOne(message);
 
-    // Fetch sender's basic profile display name for group message notifications
-    // Group messages always use the basic profile display name regardless of current active profile
-    const basicProfile = await db.collection('basicprofiles').findOne(
+    // Fetch sender's profile display name based on the group's profile type
+    const profilesCollection = profile_type === 'basic' ? 'basicprofiles' : `${profile_type}profiles`;
+    const senderProfile = await db.collection(profilesCollection).findOne(
       { user_id: auth.userId },
       { projection: { display_name: 1 } }
     );
     
-    const senderDisplayName = basicProfile?.display_name || auth.user.username || 'Unknown';
+    const senderDisplayName = senderProfile?.display_name || auth.user.username || 'Unknown';
 
     // Send SSE notification to all group members
     await notifyNewGroupMessage({
@@ -287,12 +328,14 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       timestamp: message.timestamp as string,
       attachments: attachments || [],
       sender_username: auth.user.username, // Keep username for backward compatibility
-      sender_display_name: senderDisplayName // Always use basic profile display name
+      sender_display_name: senderDisplayName, // Use profile display name based on group type
+      profile_type: profile_type // Include profile type for SSE notification
     });
 
     return NextResponse.json({ 
       success: true, 
-      message: { ...message, content, encrypted_content: undefined }
+      message: { ...message, content, encrypted_content: undefined },
+      profile_type
     });
 
   } catch (error) {
@@ -324,11 +367,22 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const channelId = params.channelId;
 
     const body = await req.json();
-    const { messageId } = body;
+    const { messageId, profile_type = 'basic' } = body;
 
     if (!messageId) {
       return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
     }
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
 
     // Convert messageId string to ObjectId
     let objectId: ObjectId;
@@ -340,12 +394,12 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     // Verify user can delete this message (either sender or group owner/admin)
     const [message, membership] = await Promise.all([
-      db.collection('group_messages').findOne({
+      db.collection(messagesCollection).findOne({
         _id: objectId,
         group_id: groupId,
         channel_id: channelId
       }),
-      db.collection('group_members').findOne({
+      db.collection(membersCollection).findOne({
         group_id: groupId,
         user_id: auth.userId
       })
@@ -370,7 +424,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       }, { status: 403 });
     }
 
-    const result = await db.collection('group_messages').deleteOne({
+    const result = await db.collection(messagesCollection).deleteOne({
       _id: objectId,
       group_id: groupId,
       channel_id: channelId
@@ -378,7 +432,8 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     return NextResponse.json({ 
       success: true, 
-      deleted: result.deletedCount > 0
+      deleted: result.deletedCount > 0,
+      profile_type
     });
 
   } catch {

@@ -40,8 +40,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const params = await context.params;
     const groupId = params.id;
 
+    // Get profile_type from request body
+    const body = await req.json();
+    const { profile_type = 'basic' } = body;
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
+    const readsCollection = profile_type === 'basic' ? 'group_message_reads' : `group_message_reads_${profile_type}`;
+
     // Check if user is a member of the group
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -54,14 +71,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Get all group messages that haven't been read by this user
-    const messages = await db.collection('group_messages').find({
+    const messages = await db.collection(messagesCollection).find({
       group_id: groupId
     }).toArray();
 
     const readRecords = [];
     for (const message of messages) {
       // Check if user has already read this message
-      const existingRead = await db.collection('group_message_reads').findOne({
+      const existingRead = await db.collection(readsCollection).findOne({
         message_id: message.message_id,
         user_id: session.user_id
       });
@@ -78,14 +95,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     // Insert read records
     if (readRecords.length > 0) {
-      await db.collection('group_message_reads').insertMany(readRecords);
+      await db.collection(readsCollection).insertMany(readRecords);
     }
 
     await client.close();
 
     return NextResponse.json({ 
       success: true, 
-      marked_count: readRecords.length 
+      marked_count: readRecords.length,
+      profile_type
     });
 
   } catch (error) {

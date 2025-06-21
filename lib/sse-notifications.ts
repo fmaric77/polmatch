@@ -189,6 +189,7 @@ export interface GroupMessageData {
   attachments?: string[];
   sender_username?: string;
   sender_display_name?: string;
+  profile_type?: string;
 }
 
 // Notify about a new group message
@@ -197,8 +198,13 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
     // Get database connection
     const { db } = await connectToDatabase();
     
+    // Determine which profile collection to use based on profile_type
+    const profileType = data.profile_type || 'basic';
+    const profilesCollection = profileType === 'basic' ? 'basicprofiles' : `${profileType}profiles`;
+    const membersCollection = profileType === 'basic' ? 'group_members' : `group_members_${profileType}`;
+    
     // Fetch all group members
-    const members = await db.collection('group_members').find({
+    const members = await db.collection(membersCollection).find({
       group_id: data.group_id
     }).toArray();
     
@@ -217,13 +223,13 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
         senderUsername = sender?.username || 'Unknown';
       }
       
-      // Always fetch basic profile display name for group messages
+      // Fetch display name from the correct profile collection based on profile_type
       if (!senderDisplayName) {
-        const basicProfile = await db.collection('basicprofiles').findOne(
+        const senderProfile = await db.collection(profilesCollection).findOne(
           { user_id: data.sender_id },
           { projection: { display_name: 1 } }
         );
-        senderDisplayName = basicProfile?.display_name || senderUsername || 'Unknown';
+        senderDisplayName = senderProfile?.display_name || senderUsername || 'Unknown';
       }
     }
     
