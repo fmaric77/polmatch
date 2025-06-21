@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import { getAnonymousDisplayName } from '../lib/anonymization';
 
+type ProfileType = 'basic' | 'love' | 'business';
+
 interface Group {
   _id?: string;
   group_id: string;
@@ -15,11 +17,13 @@ interface Group {
   status: string;
   last_activity: string;
   user_role?: string;
+  profile_type?: ProfileType;
 }
 
 interface GroupMessage {
   message_id: string;
   group_id: string;
+  channel_id?: string;
   sender_id: string;
   content: string;
   timestamp: string;
@@ -30,6 +34,7 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+  profile_type?: ProfileType;
 }
 
 interface GroupMember {
@@ -58,28 +63,32 @@ interface User {
 }
 
 const Groups = () => {
+  // Profile separation state
+  const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
+  
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [members, setMembers] = useState<GroupMember[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [refresh, setRefresh] = useState(0);
+  const [newMessage, setNewMessage] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [refresh, setRefresh] = useState<number>(0);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string } | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [showMembersModal, setShowMembersModal] = useState<boolean>(false);
+  const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
+  const [showInvitationsModal, setShowInvitationsModal] = useState<boolean>(false);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [selectedUserToInvite, setSelectedUserToInvite] = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [selectedUserToInvite, setSelectedUserToInvite] = useState<string>('');
+  const [inviteLoading, setInviteLoading] = useState<boolean>(false);
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
     topic: '',
-    is_private: false
+    is_private: false,
+    profile_type: 'basic' as ProfileType
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,9 +102,9 @@ const Groups = () => {
       });
   }, []);
 
-  // Fetch user's groups
+  // Fetch user's groups with profile filtering
   const fetchGroups = useCallback(() => {
-    fetch('/api/groups/list')
+    fetch(`/api/groups/list?profile_type=${activeProfileType}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -109,16 +118,16 @@ const Groups = () => {
         setError('Failed to load groups');
         setLoading(false);
       });
-  }, []);
+  }, [activeProfileType]);
 
   useEffect(() => {
     fetchGroups();
   }, [refresh, fetchGroups]);
 
-  // Fetch group messages
+  // Fetch group messages with profile type
   const fetchMessages = useCallback(() => {
     if (!selectedGroup) return;
-    fetch(`/api/groups/${selectedGroup}/messages`)
+    fetch(`/api/groups/${selectedGroup}/messages?profile_type=${activeProfileType}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -130,7 +139,7 @@ const Groups = () => {
       .catch(() => {
         setError('Failed to load messages');
       });
-  }, [selectedGroup]);
+  }, [selectedGroup, activeProfileType]);
 
   // Fetch group members
   const fetchMembers = useCallback(() => {
@@ -217,7 +226,10 @@ const Groups = () => {
     const res = await fetch(`/api/groups/${selectedGroup}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newMessage }),
+      body: JSON.stringify({ 
+        content: newMessage,
+        profile_type: activeProfileType
+      }),
     });
     
     const data = await res.json();
@@ -236,12 +248,21 @@ const Groups = () => {
     const res = await fetch('/api/groups/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createForm),
+      body: JSON.stringify({
+        ...createForm,
+        profile_type: activeProfileType
+      }),
     });
     
     const data = await res.json();
     if (data.success) {
-      setCreateForm({ name: '', description: '', topic: '', is_private: false });
+      setCreateForm({ 
+        name: '', 
+        description: '', 
+        topic: '', 
+        is_private: false,
+        profile_type: activeProfileType 
+      });
       setShowCreateModal(false);
       setRefresh(r => r + 1); // Refresh groups list
     } else {
@@ -431,6 +452,18 @@ const Groups = () => {
     return currentUserMember.role === 'owner';
   };
 
+  // Helper function to get profile label
+  const getProfileLabel = (profileType: ProfileType): string => {
+    switch (profileType) {
+      case 'love':
+        return 'Dating';
+      case 'business':
+        return 'Business';
+      default:
+        return 'General';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -468,6 +501,40 @@ const Groups = () => {
                 Create Group
               </button>
             </div>
+          </div>
+          
+          {/* Profile Type Switcher - moved to match direct messages position */}
+          <div className="mb-4">
+            <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Profile Type:</div>
+            <div className="flex gap-1 p-1 bg-gray-800 border border-white rounded-none">
+              {(['basic', 'love', 'business'] as ProfileType[]).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    console.log(`🔄 Switching to ${type} profile type for groups`);
+                    setActiveProfileType(type);
+                    setSelectedGroup('');
+                    setMessages([]);
+                    setMembers([]);
+                    setError('');
+                    // Force refresh groups for the new profile type
+                    setRefresh(r => r + 1);
+                  }}
+                  className={`flex-1 px-2 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
+                    activeProfileType === type
+                      ? 'bg-white text-black font-bold'
+                      : 'bg-transparent text-white hover:bg-white/20'
+                  }`}
+                >
+                  {type === 'basic' ? 'GENERAL' : type === 'love' ? 'DATING' : 'BUSINESS'}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Active Profile Indicator */}
+          <div className="text-xs text-gray-400 font-mono">
+            Viewing {getProfileLabel(activeProfileType).toLowerCase()} profile groups
           </div>
         </div>
         

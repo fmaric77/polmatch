@@ -150,7 +150,7 @@ const UnifiedMessages: React.FC = () => {
 
   // Custom hooks
   const conversations = useConversations(currentUser, activeProfileType);
-  const profileConversations = useProfileConversations(activeProfileType);
+  const profileConversations = useProfileConversations(currentUser, activeProfileType, selectedCategory === 'direct');
   const profileMessages = useProfileMessages(activeProfileType);
   const groupManagement = useGroupManagement(currentUser);
   const modals = useModalStates();
@@ -671,12 +671,28 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [currentUser]); // Only depend on currentUser to prevent infinite loops
 
-  // Fetch profile conversations when profile type changes
+  // Fetch profile conversations when profile type changes - ONLY for direct messages
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && selectedCategory === 'direct') {
+      console.log('🔄 Fetching profile conversations for category:', selectedCategory, 'profile:', activeProfileType);
       profileConversations.fetchConversations();
     }
-  }, [activeProfileType, currentUser]);
+  }, [activeProfileType, currentUser, selectedCategory]);
+
+  // Clear selected group/channel when profile type changes and we're in groups category
+  useEffect(() => {
+    if (selectedCategory === 'groups') {
+      console.log('🔧 Profile type changed in groups, clearing selected group/channel');
+      setSelectedConversation('');
+      setSelectedConversationType('direct');
+      setSelectedChannel('');
+      setReplyTo(null);
+      // Clear any loading states
+      messages.setContextSwitchLoading(false);
+      // Refresh groups for the new profile type
+      conversations.fetchConversations();
+    }
+  }, [activeProfileType, selectedCategory]);
 
   // Clear URL parameters after auto-select to prevent forced navigation
   useEffect(() => {
@@ -836,9 +852,9 @@ const UnifiedMessages: React.FC = () => {
   // Fetch messages when channel changes
   useEffect(() => {
     if (selectedConversation && selectedConversationType === 'group' && selectedChannel) {
-      messages.fetchChannelMessages(selectedConversation, selectedChannel);
+      messages.fetchChannelMessages(selectedConversation, selectedChannel, activeProfileType);
     }
-  }, [selectedChannel, selectedConversation, selectedConversationType]); // Removed messages dependency to prevent infinite loops
+  }, [selectedChannel, selectedConversation, selectedConversationType, activeProfileType]); // Added activeProfileType dependency
 
   // Send message handler
   const handleSendMessage = useCallback(async () => {
@@ -847,6 +863,7 @@ const UnifiedMessages: React.FC = () => {
     console.log('🚀 SEND MESSAGE DEBUG:', {
       selectedConversationType,
       selectedCategory,
+      activeProfileType,
       condition: selectedConversationType === 'direct' && selectedCategory === 'direct',
       newMessage,
       replyTo,
@@ -857,6 +874,9 @@ const UnifiedMessages: React.FC = () => {
     if (selectedConversationType === 'direct' && selectedCategory === 'direct') {
       console.log('📨 Using profileMessages.sendMessage');
       success = await profileMessages.sendMessage(selectedConversation, newMessage, replyTo || undefined);
+    } else if (selectedConversationType === 'group') {
+      console.log('📨 Using messages.sendMessage with profile type for group');
+      success = await messages.sendMessage(newMessage, replyTo || undefined, activeProfileType);
     } else {
       console.log('📨 Using messages.sendMessage');
       success = await messages.sendMessage(newMessage, replyTo || undefined);
@@ -866,7 +886,7 @@ const UnifiedMessages: React.FC = () => {
       setNewMessage('');
       setReplyTo(null); // Clear reply after sending
     }
-  }, [selectedConversationType, selectedCategory, profileMessages, messages, newMessage, replyTo]);
+  }, [selectedConversationType, selectedCategory, activeProfileType, profileMessages, messages, newMessage, replyTo]);
 
   // Context menu handlers
   const handleConversationContextMenu = (e: React.MouseEvent, conversation: Conversation) => {
@@ -1192,6 +1212,7 @@ const UnifiedMessages: React.FC = () => {
         <CreateGroupModal
           onClose={() => modals.closeModal('showCreateGroupModal')}
           currentUser={currentUser}
+          activeProfileType={activeProfileType}
           onSuccess={() => {
             conversations.fetchConversations();
             modals.closeModal('showCreateGroupModal');

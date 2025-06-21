@@ -151,27 +151,25 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             </div>
           </div>
 
-          {/* Profile Type Switcher - only show for direct messages */}
-          {selectedCategory === 'direct' && (
-            <div className="mb-4">
-              <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Profile Type:</div>
-              <div className="flex gap-1 p-1 bg-gray-800 border border-white rounded-none">
-                {(['basic', 'love', 'business'] as const).map((profileType) => (
-                  <button
-                    key={profileType}
-                    onClick={() => setActiveProfileType(profileType)}
-                    className={`flex-1 px-2 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
-                      activeProfileType === profileType
-                        ? 'bg-white text-black font-bold'
-                        : 'bg-transparent text-white hover:bg-white/20'
-                    }`}
-                  >
-                    {profileType === 'basic' ? 'GENERAL' : profileType === 'love' ? 'PERSONAL' : 'CORPORATE'}
-                  </button>
-                ))}
-              </div>
+          {/* Profile Type Switcher - show for both direct messages and groups */}
+          <div className="mb-4">
+            <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Profile Type:</div>
+            <div className="flex gap-1 p-1 bg-gray-800 border border-white rounded-none">
+              {(['basic', 'love', 'business'] as const).map((profileType) => (
+                <button
+                  key={profileType}
+                  onClick={() => setActiveProfileType(profileType)}
+                  className={`flex-1 px-2 py-2 font-mono text-xs uppercase tracking-wider transition-colors ${
+                    activeProfileType === profileType
+                      ? 'bg-white text-black font-bold'
+                      : 'bg-transparent text-white hover:bg-white/20'
+                  }`}
+                >
+                  {profileType === 'basic' ? 'GENERAL' : profileType === 'love' ? 'DATING' : 'BUSINESS'}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           
           {/* Connection Status Indicator */}

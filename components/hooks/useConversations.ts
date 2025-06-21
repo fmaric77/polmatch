@@ -66,7 +66,7 @@ export const useConversations = (currentUser: { user_id: string; username: strin
       // Fetch DMs and groups in parallel
       const [dmsRes, groupsRes] = await Promise.all([
         fetch(dmsUrl),
-        fetch('/api/groups/list')
+        fetch(`/api/groups/list?profile_type=${profileType}`)
       ]);
 
       const [dmsData, groupsData] = await Promise.all([

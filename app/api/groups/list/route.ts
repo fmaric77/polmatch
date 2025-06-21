@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../lib/mongodb-connection';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Fast authentication
     const cookieStore = await cookies();
@@ -17,14 +17,29 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get profile_type from query parameters
+    const url = new URL(request.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
     const { db } = await connectToDatabase();
 
-    // Use aggregation pipeline for efficient query
-    const groupsWithRoles = await db.collection('group_members').aggregate([
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+
+    // Use aggregation pipeline for efficient query with profile-specific collections
+    const groupsWithRoles = await db.collection(membersCollection).aggregate([
       { $match: { user_id: auth.user.user_id } },
       {
         $lookup: {
-          from: 'groups',
+          from: groupsCollection,
           localField: 'group_id',
           foreignField: 'group_id',
           as: 'group_details'
@@ -44,6 +59,7 @@ export async function GET() {
           created_by: '$group_details.created_by',
           last_activity: '$group_details.last_activity',
           member_count: '$group_details.member_count',
+          profile_type: '$group_details.profile_type',
           user_role: '$role'
         }
       },
@@ -52,7 +68,8 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      groups: groupsWithRoles 
+      groups: groupsWithRoles,
+      profile_type 
     });
 
   } catch (error) {
