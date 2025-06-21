@@ -40,7 +40,7 @@ async function leaveGroup(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const { group_id } = await req.json();
+    const { group_id, profile_type } = await req.json();
 
     if (!group_id) {
       await client.close();
@@ -49,52 +49,59 @@ async function leaveGroup(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if user is a member
-    const membership = await db.collection('group_members').findOne({
-      group_id,
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+
+    // Check if user is a member of the group
+    const membership = await db.collection(membersCollection).findOne({
+      group_id: group_id,
       user_id: session.user_id
     });
 
     if (!membership) {
       await client.close();
       return NextResponse.json({ 
-        error: 'Not a member of this group' 
+        error: 'You are not a member of this group' 
       }, { status: 400 });
     }
 
-    // Check if user is the creator/admin
-    const group = await db.collection('groups').findOne({ group_id });
-    
-    if (!group) {
+    // Check if user is the group creator/owner
+    const group = await db.collection(groupsCollection).findOne({ group_id: group_id });
+    if (group && group.creator_id === session.user_id) {
       await client.close();
       return NextResponse.json({ 
-        error: 'Group not found' 
-      }, { status: 404 });
-    }
-
-    // Prevent creator from leaving (they should delete the group instead)
-    const isCreator = group.creator_id === session.user_id || 
-                     (membership && (membership.role === 'owner' || membership.role === 'admin'));
-
-    if (isCreator) {
-      await client.close();
-      return NextResponse.json({ 
-        error: 'Group creator cannot leave the group. Delete the group instead.' 
+        error: 'Group owners cannot leave their own group. Delete the group instead.' 
       }, { status: 400 });
     }
 
     // Remove user from group
-    await db.collection('group_members').deleteOne({
-      group_id,
+    await db.collection(membersCollection).deleteOne({
+      group_id: group_id,
       user_id: session.user_id
     });
 
     // Update group member count
-    await db.collection('groups').updateOne(
-      { group_id },
+    const remainingMembersCount = await db.collection(membersCollection).countDocuments({
+      group_id: group_id
+    });
+
+    await db.collection(groupsCollection).updateOne(
+      { group_id: group_id },
       { 
-        $inc: { members_count: -1 },
-        $set: { last_activity: new Date() }
+        $set: { 
+          member_count: remainingMembersCount,
+          last_activity: new Date()
+        }
       }
     );
 
@@ -102,7 +109,8 @@ async function leaveGroup(req: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Successfully left group' 
+      message: 'Successfully left the group',
+      profile_type: groupProfileType
     });
 
   } catch (error) {

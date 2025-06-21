@@ -6,21 +6,36 @@ interface CreateGroupModalProps {
   onClose: () => void;
   currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
   onSuccess: () => void;
+  activeProfileType?: 'basic' | 'love' | 'business';
 }
 
 const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onClose,
   currentUser,
-  onSuccess
+  onSuccess,
+  activeProfileType = 'basic'
 }) => {
   const [form, setForm] = useState({
     name: '',
     description: '',
     topic: '',
-    is_private: false
+    is_private: false,
+    profile_type: activeProfileType
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Helper function to get profile label
+  const getProfileLabel = (profileType: 'basic' | 'love' | 'business'): string => {
+    switch (profileType) {
+      case 'love':
+        return 'Dating';
+      case 'business':
+        return 'Business';
+      default:
+        return 'General';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -71,7 +86,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           name: form.name.trim(),
           description: form.description.trim(),
           topic: form.topic.trim(),
-          is_private: form.is_private
+          is_private: form.is_private,
+          profile_type: form.profile_type
         })
       });
 
@@ -143,6 +159,27 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               disabled={loading}
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+              PROFILE TYPE
+            </label>
+            <select
+              value={form.profile_type}
+              onChange={(e) => handleInputChange('profile_type', e.target.value as 'basic' | 'love' | 'business')}
+              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+              disabled={loading}
+            >
+              {(['basic', 'love', 'business'] as const).map((type) => (
+                <option key={type} value={type} className="bg-black text-white">
+                  {getProfileLabel(type).toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <div className="text-xs text-gray-400 mt-2 font-mono">
+              Groups are separated by profile type. Only users with the selected profile can join.
+            </div>
           </div>
 
           <div>

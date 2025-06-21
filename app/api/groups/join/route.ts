@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const { group_id } = await req.json();
+    const { group_id, profile_type } = await req.json();
 
     if (!group_id) {
       await client.close();
@@ -41,8 +41,22 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const bansCollection = groupProfileType === 'basic' ? 'group_bans' : `group_bans_${groupProfileType}`;
+
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id });
+    const group = await db.collection(groupsCollection).findOne({ group_id });
     
     if (!group) {
       await client.close();
@@ -52,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is already a member
-    const existingMembership = await db.collection('group_members').findOne({
+    const existingMembership = await db.collection(membersCollection).findOne({
       group_id,
       user_id: session.user_id
     });
@@ -65,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is banned from this group
-    const banRecord = await db.collection('group_bans').findOne({
+    const banRecord = await db.collection(bansCollection).findOne({
       group_id,
       user_id: session.user_id
     });
@@ -90,13 +104,14 @@ export async function POST(req: NextRequest) {
       group_id,
       user_id: session.user_id,
       join_date: new Date(),
-      role: 'member'
+      role: 'member',
+      profile_type: groupProfileType
     };
 
-    await db.collection('group_members').insertOne(membership);
+    await db.collection(membersCollection).insertOne(membership);
 
     // Update group member count
-    await db.collection('groups').updateOne(
+    await db.collection(groupsCollection).updateOne(
       { group_id },
       { 
         $inc: { members_count: 1 },

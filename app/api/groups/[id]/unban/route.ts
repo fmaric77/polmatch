@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const params = await context.params;
     const groupId = params.id;
-    const { user_id } = await req.json();
+    const { user_id, profile_type = 'basic' } = await req.json();
 
     if (!user_id) {
       await client.close();
@@ -47,8 +47,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }, { status: 400 });
     }
 
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const bansCollection = profile_type === 'basic' ? 'group_bans' : `group_bans_${profile_type}`;
+
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -57,7 +70,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if requester is admin/owner
-    const requesterMembership = await db.collection('group_members').findOne({
+    const requesterMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -73,7 +86,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if user is actually banned
-    const existingBan = await db.collection('group_bans').findOne({
+    const existingBan = await db.collection(bansCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -86,7 +99,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Remove ban record
-    await db.collection('group_bans').deleteOne({
+    await db.collection(bansCollection).deleteOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -95,7 +108,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'User unbanned successfully' 
+      message: 'User unbanned successfully',
+      profile_type
     });
 
   } catch (error) {

@@ -20,26 +20,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { invited_user_id } = await request.json();
+    const { invited_user_id, profile_type } = await request.json();
     if (!invited_user_id) {
       return NextResponse.json({ success: false, message: 'Missing invited_user_id' }, { status: 400 });
     }
+
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      return NextResponse.json({ success: false, message: 'Invalid profile_type. Must be basic, love, or business' }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const invitationsCollection = groupProfileType === 'basic' ? 'group_invitations' : `group_invitations_${groupProfileType}`;
 
     const resolvedParams = await params;
     const group_id = resolvedParams.id;
     const inviter_id = session.user_id;
 
-    console.log('Group invitation attempt:', { group_id, inviter_id, invited_user_id });
+    console.log('Group invitation attempt:', { group_id, inviter_id, invited_user_id, profile_type: groupProfileType });
 
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id });
+    const group = await db.collection(groupsCollection).findOne({ group_id });
     if (!group) {
       console.log('Group not found:', group_id);
       return NextResponse.json({ success: false, message: 'Group not found' }, { status: 404 });
     }
 
     // Check if inviter is a member of the group
-    const inviterMembership = await db.collection('group_members').findOne({ 
+    const inviterMembership = await db.collection(membersCollection).findOne({ 
       group_id, 
       user_id: inviter_id 
     });
@@ -58,11 +69,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'You do not have permission to invite users to this group' }, { status: 403 });
     }
 
-    // Get inviter's username
+    // Get inviter's username and display name
     const inviterUser = await db.collection('users').findOne({ user_id: inviter_id });
     if (!inviterUser) {
       return NextResponse.json({ success: false, message: 'Inviter not found' }, { status: 404 });
     }
+
+    // Get inviter's profile-specific display name
+    const profileCollectionName = `${groupProfileType}profiles`;
+    const inviterProfile = await db.collection(profileCollectionName).findOne({ user_id: inviter_id });
 
     // Check if invited user exists
     const invitedUser = await db.collection('users').findOne({ user_id: invited_user_id });
@@ -71,7 +86,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Check if user is already a member
-    const existingMembership = await db.collection('group_members').findOne({ 
+    const existingMembership = await db.collection(membersCollection).findOne({ 
       group_id, 
       user_id: invited_user_id 
     });
@@ -80,7 +95,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Check if invitation already exists (any status)
-    const existingInvitation = await db.collection('group_invitations').findOne({ 
+    const existingInvitation = await db.collection(invitationsCollection).findOne({ 
       group_id, 
       invited_user_id
     });
@@ -95,13 +110,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       group_name: group.name,
       inviter_id,
       inviter_username: inviterUser.username,
+      inviter_display_name: inviterProfile?.display_name || inviterUser.username,
       invited_user_id,
       invited_username: invitedUser.username,
       created_at: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
+      profile_type: groupProfileType
     };
 
-    await db.collection('group_invitations').insertOne(invitation);
+    await db.collection(invitationsCollection).insertOne(invitation);
 
     return NextResponse.json({ 
       success: true, 

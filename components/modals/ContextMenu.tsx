@@ -175,11 +175,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             color: 'text-blue-400',
             onClick: () => {
               if (messages.setReplyTo && message.content) {
-                // Get sender name from message
+                // Get sender name from message - NEVER use username for group messages
                 const messageWithSender = message as { sender_display_name?: string; sender_username?: string; sender_id?: string };
                 const senderName = messageWithSender.sender_display_name || 
-                                 messageWithSender.sender_username || 
-                                 `USER-${message.sender_id?.substring(0, 8).toUpperCase()}`;
+                                 '[NO PROFILE NAME]';
                 
                 messages.setReplyTo({
                   id: contextMenu.id,

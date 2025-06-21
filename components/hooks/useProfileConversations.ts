@@ -27,14 +27,15 @@ interface ProfileConversation {
 
 export const useProfileConversations = (
   currentUser: { user_id: string; username: string } | null,
-  profileType: ProfileType
+  profileType: ProfileType,
+  enabled: boolean = true
 ) => {
   const [conversations, setConversations] = useState<ProfileConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const fetchConversations = useCallback(async () => {
-    if (!currentUser) {
+    if (!currentUser || !enabled) {
       setConversations([]);
       setLoading(false);
       return;
@@ -61,12 +62,17 @@ export const useProfileConversations = (
     } finally {
       setLoading(false);
     }
-  }, [currentUser, profileType]);
+  }, [currentUser, profileType, enabled]);
 
-  // Fetch conversations when user or profile type changes
+  // Fetch conversations when user or profile type changes - ONLY if enabled
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    if (enabled) {
+      fetchConversations();
+    } else {
+      setConversations([]);
+      setLoading(false);
+    }
+  }, [fetchConversations, enabled]);
 
   return {
     conversations,

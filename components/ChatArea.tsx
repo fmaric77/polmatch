@@ -18,7 +18,6 @@ import MessageContent from './MessageContent';
 import TypingIndicator from './TypingIndicator';
 import { TypingData } from './hooks/useTypingIndicator';
 import { profilePictureCache } from '../lib/profilePictureCache';
-import { getAnonymousDisplayName } from '../lib/anonymization';
 
 interface PrivateMessage {
   _id?: string;
@@ -557,13 +556,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                               ? selectedConversationData.name 
                               : null;
                           } else {
-                            // For group messages, use proper fallback hierarchy
+                            // For group messages, NEVER use username fallback - always use profile display name
                             const groupMessage = message as GroupMessage;
-                            displayName = getAnonymousDisplayName(
-                              groupMessage.sender_display_name, 
-                              groupMessage.sender_username, 
-                              groupMessage.sender_id
-                            );
+                            displayName = groupMessage.sender_display_name || '[NO PROFILE NAME]';
                           }
                           
                           return displayName ? (

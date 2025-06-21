@@ -26,13 +26,22 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const groupId = url.searchParams.get('group_id');
+    const profileType = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profileType)) {
+      return NextResponse.json({ success: false, message: 'Invalid profile type' }, { status: 400 });
+    }
 
     let query: Record<string, unknown> = { user_id: { $ne: session.user_id } };
 
     // If group_id is provided, exclude users who are already members of that group
     if (groupId) {
+      // Use profile-specific collection for group members
+      const membersCollection = `group_members_${profileType}`;
+      
       // Get existing group members
-      const existingMembers = await db.collection('group_members')
+      const existingMembers = await db.collection(membersCollection)
         .find({ group_id: groupId }, { projection: { user_id: 1 } })
         .toArray();
       
@@ -52,9 +61,34 @@ export async function GET(request: NextRequest) {
       .find(query, { projection: { user_id: 1, username: 1 } })
       .toArray();
 
+    // Fetch profile-specific display names for these users
+    const userIds = users.map(user => user.user_id);
+    const profileCollectionName = `${profileType}profiles`;
+    const profiles = await db.collection(profileCollectionName)
+      .find({ user_id: { $in: userIds } })
+      .project({ user_id: 1, display_name: 1 })
+      .toArray();
+
+    // Create a map for quick lookup
+    const profileMap = new Map(profiles.map(p => [p.user_id, p.display_name]));
+
+    // Only include users who have valid profile-specific display names
+    const enrichedUsers = users
+      .filter(user => {
+        const profileDisplayName = profileMap.get(user.user_id);
+        return profileDisplayName && 
+               profileDisplayName.trim() && 
+               profileDisplayName !== '[NO PROFILE NAME]';
+      })
+      .map(user => ({
+        user_id: user.user_id,
+        username: user.username,
+        display_name: profileMap.get(user.user_id)
+      }));
+
     return NextResponse.json({ 
       success: true, 
-      users 
+      users: enrichedUsers 
     });
 
   } catch (error) {

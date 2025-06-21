@@ -45,7 +45,8 @@ export default function DiscoverGroups() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20'
+        limit: '20',
+        profile_type: 'basic' // Default to basic profile for now
       });
       
       if (search.trim()) {

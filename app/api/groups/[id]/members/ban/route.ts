@@ -58,12 +58,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return createValidationErrorResponse('Invalid JSON in request body', 400);
     }
 
-    const bodyValidation = validateRequestBody(requestBody, ['user_id'], ['reason']);
+    const bodyValidation = validateRequestBody(requestBody, ['user_id'], ['reason', 'profile_type']);
     if (!bodyValidation.isValid) {
       return createValidationErrorResponse(bodyValidation.error!, 400);
     }
 
-    const { user_id, reason } = requestBody;
+    const { user_id, reason, profile_type } = requestBody;
+
+    // Default to basic if not specified, validate profile_type
+    const groupProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(groupProfileType)) {
+      return createValidationErrorResponse('Invalid profile_type. Must be basic, love, or business', 400);
+    }
+
+    // Use profile-specific collections
+    const membersCollection = groupProfileType === 'basic' ? 'group_members' : `group_members_${groupProfileType}`;
+    const groupsCollection = groupProfileType === 'basic' ? 'groups' : `groups_${groupProfileType}`;
+    const bansCollection = groupProfileType === 'basic' ? 'group_bans' : `group_bans_${groupProfileType}`;
 
     // Validate user_id
     const userIdValidation = validateUserId(user_id);
@@ -94,7 +105,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if group exists
-    const group = await db.collection('groups').findOne({ group_id: groupId });
+    const group = await db.collection(groupsCollection).findOne({ group_id: groupId });
     if (!group) {
       await client.close();
       return NextResponse.json({ 
@@ -103,7 +114,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if requester is admin/owner
-    const requesterMembership = await db.collection('group_members').findOne({
+    const requesterMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -127,7 +138,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Check if user is already banned
-    const existingBan = await db.collection('group_bans').findOne({
+    const existingBan = await db.collection(bansCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
@@ -140,19 +151,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Remove user from group if they are a member
-    const targetMembership = await db.collection('group_members').findOne({
+    const targetMembership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: user_id
     });
 
     if (targetMembership) {
-      await db.collection('group_members').deleteOne({
+      await db.collection(membersCollection).deleteOne({
         group_id: groupId,
         user_id: user_id
       });
 
       // Update group member count
-      await db.collection('groups').updateOne(
+      await db.collection(groupsCollection).updateOne(
         { group_id: groupId },
         { 
           $inc: { members_count: -1 },
@@ -162,12 +173,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Add ban record
-    await db.collection('group_bans').insertOne({
+    await db.collection(bansCollection).insertOne({
       group_id: groupId,
       user_id: user_id,
       banned_by: session.user_id,
       banned_at: new Date(),
-      reason: reason || 'No reason provided'
+      reason: reason || 'No reason provided',
+      profile_type: groupProfileType
     });
 
     await client.close();

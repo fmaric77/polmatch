@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck, faX, faUsers, faRefresh } from '@fortawesome/free-solid-svg-icons';
+import { getAnonymousDisplayName } from '../../lib/anonymization';
 
 interface GroupInvitation {
   invitation_id: string;
   group_id: string;
   group_name: string;
   inviter_username: string;
+  inviter_display_name?: string;
+  inviter_id?: string;
   created_at: string;
 }
 
@@ -143,7 +146,9 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({
                       </div>
                       <div className="bg-black border border-gray-500 rounded-none p-3 shadow-inner">
                         <p className="text-gray-300 text-sm font-mono uppercase tracking-wide mb-1">
-                          INVITED BY: <span className="font-medium text-white">{invitation.inviter_username}</span>
+                          INVITED BY: <span className="font-medium text-white">
+                            {getAnonymousDisplayName(invitation.inviter_display_name, invitation.inviter_username, invitation.inviter_id || '')}
+                          </span>
                         </p>
                         <p className="text-gray-400 text-xs font-mono uppercase tracking-widest">
                           SENT: {formatInviteDate(invitation.created_at)}

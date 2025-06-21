@@ -13,7 +13,7 @@ if (!MONGODB_URI) {
 async function ensureIndexes(db: Db, collectionName: string): Promise<void> {
   const coll = db.collection(collectionName);
   try {
-    if (collectionName === 'group_channels') {
+    if (collectionName === 'group_channels' || collectionName.startsWith('group_channels_')) {
       // Create a compound unique index for group_id + name to prevent duplicate channel names within a group
       await coll.createIndex({ group_id: 1, name: 1 }, { unique: true, background: true });
       // Create unique index for channel_id
@@ -60,8 +60,24 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     const params = await context.params;
     const groupId = params.id;
 
+    // Get profile_type from query parameters
+    const url = new URL(req.url);
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const channelsCollection = profile_type === 'basic' ? 'group_channels' : `group_channels_${profile_type}`;
+
     // Check if user is a member of the group
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -74,7 +90,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     }
 
     // Get all channels in the group
-    const channels = await db.collection('group_channels')
+    const channels = await db.collection(channelsCollection)
       .find({ group_id: groupId })
       .sort({ position: 1, created_at: 1 })
       .toArray();
@@ -121,7 +137,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     const params = await context.params;
     const groupId = params.id;
-    const { name, description } = await req.json();
+    const { name, description, profile_type } = await req.json();
 
     if (!name) {
       await client.close();
@@ -130,8 +146,21 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       }, { status: 400 });
     }
 
+    // Default to basic if not specified, validate profile_type
+    const channelProfileType = profile_type || 'basic';
+    if (!['basic', 'love', 'business'].includes(channelProfileType)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const membersCollection = channelProfileType === 'basic' ? 'group_members' : `group_members_${channelProfileType}`;
+    const channelsCollection = channelProfileType === 'basic' ? 'group_channels' : `group_channels_${channelProfileType}`;
+
     // Check if user is a member of the group with admin privileges
-    const membership = await db.collection('group_members').findOne({
+    const membership = await db.collection(membersCollection).findOne({
       group_id: groupId,
       user_id: session.user_id
     });
@@ -153,7 +182,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
     // Check if channel name already exists in this group (case-insensitive)
     const normalizedName = name.trim().toLowerCase();
-    const existingChannel = await db.collection('group_channels').findOne({
+    const existingChannel = await db.collection(channelsCollection).findOne({
       group_id: groupId,
       name: normalizedName
     });
@@ -166,7 +195,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     }
 
     // Get the highest position for ordering
-    const lastChannel = await db.collection('group_channels')
+    const lastChannel = await db.collection(channelsCollection)
       .findOne(
         { group_id: groupId },
         { sort: { position: -1 } }
@@ -189,10 +218,10 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
     };
 
     // Ensure indexes exist before inserting
-    await ensureIndexes(db, 'group_channels');
+    await ensureIndexes(db, channelsCollection);
 
     try {
-      await db.collection('group_channels').insertOne(channel);
+      await db.collection(channelsCollection).insertOne(channel);
       
       await client.close();
 

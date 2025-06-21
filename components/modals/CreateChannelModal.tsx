@@ -6,12 +6,14 @@ interface CreateChannelModalProps {
   selectedConversation: string;
   onClose: () => void;
   onSuccess: () => void;
+  profileType?: string;
 }
 
 const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   selectedConversation,
   onClose,
-  onSuccess
+  onSuccess,
+  profileType
 }) => {
   const [form, setForm] = useState({
     name: '',
@@ -58,7 +60,8 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name.trim(),
-          description: form.description.trim()
+          description: form.description.trim(),
+          ...(profileType && { profile_type: profileType })
         })
       });
 

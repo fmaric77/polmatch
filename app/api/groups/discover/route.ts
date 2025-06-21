@@ -36,7 +36,20 @@ export async function GET(req: NextRequest) {
     const searchQuery = url.searchParams.get('search') || '';
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '20');
+    const profile_type = url.searchParams.get('profile_type') || 'basic';
     const skip = (page - 1) * limit;
+
+    // Validate profile_type
+    if (!['basic', 'love', 'business'].includes(profile_type)) {
+      await client.close();
+      return NextResponse.json({ 
+        error: 'Invalid profile_type. Must be basic, love, or business' 
+      }, { status: 400 });
+    }
+
+    // Use profile-specific collections
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
 
     // Build match query for public groups that user is not already a member of
     const matchQuery: Record<string, unknown> = {
@@ -61,7 +74,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get groups the user is already a member of
-    const userMemberships = await db.collection('group_members').find({
+    const userMemberships = await db.collection(membersCollection).find({
       user_id: session.user_id
     }).toArray();
     
@@ -79,7 +92,7 @@ export async function GET(req: NextRequest) {
 
 
     // Get public groups with aggregation pipeline
-    const groups = await db.collection('groups').aggregate([
+    const groups = await db.collection(groupsCollection).aggregate([
       { $match: matchQuery },
       { $sort: { members_count: -1, last_activity: -1 } }, // Sort by popularity then activity
       { $skip: skip },
@@ -113,7 +126,7 @@ export async function GET(req: NextRequest) {
     ]).toArray();
 
     // Get total count for pagination
-    const totalCount = await db.collection('groups').countDocuments(matchQuery);
+    const totalCount = await db.collection(groupsCollection).countDocuments(matchQuery);
     const totalPages = Math.ceil(totalCount / limit);
 
     await client.close();
