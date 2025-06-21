@@ -879,8 +879,107 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [selectedChannel, selectedConversation, selectedConversationType, activeProfileType]); // Added activeProfileType dependency
 
+  // Parse and handle /poll command
+  const parsePollCommand = useCallback((message: string): { question: string; options: string[] } | null => {
+    // Check if message starts with /poll
+    if (!message.trim().startsWith('/poll ')) {
+      return null;
+    }
+
+    // Remove /poll from the beginning and trim
+    const pollContent = message.slice(6).trim();
+    
+    if (!pollContent) {
+      return null;
+    }
+
+    // Split by spaces but keep quoted strings together
+    const parts: string[] = [];
+    let currentPart = '';
+    let inQuotes = false;
+    let i = 0;
+    
+    while (i < pollContent.length) {
+      const char = pollContent[i];
+      
+      if (char === '"' && (i === 0 || pollContent[i - 1] !== '\\')) {
+        inQuotes = !inQuotes;
+      } else if (char === ' ' && !inQuotes) {
+        if (currentPart.trim()) {
+          parts.push(currentPart.trim());
+          currentPart = '';
+        }
+      } else {
+        currentPart += char;
+      }
+      i++;
+    }
+    
+    // Add the last part if it exists
+    if (currentPart.trim()) {
+      parts.push(currentPart.trim());
+    }
+
+    // Clean up quoted strings (remove surrounding quotes)
+    const cleanedParts = parts.map(part => {
+      if (part.startsWith('"') && part.endsWith('"')) {
+        return part.slice(1, -1);
+      }
+      return part;
+    });
+
+    if (cleanedParts.length < 3) {
+      return null; // Need at least question + 2 options
+    }
+
+    const question = cleanedParts[0];
+    const options = cleanedParts.slice(1);
+
+    return { question, options };
+  }, []);
+
+  // Create poll from command
+  const handlePollCommand = useCallback(async (question: string, options: string[]): Promise<boolean> => {
+    if (!selectedConversation || selectedConversationType !== 'group') {
+      return false;
+    }
+
+    try {
+      const res = await fetch(`/api/groups/${selectedConversation}/polls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          options,
+          profile_type: activeProfileType
+        })
+      });
+      
+      const data = await res.json();
+      return data.success;
+    } catch (error) {
+      console.error('Error creating poll from command:', error);
+      return false;
+    }
+  }, [selectedConversation, selectedConversationType, activeProfileType]);
+
   // Send message handler
   const handleSendMessage = useCallback(async () => {
+    // Check for /poll command first
+    if (selectedConversationType === 'group') {
+      const pollCommand = parsePollCommand(newMessage);
+      if (pollCommand) {
+        const success = await handlePollCommand(pollCommand.question, pollCommand.options);
+        if (success) {
+          setNewMessage('');
+          setReplyTo(null);
+        } else {
+          console.error('Failed to create poll from command');
+        }
+        return;
+      }
+    }
+
     let success = false;
     
     console.log('🚀 SEND MESSAGE DEBUG:', {
@@ -909,7 +1008,7 @@ const UnifiedMessages: React.FC = () => {
       setNewMessage('');
       setReplyTo(null); // Clear reply after sending
     }
-  }, [selectedConversationType, selectedCategory, activeProfileType, profileMessages, messages, newMessage, replyTo]);
+  }, [selectedConversationType, selectedCategory, activeProfileType, profileMessages, messages, newMessage, replyTo, selectedConversation, parsePollCommand, handlePollCommand]);
 
   // Context menu handlers
   const handleConversationContextMenu = (e: React.MouseEvent, conversation: Conversation) => {
@@ -1151,19 +1250,17 @@ const UnifiedMessages: React.FC = () => {
         setIsSidebarVisible={setIsSidebarVisible}
         onMembersClick={() => modals.openModal('showMembersModal')}
         onInviteClick={() => modals.openModal('showInviteModal')}
-        onBannedUsersClick={() => {
-          groupManagement.fetchBannedUsers(selectedConversation);
-          modals.openModal('showBannedUsersModal');
-        }}
+        onBannedUsersClick={() => modals.openModal('showBannedUsersModal')}
         onCreateChannelClick={() => modals.openModal('showCreateChannelModal')}
         onChannelContextMenu={handleChannelContextMenu}
         canManageMembers={canManageMembers}
         typingUsers={typingIndicator.typingUsers}
         onTyping={typingIndicator.emitTyping}
         sessionToken={sessionToken}
+        onInitiateCall={incomingCalls.initiateCall}
         replyTo={replyTo}
         setReplyTo={setReplyTo}
-        onInitiateCall={incomingCalls.initiateCall}
+        activeProfileType={activeProfileType}
       />
 
       {/* Context Menu */}

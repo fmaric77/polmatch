@@ -428,16 +428,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                     </div>
 
                     <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Questions</h3>
-                        <button
-                          type="button"
-                          onClick={addQuestion}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                        >
-                          Add Question
-                        </button>
-                      </div>
+                      <h3 className="text-lg font-semibold mb-4">Questions</h3>
 
                       {questionnaireForm.questions.map((question, index) => (
                         <div key={index} className="border border-gray-600 rounded-lg p-4 mb-4">
@@ -484,6 +475,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                                 <option value="radio">Single Choice</option>
                                 <option value="checkbox">Checkboxes</option>
                                 <option value="number">Number</option>
+                                <option value="year">Year</option>
                                 <option value="email">Email</option>
                                 <option value="url">URL</option>
                               </select>
@@ -568,6 +560,13 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                         Cancel
                       </button>
                       <button
+                        type="button"
+                        onClick={addQuestion}
+                        className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        Add Question
+                      </button>
+                      <button
                         type="submit"
                         className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                       >
@@ -625,13 +624,6 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                     <div>
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Questions</h3>
-                        <button
-                          type="button"
-                          onClick={addEditQuestion}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                        >
-                          Add Question
-                        </button>
                       </div>
                       {editQuestionnaireForm.questions.map((question: Question, index: number) => (
                         <div key={index} className="border border-gray-600 rounded-lg p-4 mb-4">
@@ -676,6 +668,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                                 <option value="radio">Single Choice</option>
                                 <option value="checkbox">Checkboxes</option>
                                 <option value="number">Number</option>
+                                <option value="year">Year</option>
                                 <option value="email">Email</option>
                                 <option value="url">URL</option>
                               </select>
@@ -755,6 +748,13 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                         className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                       >
                         Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={addEditQuestion}
+                        className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        Add Question
                       </button>
                       <button
                         type="submit"

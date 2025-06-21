@@ -62,10 +62,15 @@ export async function GET(req: NextRequest, context: RouteContext) {
       })
       .toArray();
 
-    // Map answers to questions
-    const answersMap = new Map(existingAnswers.map(answer => [answer.question_id, answer.answer]));
+    // Map answers to questions with visibility settings
+    const answersMap = new Map(existingAnswers.map(answer => [answer.question_id, { 
+      answer: answer.answer, 
+      visibility: answer.visibility || 'public' 
+    }]));
     questions.forEach(question => {
-      question.user_answer = answersMap.get(question.question_id) || '';
+      const existingAnswer = answersMap.get(question.question_id);
+      question.user_answer = existingAnswer?.answer || '';
+      question.user_visibility = existingAnswer?.visibility || 'public';
     });
 
     return NextResponse.json({ 
@@ -154,6 +159,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
           message: `Answer is required for question: ${question.question_text}` 
         }, { status: 400 });
       }
+
+      // Validate visibility setting
+      const visibility = answer.visibility || 'public';
+      if (!['public', 'friends', 'private'].includes(visibility)) {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Invalid visibility setting for question: ${answer.question_id}. Must be 'public', 'friends', or 'private'` 
+        }, { status: 400 });
+      }
     }
 
     // Delete existing answers for this questionnaire
@@ -169,6 +183,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       questionnaire_id: questionnaireId,
       question_id: answer.question_id,
       answer: answer.answer,
+      visibility: answer.visibility || 'public', // Default to 'public' if not provided
       completion_date: completionDate
     }));
 

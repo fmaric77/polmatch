@@ -329,10 +329,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                           })}
                         </div>
                         
-                        {/* Security Footer */}
-                        <div className="bg-red-900 text-white p-1 text-xs font-mono text-center border-t border-red-700">
-                          ⚠ CLASSIFIED QUESTIONNAIRE DATA - RESTRICTED ACCESS ⚠
-                        </div>
+                        {/* No security footer needed */}
                       </div>
                     )}
 

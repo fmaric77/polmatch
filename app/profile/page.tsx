@@ -68,6 +68,7 @@ export default function ProfilePage() {
   const [questionnaireError, setQuestionnaireError] = useState('');
   const [activeQuestionnaire, setActiveQuestionnaire] = useState<Questionnaire | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answerVisibility, setAnswerVisibility] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
 
@@ -182,10 +183,13 @@ export default function ProfilePage() {
       if (data.success) {
         setActiveQuestionnaire(data.questionnaire);
         const initialAnswers: Record<string, string> = {};
-        data.questionnaire.questions.forEach((q: Question) => {
+        const initialVisibility: Record<string, string> = {};
+        data.questionnaire.questions.forEach((q: Question & { user_visibility?: string }) => {
           initialAnswers[q.question_id] = q.user_answer || '';
+          initialVisibility[q.question_id] = q.user_visibility || 'public';
         });
         setAnswers(initialAnswers);
+        setAnswerVisibility(initialVisibility);
       } else {
         alert(data.message || 'Failed to load questionnaire');
       }
@@ -203,7 +207,8 @@ export default function ProfilePage() {
     try {
       const answerArray = Object.entries(answers).map(([questionId, answer]) => ({
         question_id: questionId,
-        answer
+        answer,
+        visibility: answerVisibility[questionId] || 'public'
       }));
 
       const res = await fetch(`/api/questionnaires/${activeQuestionnaire.questionnaire_id}`, {
@@ -219,6 +224,7 @@ export default function ProfilePage() {
         setTimeout(() => {
           setActiveQuestionnaire(null);
           setAnswers({});
+          setAnswerVisibility({});
           setSubmitMessage('');
           fetchQuestionnaires();
         }, 1500);
@@ -386,6 +392,32 @@ export default function ProfilePage() {
                       {question.is_required && <span className="text-red-400 ml-1">(Required)</span>}
                     </label>
                     {renderQuestion(question)}
+                    
+                    {/* Privacy Controls */}
+                    <div className="mt-4 pt-4 border-t border-white/20">
+                      <label className="block text-xs font-mono font-medium mb-2 text-gray-300 uppercase tracking-wider">
+                        Answer Visibility
+                      </label>
+                      <select
+                        value={answerVisibility[question.question_id] || 'public'}
+                        onChange={(e) => setAnswerVisibility(prev => ({
+                          ...prev,
+                          [question.question_id]: e.target.value
+                        }))}
+                        className="w-full p-2 bg-black text-white border border-white/30 rounded focus:outline-none focus:border-white/60 font-mono text-xs"
+                      >
+                        <option value="public">🌍 Public - Everyone can see this answer</option>
+                        <option value="friends">👥 Friends Only - Only friends can see this answer</option>
+                        <option value="private">🔒 Private - Hide this answer from others</option>
+                      </select>
+                      <p className="text-xs text-gray-400 font-mono mt-1">
+                        {answerVisibility[question.question_id] === 'friends' 
+                          ? 'Only users who are your friends will see this answer' 
+                          : answerVisibility[question.question_id] === 'private'
+                          ? 'This answer will be hidden from everyone else'
+                          : 'This answer will be visible to everyone who can see your profile'}
+                      </p>
+                    </div>
                   </div>
                 ))}
 

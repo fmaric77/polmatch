@@ -62,6 +62,11 @@ interface User {
   display_name?: string;
 }
 
+interface PollOption { option_id: string; text: string; }
+interface Poll { poll_id: string; question: string; options: PollOption[]; }
+interface PollVote { _id: string; count: number; }
+interface PollResult { votes: PollVote[]; userVote: string | null; }
+
 const Groups = () => {
   // Profile separation state
   const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
@@ -90,6 +95,11 @@ const Groups = () => {
     is_private: false,
     profile_type: 'basic' as ProfileType
   });
+  const [showPollModal, setShowPollModal] = useState<boolean>(false);
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [pollResults, setPollResults] = useState<Record<string, PollResult>>({});
+  const [newPollQuestion, setNewPollQuestion] = useState<string>('');
+  const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -191,6 +201,26 @@ const Groups = () => {
         setError('Failed to load users');
       });
   }, [selectedGroup, activeProfileType]);
+
+  const fetchPolls = useCallback(async () => {
+    if (!selectedGroup) return;
+    const res = await fetch(`/api/groups/${selectedGroup}/polls`);
+    const data = await res.json();
+    if (data.success) {
+      setPolls(data.polls as Poll[]);
+      const results: Record<string, PollResult> = {};
+      await Promise.all(data.polls.map(async (p: Poll) => {
+        const r = await fetch(`/api/groups/${selectedGroup}/polls/${p.poll_id}/votes`);
+        const d = await r.json();
+        if (d.success) results[p.poll_id] = { votes: d.votes, userVote: d.userVote };
+      }));
+      setPollResults(results);
+    }
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    if (showPollModal) fetchPolls();
+  }, [showPollModal, fetchPolls]);
 
   useEffect(() => {
     // Clear previous group data immediately when switching groups
@@ -354,6 +384,30 @@ const Groups = () => {
     } else {
       setError(data.error || 'Failed to respond to invitation');
     }
+  };
+
+  // Poll handling functions
+  const handleCreatePoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const opts = newPollOptions.filter(o => o.trim());
+    if (!newPollQuestion.trim() || opts.length < 2) return;
+    const res = await fetch(`/api/groups/${selectedGroup}/polls`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ question: newPollQuestion, options: opts })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setNewPollQuestion(''); setNewPollOptions(['','']);
+      fetchPolls();
+    }
+  };
+
+  const handleVote = async (pollId: string, optionId: string) => {
+    const res = await fetch(`/api/groups/${selectedGroup}/polls/${pollId}/votes`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ optionId })
+    });
+    if ((await res.json()).success) fetchPolls();
   };
 
   // Member management functions
@@ -627,6 +681,16 @@ const Groups = () => {
                   title="View Members"
                 >
                   👥 Members ({members.length})
+                </button>
+                <button
+                  className="p-2 rounded bg-purple-600 text-white hover:bg-purple-500 text-sm"
+                  onClick={() => {
+                    setShowPollModal(true);
+                    fetchPolls();
+                  }}
+                  title="View and Create Polls"
+                >
+                  📊 Polls
                 </button>
                 <button
                   className="p-2 rounded bg-green-600 text-white hover:bg-green-500 text-sm"
@@ -908,6 +972,55 @@ const Groups = () => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Polls Modal */}
+      {showPollModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="bg-black border border-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-white mb-4">Group Polls</h2>
+            <button onClick={() => setShowPollModal(false)} className="absolute top-4 right-4 text-white">✕</button>
+
+            {/* Create Poll Form */}
+            <form onSubmit={handleCreatePoll} className="mb-6">
+              <input value={newPollQuestion} onChange={e => setNewPollQuestion(e.target.value)}
+                placeholder="Poll question" className="w-full p-2 bg-gray-800 text-white border border-white rounded mb-2" required />
+              {newPollOptions.map((opt, idx) => (
+                <input key={idx} value={opt} onChange={e => {
+                  const arr = [...newPollOptions]; arr[idx] = e.target.value; setNewPollOptions(arr);
+                }} placeholder={`Option ${idx+1}`} className="w-full p-2 bg-gray-800 text-white border border-white rounded mb-2" required />
+              ))}
+              <button type="button" onClick={() => setNewPollOptions([...newPollOptions, ''])}
+                className="text-sm text-blue-400 mb-4">+ Add Option</button>
+              <button type="submit" className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200">Create Poll</button>
+            </form>
+
+            {/* Polls List */}
+            <div className="space-y-4">
+              {polls.map(poll => (
+                <div key={poll.poll_id} className="bg-gray-900 p-4 rounded border border-gray-700">
+                  <div className="text-white font-medium mb-2">{poll.question}</div>
+                  <div className="space-y-2">
+                    {poll.options.map(opt => {
+                      const result = pollResults[poll.poll_id];
+                      const count = result?.votes.find(v => v._id === opt.option_id)?.count || 0;
+                      const isVoted = result?.userVote === opt.option_id;
+                      return (
+                        <div key={opt.option_id} className="flex items-center justify-between">
+                          <button onClick={() => handleVote(poll.poll_id, opt.option_id)}
+                            disabled={!!result?.userVote}
+                            className={`flex-1 text-left p-2 rounded ${isVoted ? 'bg-green-600 text-white' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+                          >{opt.text}</button>
+                          <span className="text-gray-400 text-sm ml-2">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

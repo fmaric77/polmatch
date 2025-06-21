@@ -71,87 +71,127 @@ export async function GET(request: NextRequest) {
     
     const isFriends = !!friendshipCheck;
     
-    // Filter profiles based on visibility
-    const profiles = {
-      basic: getVisibleProfile(basicProfile, isFriends, session.user_id === targetUserId),
-      love: getVisibleProfile(loveProfile, isFriends, session.user_id === targetUserId),
-      business: getVisibleProfile(businessProfile, isFriends, session.user_id === targetUserId)
+    // Profile types and their profile data
+    const profileMap: Record<string, unknown> = {
+      basic: basicProfile,
+      love: loveProfile,
+      business: businessProfile
     };
-    
-    // Fetch questionnaire answers for public/visible profiles
+
+    const profiles: Record<string, unknown> = {};
     const questionnaireAnswers: Record<string, unknown[]> = {};
-    
-    for (const [profileType, profile] of Object.entries(profiles)) {
-      if (profile) {
-        // Get questionnaire answers for this profile type
-        const answers = await db.collection('user_questionnaire_answers').aggregate([
-          {
-            $match: { user_id: targetUserId }
-          },
-          {
-            $lookup: {
-              from: 'questionnaires',
-              localField: 'questionnaire_id',
-              foreignField: 'questionnaire_id',
-              as: 'questionnaire'
-            }
-          },
-          {
-            $unwind: '$questionnaire'
-          },
-          {
-            $lookup: {
-              from: 'questionnaire_groups',
-              localField: 'questionnaire.group_id',
-              foreignField: 'group_id',
-              as: 'group'
-            }
-          },
-          {
-            $unwind: '$group'
-          },
-          {
-            $match: {
-              'group.profile_type': profileType,
-              'group.is_hidden': false,
-              'questionnaire.is_hidden': false
-            }
-          },
-          {
-            $lookup: {
-              from: 'questions',
-              localField: 'question_id',
-              foreignField: 'question_id',
-              as: 'question'
-            }
-          },
-          {
-            $unwind: '$question'
-          },
-          {
-            $group: {
-              _id: '$questionnaire_id',
-              questionnaire_title: { $first: '$questionnaire.title' },
-              questionnaire_description: { $first: '$questionnaire.description' },
-              group_title: { $first: '$group.title' },
-              answers: {
-                $push: {
-                  question_id: '$question_id',
-                  question_text: '$question.question_text',
-                  answer: '$answer',
-                  completion_date: '$completion_date',
-                  profile_display_text: '$question.profile_display_text'
-                }
+
+    for (const profileType of Object.keys(profileMap)) {
+      const profileData = profileMap[profileType];
+      if (!profileData) {
+        profiles[profileType] = null;
+        continue;
+      }
+
+      // Check friendship status in profile-specific and general collections
+      const friendsCollectionName = `friends_${profileType}`;
+      const friendshipDoc = await db.collection(friendsCollectionName).findOne({
+        $or: [
+          { user_id: session.user_id, friend_id: targetUserId, status: 'accepted' },
+          { user_id: targetUserId, friend_id: session.user_id, status: 'accepted' }
+        ]
+      });
+      // Combine general and profile-specific friendship checks
+      const isProfileFriends = !!friendshipDoc || isFriends;
+      const isOwnProfile = session.user_id === targetUserId;
+
+      // Determine profile visibility per-profile
+      const visibleProfile = getVisibleProfile(profileData, isProfileFriends, isOwnProfile);
+      profiles[profileType] = visibleProfile;
+
+      if (!visibleProfile) {
+        questionnaireAnswers[profileType] = [];
+        continue;
+      }
+
+      // Fetch and filter questionnaire answers
+      const answers = await db.collection('user_questionnaire_answers').aggregate([
+        {
+          $match: { user_id: targetUserId }
+        },
+        {
+          $lookup: {
+            from: 'questionnaires',
+            localField: 'questionnaire_id',
+            foreignField: 'questionnaire_id',
+            as: 'questionnaire'
+          }
+        },
+        {
+          $unwind: '$questionnaire'
+        },
+        {
+          $lookup: {
+            from: 'questionnaire_groups',
+            localField: 'questionnaire.group_id',
+            foreignField: 'group_id',
+            as: 'group'
+          }
+        },
+        {
+          $unwind: '$group'
+        },
+        {
+          $match: {
+            'group.profile_type': profileType,
+            'group.is_hidden': false,
+            'questionnaire.is_hidden': false
+          }
+        },
+        {
+          $lookup: {
+            from: 'questions',
+            localField: 'question_id',
+            foreignField: 'question_id',
+            as: 'question'
+          }
+        },
+        {
+          $unwind: '$question'
+        },
+        {
+          $group: {
+            _id: '$questionnaire_id',
+            questionnaire_title: { $first: '$questionnaire.title' },
+            questionnaire_description: { $first: '$questionnaire.description' },
+            group_title: { $first: '$group.title' },
+            answers: {
+              $push: {
+                question_id: '$question_id',
+                question_text: '$question.question_text',
+                answer: '$answer',
+                completion_date: '$completion_date',
+                profile_display_text: '$question.profile_display_text',
+                visibility: { $ifNull: ['$visibility', 'public'] } // Default to 'public' for backward compatibility
               }
             }
-          },
-          {
-            $sort: { questionnaire_title: 1 }
           }
-        ]).toArray();
-        
-        questionnaireAnswers[profileType] = answers;
-      }
+        },
+        {
+          $sort: { questionnaire_title: 1 }
+        }
+      ]).toArray();
+
+      const filteredAnswers = answers.map(q => ({
+        ...q,
+        answers: q.answers.filter((ans: { visibility: string }) => {
+          const v = ans.visibility || 'public';
+          if (isOwnProfile) return true;
+          switch (v) {
+            case 'public': return true;
+            case 'friends': return isProfileFriends;
+            case 'private': return false;
+            default: return true;
+          }
+        })
+      })).filter(q => q.answers.length > 0);
+
+      questionnaireAnswers[profileType] = filteredAnswers;
     }
     
     return NextResponse.json({ 
