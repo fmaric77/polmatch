@@ -137,10 +137,10 @@ const MembersModal: React.FC<MembersModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
-      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono p-4">
+      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1 pr-4">
             <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">GROUP MEMBERS</div>
             <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
               <FontAwesomeIcon icon={faUsers} className="mr-3" />
@@ -149,13 +149,13 @@ const MembersModal: React.FC<MembersModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
+            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono flex-shrink-0"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
 
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {groupMembers.length === 0 ? (
             <div className="text-center py-8">
               <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
@@ -163,36 +163,33 @@ const MembersModal: React.FC<MembersModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto space-y-3">
+            <div className="h-full overflow-y-auto overflow-x-hidden space-y-3 pr-2">
               {sortedMembers.map((member) => (
                 <div
                   key={member.user_id}
-                  className="p-3 bg-black border-2 border-gray-400 rounded-none hover:border-white transition-all shadow-lg"
+                  className="p-3 bg-black border-2 border-gray-400 rounded-none hover:border-white transition-all shadow-lg min-w-0"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="border border-white rounded-none p-1">
+                  <div className="flex items-center justify-between min-w-0">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="border border-white rounded-none p-1 flex-shrink-0">
                         {getRoleIcon(member.role)}
                       </div>
-                      <div>
-                        <div className="text-white font-mono uppercase tracking-wide">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-mono uppercase tracking-wide truncate">
                           {getAnonymousDisplayName(member.display_name, member.username, member.user_id)}
                         </div>
-                        <div className={`text-sm font-mono uppercase tracking-widest ${getRoleColor(member.role)}`}>
+                        <div className={`text-sm font-mono uppercase tracking-widest ${getRoleColor(member.role)} truncate`}>
                           {member.role} | JOINED: {formatJoinDate(member.join_date)}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="text-gray-400 text-xs mr-2 font-mono uppercase tracking-widest">
-                        JOINED: {formatJoinDate(member.join_date)}
-                      </div>
+                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                       {canManageMember(member) && (
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 flex-wrap">
                           {member.role === 'member' && (
                             <button
                               onClick={() => handlePromoteToAdmin(member)}
-                              className="p-1 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-sm font-mono"
+                              className="p-1 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-sm font-mono text-xs"
                               title="PROMOTE TO ADMIN"
                             >
                               <FontAwesomeIcon icon={faUserPlus} size="sm" />
@@ -201,7 +198,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           {member.role === 'admin' && (
                             <button
                               onClick={() => handleDemoteToMember(member)}
-                              className="p-1 bg-black text-yellow-400 border border-yellow-400 rounded-none hover:bg-yellow-400 hover:text-black transition-all shadow-sm font-mono"
+                              className="p-1 bg-black text-yellow-400 border border-yellow-400 rounded-none hover:bg-yellow-400 hover:text-black transition-all shadow-sm font-mono text-xs"
                               title="DEMOTE TO MEMBER"
                             >
                               <FontAwesomeIcon icon={faUserMinus} size="sm" />
@@ -209,14 +206,14 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           )}
                           <button
                             onClick={() => handleKickMember(member)}
-                            className="p-1 bg-black text-orange-400 border border-orange-400 rounded-none hover:bg-orange-400 hover:text-black transition-all shadow-sm font-mono"
+                            className="p-1 bg-black text-orange-400 border border-orange-400 rounded-none hover:bg-orange-400 hover:text-black transition-all shadow-sm font-mono text-xs"
                             title="KICK MEMBER"
                           >
                             <FontAwesomeIcon icon={faUserTimes} size="sm" />
                           </button>
                           <button
                             onClick={() => handleBanMember(member)}
-                            className="p-1 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-sm font-mono"
+                            className="p-1 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-sm font-mono text-xs"
                             title="BAN MEMBER"
                           >
                             <FontAwesomeIcon icon={faBan} size="sm" />
@@ -229,15 +226,6 @@ const MembersModal: React.FC<MembersModalProps> = ({
               ))}
             </div>
           )}
-        </div>
-
-        <div className="flex justify-end mt-6">
-          <button
-            onClick={onClose}
-            className="bg-black text-white border-2 border-white py-3 px-6 rounded-none hover:bg-white hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
-          >
-            CLOSE
-          </button>
         </div>
       </div>
     </div>

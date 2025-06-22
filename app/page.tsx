@@ -2,6 +2,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faQuestion } from '@fortawesome/free-solid-svg-icons';
+import InfoModal from "../components/modals/InfoModal";
 
 export default function Login() {
   const router = useRouter();
@@ -11,6 +14,7 @@ export default function Login() {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   // Check session on mount
   useEffect(() => {
@@ -70,6 +74,14 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 min-h-screen bg-black text-white font-mono overflow-hidden">
+      {/* Help Button - Top Left */}
+      <button
+        onClick={() => setShowInfoModal(true)}
+        className="fixed top-4 left-4 z-20 p-3 bg-black text-blue-400 border-2 border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
+        title="Platform Information"
+      >
+        <FontAwesomeIcon icon={faQuestion} size="lg" />
+      </button>
       {/* Animated Background Grid */}
       <div className="absolute inset-0 opacity-10">
         <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-12 gap-px h-full">
@@ -227,6 +239,12 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Info Modal */}
+      <InfoModal 
+        isOpen={showInfoModal} 
+        onClose={() => setShowInfoModal(false)} 
+      />
 
       {/* Custom CSS for animations */}
       <style jsx>{`
