@@ -407,23 +407,44 @@ export const useMessages = (
         console.error('Failed to delete direct message:', data?.message || data?.error || 'Unknown error', data);
         return false;
       } else if (selectedConversationType === 'group') {
-        // Group message - use correct endpoint based on whether we're in a channel
-        let deleteUrl: string;
-        if (selectedChannel) {
-          // Channel-specific message
-          deleteUrl = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
-        } else {
-          // General group message
-          deleteUrl = `/api/groups/${selectedConversation}/messages`;
+        // Group message - need to find the correct message and use the right ID field
+        const messageToDelete = messages.find(msg => {
+          if ('message_id' in msg) {
+            return msg.message_id === messageId;
+          }
+          return false;
+        }) as GroupMessage | undefined;
+
+        if (!messageToDelete) {
+          console.error('Message not found in current messages');
+          return false;
         }
+
+        let deleteUrl: string;
+        let requestBody: Record<string, unknown>;
+        
+        if (selectedChannel) {
+          // Channel-specific message - API expects '_id' field (ObjectId) as 'messageId'
+          deleteUrl = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+          requestBody = { 
+            messageId: (messageToDelete as any)._id || messageToDelete.message_id, // Use _id if available, fallback to message_id
+            ...(profileType && { profile_type: profileType })
+          };
+        } else {
+          // General group message - API expects 'message_id' field (UUID)
+          deleteUrl = `/api/groups/${selectedConversation}/messages`;
+          requestBody = { 
+            message_id: messageToDelete.message_id,
+            ...(profileType && { profile_type: profileType })
+          };
+        }
+        
+        console.log('🗑️ Delete request:', { deleteUrl, requestBody });
         
         const response = await fetch(deleteUrl, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            messageId,
-            ...(profileType && { profile_type: profileType })
-          })
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
@@ -452,7 +473,7 @@ export const useMessages = (
       console.error('Error deleting message:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType, messages]);
 
   // Pin a message
   const pinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
