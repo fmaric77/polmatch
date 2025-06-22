@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-06-22T18:17:55.048Z",
+  "config": {
+    "TOTAL_USERS": 500,
+    "TOTAL_MESSAGES": 50000,
+    "CONCURRENT_GROUPS": 10,
+    "BATCH_SIZE": 25,
+    "MESSAGE_BATCH_SIZE": 50,
+    "ADMIN_USER": {
+      "email": "sokol@example.com",
+      "password": "mango"
+    }
+  },
+  "stats": {
+    "usersCreated": 500,
+    "groupsCreated": 5,
+    "usersJoinedGroups": 500,
+    "messagesSent": 50000,
+    "totalErrors": 5,
+    "startTime": 1750614305724,
+    "endTime": 1750616275047,
+    "phases": []
+  },
+  "assessment": {
+    "successRate": 99,
+    "throughput": 25.389435861968806,
+    "duration": "32.82"
+  }
+}

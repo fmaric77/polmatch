@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-06-22T17:34:53.121Z",
+  "config": {
+    "TOTAL_USERS": 500,
+    "TOTAL_MESSAGES": 50000,
+    "CONCURRENT_GROUPS": 10,
+    "BATCH_SIZE": 50,
+    "RAPID_FIRE_DURATION": 30000,
+    "MESSAGE_RATE_PER_SECOND": 100,
+    "STRESS_PHASES": true,
+    "MEMORY_TRACKING": true
+  },
+  "results": {
+    "startTime": 1750613690401,
+    "users": [],
+    "groups": [],
+    "totalMessagesSent": 0,
+    "errors": {
+      "userCreation": 0,
+      "login": 1,
+      "groupJoin": 0,
+      "messaging": 0,
+      "network": 0
+    },
+    "performance": {
+      "userCreationTime": 0,
+      "groupJoinTime": 0,
+      "messagingTime": 0,
+      "peakMemory": 0,
+      "averageResponseTime": 1358
+    },
+    "phases": []
+  },
+  "summary": {
+    "totalTime": 2720,
+    "successRate": 99.8,
+    "throughput": 0
+  }
+}
