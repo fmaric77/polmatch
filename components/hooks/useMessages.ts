@@ -426,8 +426,10 @@ export const useMessages = (
         if (selectedChannel) {
           // Channel-specific message - API expects '_id' field (ObjectId) as 'messageId'
           deleteUrl = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+          // For channel messages, we need the MongoDB _id field if available
+          const messageId = '_id' in messageToDelete ? messageToDelete._id : messageToDelete.message_id;
           requestBody = { 
-            messageId: (messageToDelete as any)._id || messageToDelete.message_id, // Use _id if available, fallback to message_id
+            messageId,
             ...(profileType && { profile_type: profileType })
           };
         } else {
