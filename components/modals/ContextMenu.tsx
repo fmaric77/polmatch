@@ -5,7 +5,8 @@ import {
   faUserMinus,
   faCopy,
   faSignOutAlt,
-  faReply
+  faReply,
+  faThumbtack
 } from '@fortawesome/free-solid-svg-icons';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
@@ -81,6 +82,8 @@ interface ContextMenuProps {
   messages: {
     deleteMessage: (messageId: string) => Promise<boolean>;
     setReplyTo?: (message: { id: string; content: string; sender_name: string }) => void;
+    pinMessage?: (messageId: string, channelId?: string) => Promise<boolean>;
+    unpinMessage?: (messageId: string, channelId?: string) => Promise<boolean>;
   };
   currentUser: {
     user_id: string;
@@ -89,6 +92,8 @@ interface ContextMenuProps {
   } | null;
   selectedChannel?: string;
   setSelectedChannel?: (channelId: string) => void;
+  selectedConversation?: string;
+  selectedConversationType?: 'direct' | 'group';
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -99,7 +104,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   messages,
   currentUser,
   selectedChannel,
-  setSelectedChannel
+  setSelectedChannel,
+  selectedConversation,
+  selectedConversationType
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -164,8 +171,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const getMenuItems = (): ContextMenuItem[] => {
     switch (contextMenu.type) {
       case 'message': {
-        const message = contextMenu.extra as { content?: string; sender_id?: string; [key: string]: unknown };
+        const message = contextMenu.extra as { content?: string; sender_id?: string; is_pinned?: boolean; channel_id?: string; [key: string]: unknown };
         const isOwnMessage = currentUser?.user_id === message?.sender_id;
+        
+        // Check if user can pin messages (only in group conversations, and only if user is owner/admin)
+        const canPinMessage = selectedConversationType === 'group' && selectedConversation && (() => {
+          const currentGroup = conversations.conversations.find(conv => conv.id === selectedConversation);
+          return currentGroup?.user_role === 'owner' || currentGroup?.user_role === 'admin';
+        })();
         
         const messageItems: ContextMenuItem[] = [
           {
@@ -187,7 +200,37 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
                 });
               }
             }
-          },
+          }
+        ];
+
+        // Only add pin option if user has permission
+        if (canPinMessage) {
+          messageItems.push({
+            id: 'pin',
+            label: message.is_pinned ? 'Unpin Message' : 'Pin Message',
+            icon: faThumbtack,
+            color: message.is_pinned ? 'text-yellow-500' : 'text-gray-400',
+            onClick: async () => {
+              try {
+                if (message.is_pinned) {
+                  // Unpin the message
+                  if (messages.unpinMessage) {
+                    await messages.unpinMessage(contextMenu.id, selectedChannel);
+                  }
+                } else {
+                  // Pin the message
+                  if (messages.pinMessage) {
+                    await messages.pinMessage(contextMenu.id, selectedChannel);
+                  }
+                }
+              } catch (error) {
+                console.error('Error pinning/unpinning message:', error);
+              }
+            }
+          });
+        }
+
+        messageItems.push(
           {
             id: 'copy',
             label: 'Copy Text',
@@ -209,7 +252,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               messages.deleteMessage(contextMenu.id);
             }
           }
-        ];
+        );
 
         return messageItems;
       }

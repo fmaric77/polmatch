@@ -8,6 +8,7 @@ export interface ModalStates {
   showInvitationsModal: boolean;
   showBannedUsersModal: boolean;
   showCreateChannelModal: boolean;
+  showPinnedMessagesModal: boolean;
 }
 
 export const useModalStates = () => {
@@ -18,7 +19,8 @@ export const useModalStates = () => {
     showInviteModal: false,
     showInvitationsModal: false,
     showBannedUsersModal: false,
-    showCreateChannelModal: false
+    showCreateChannelModal: false,
+    showPinnedMessagesModal: false
   });
 
   const openModal = (modalName: keyof ModalStates) => {
@@ -37,7 +39,8 @@ export const useModalStates = () => {
       showInviteModal: false,
       showInvitationsModal: false,
       showBannedUsersModal: false,
-      showCreateChannelModal: false
+      showCreateChannelModal: false,
+      showPinnedMessagesModal: false
     });
   };
 

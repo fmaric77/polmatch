@@ -20,6 +20,7 @@ import BannedUsersModal from './modals/BannedUsersModal';
 import InviteModal from './modals/InviteModal';
 import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
+import PinnedMessagesModal from './modals/PinnedMessagesModal';
 import ContextMenu from './modals/ContextMenu';
 
 // Dynamically import VoiceCall to prevent SSR issues
@@ -62,6 +63,9 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+  is_pinned?: boolean;
+  pinned_at?: string;
+  pinned_by?: string;
   reply_to?: {
     message_id: string;
     content: string;
@@ -1025,11 +1029,20 @@ const UnifiedMessages: React.FC = () => {
   const handleMessageContextMenu = (e: React.MouseEvent, message: PrivateMessage | GroupMessage) => {
     e.preventDefault();
     
+    // For group messages, use message_id (UUID). For private messages, use _id (ObjectId)
+    const isGroupMessage = 'message_id' in message;
+    const messageId = isGroupMessage ? (message as GroupMessage).message_id : (message as PrivateMessage)._id;
+    
+    if (!messageId) {
+      console.error('🚨 No valid message ID found for context menu:', message);
+      return;
+    }
+    
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
       type: 'message',
-      id: (message as PrivateMessage)._id || (message as GroupMessage).message_id,
+      id: messageId,
       extra: message
     });
   };
@@ -1094,6 +1107,64 @@ const UnifiedMessages: React.FC = () => {
     ? groupManagement.canManageMembers(selectedConversation)
     : false;
 
+  // Pin message function
+  const pinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message_id: messageId,
+          channel_id: channelId
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh messages to show the pinned state
+        if (selectedConversationType === 'group') {
+          messages.fetchMessages(selectedConversation, selectedConversationType);
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error pinning message:', error);
+      return false;
+    }
+  }, [selectedConversation, selectedConversationType, messages]);
+
+  // Unpin message function
+  const unpinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message_id: messageId,
+          channel_id: channelId
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh messages to show the unpinned state
+        if (selectedConversationType === 'group') {
+          messages.fetchMessages(selectedConversation, selectedConversationType);
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+      return false;
+    }
+  }, [selectedConversation, selectedConversationType, messages]);
+
   // Callback when a user accepts a group invitation: refresh conversations & members
   const handleGroupAccepted = useCallback((groupId: string) => {
     // Refresh conversation list to include the new group
@@ -1103,6 +1174,11 @@ const UnifiedMessages: React.FC = () => {
       groupManagement.fetchGroupMembers(groupId);
     }
   }, [conversations.fetchConversations, selectedConversation, groupManagement.fetchGroupMembers]);
+
+  // Handle pinned messages modal
+  const handlePinnedMessagesClick = useCallback(() => {
+    modals.openModal('showPinnedMessagesModal');
+  }, [modals]);
 
   // Helper function to get profile type symbol
   const getProfileTypeSymbol = (profileType: 'basic' | 'love' | 'business'): string => {
@@ -1252,6 +1328,7 @@ const UnifiedMessages: React.FC = () => {
         onInviteClick={() => modals.openModal('showInviteModal')}
         onBannedUsersClick={() => modals.openModal('showBannedUsersModal')}
         onCreateChannelClick={() => modals.openModal('showCreateChannelModal')}
+        onPinnedMessagesClick={handlePinnedMessagesClick}
         onChannelContextMenu={handleChannelContextMenu}
         canManageMembers={canManageMembers}
         typingUsers={typingIndicator.typingUsers}
@@ -1261,6 +1338,22 @@ const UnifiedMessages: React.FC = () => {
         replyTo={replyTo}
         setReplyTo={setReplyTo}
         activeProfileType={activeProfileType}
+        onRefreshMessages={async () => {
+          console.log('🔄 Refreshing messages after poll creation...', {
+            selectedConversationType,
+            selectedCategory,
+            selectedConversation,
+            activeProfileType
+          });
+          if (selectedConversationType === 'direct' && selectedCategory === 'direct') {
+            console.log('📨 Using profileMessages.fetchMessages');
+            await profileMessages.fetchMessages(selectedConversation);
+          } else {
+            console.log('📨 Using messages.fetchMessages');
+            await messages.fetchMessages(selectedConversation, selectedConversationType);
+          }
+          console.log('✅ Messages refresh completed');
+        }}
       />
 
       {/* Context Menu */}
@@ -1324,11 +1417,15 @@ const UnifiedMessages: React.FC = () => {
             deleteMessage: selectedCategory === 'direct' && selectedConversationType === 'direct' 
               ? profileMessages.deleteMessage 
               : messages.deleteMessage,
-            setReplyTo: setReplyTo
+            setReplyTo: setReplyTo,
+            pinMessage: pinMessage,
+            unpinMessage: unpinMessage
           }}
           currentUser={currentUser}
           selectedChannel={selectedChannel}
           setSelectedChannel={setSelectedChannel}
+          selectedConversation={selectedConversation}
+          selectedConversationType={selectedConversationType}
         />
       )}
 
@@ -1369,6 +1466,42 @@ const UnifiedMessages: React.FC = () => {
             modals.closeModal('showCreateChannelModal');
           }}
           profileType={activeProfileType}
+        />
+      )}
+
+      {modals.modals.showPinnedMessagesModal && (
+        <PinnedMessagesModal
+          isOpen={modals.modals.showPinnedMessagesModal}
+          onClose={() => modals.closeModal('showPinnedMessagesModal')}
+          groupId={selectedConversation}
+          channelId={selectedChannel}
+          currentUser={currentUser}
+          onVote={async (pollId: string, optionId: string) => {
+            // Handle poll voting in pinned messages
+            try {
+              const endpoint = selectedChannel
+                ? `/api/groups/${selectedConversation}/channels/${selectedChannel}/polls/${pollId}/vote`
+                : `/api/groups/${selectedConversation}/polls/${pollId}/vote`;
+
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  option_id: optionId,
+                  profile_type: activeProfileType
+                }),
+              });
+
+              if (response.ok) {
+                // Optionally refresh the pinned messages to show updated vote counts
+                console.log('Vote cast successfully in pinned message');
+              }
+            } catch (error) {
+              console.error('Error voting on poll in pinned message:', error);
+            }
+          }}
         />
       )}
 

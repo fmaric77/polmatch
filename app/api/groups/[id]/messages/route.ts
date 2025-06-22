@@ -13,8 +13,15 @@ interface MessageDocument {
   sender_username?: string;
   timestamp: Date;
   group_id: string;
-  channel_id: string;
+  channel_id?: string;
   attachments?: number;
+  message_type?: 'text' | 'poll';
+  poll_data?: {
+    poll_id: string;
+    question: string;
+    options: Array<{ option_id: string; text: string }>;
+    expires_at?: string;
+  };
   [key: string]: unknown;
 }
 
@@ -111,13 +118,25 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
         const username = userMap.get(msg.sender_id) || 'Unknown';
         const profileDisplayName = profileMap.get(msg.sender_id);
         
-        return {
+        const result = {
           ...msg,
           content: content || '[Decryption failed]',
           sender_username: username,
           // Always use profile display name, never username
           sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
         };
+        
+        // Log poll messages for debugging
+        if (msg.message_type === 'poll') {
+          console.log('📊 Poll message found:', {
+            message_id: msg.message_id,
+            message_type: msg.message_type,
+            has_poll_data: !!msg.poll_data,
+            poll_data: msg.poll_data
+          });
+        }
+        
+        return result;
       } catch {
         const username = userMap.get(msg.sender_id) || 'Unknown';
         const profileDisplayName = profileMap.get(msg.sender_id);
@@ -236,6 +255,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       content: encryptedContent,
       timestamp: new Date().toISOString(),
       edited: false,
+      is_pinned: false,
       attachments: [],
       profile_type
     };

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '../../../../../lib/mongodb-connection';
 import { v4 as uuidv4 } from 'uuid';
+import CryptoJS from 'crypto-js';
+
+const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
 interface PollOption {
   option_id: string;
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await db.collection('sessions').findOne({ sessionToken });
   if (!session) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
-  const { question, options, expires_in_hours, profile_type = 'basic' } = await req.json();
+  const { question, options, expires_in_hours, profile_type = 'basic', channel_id } = await req.json();
   if (!question || !Array.isArray(options) || options.length < 2) {
     return NextResponse.json({ success: false, message: 'Question and at least two options required' }, { status: 400 });
   }
@@ -98,27 +101,50 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   
   await db.collection('group_polls').insertOne(pollDoc);
   
+  // Get user profile information for the message
+  const userProfileCollection = profile_type === 'basic' ? 'user_profiles' : `user_profiles_${profile_type}`;
+  const userProfile = await db.collection(userProfileCollection).findOne(
+    { user_id: session.user_id },
+    { projection: { display_name: 1 } }
+  );
+  
+  const user = await db.collection('users').findOne(
+    { user_id: session.user_id },
+    { projection: { username: 1 } }
+  );
+  
   // Create a poll message artifact in the group chat using the correct profile-specific collection
   const messageId = uuidv4();
+  const messageContent = `📊 **Poll Created:** ${question}`;
+  const encryptedContent = CryptoJS.AES.encrypt(messageContent, SECRET_KEY).toString();
+  
   const pollMessage = {
     message_id: messageId,
     group_id: groupId,
     sender_id: session.user_id,
-    content: `📊 **Poll Created:** ${question}`,
+    content: encryptedContent,
     timestamp: now.toISOString(),
+    edited: false,
     attachments: [],
+    is_pinned: false,
     message_type: 'poll',
+    sender_username: user?.username || 'Unknown',
+    sender_display_name: userProfile?.display_name || '[NO PROFILE NAME]',
     poll_data: {
       poll_id: pollId,
       question,
       options: pollDoc.options,
       expires_at: expiresAt
     },
-    profile_type
+    profile_type,
+    ...(channel_id && { channel_id }) // Include channel_id if creating poll in a specific channel
   };
   
   // Store poll message in the correct profile-specific collection
+  console.log('📝 Storing poll message in collection:', messagesCollection);
+  console.log('📝 Poll message data:', JSON.stringify(pollMessage, null, 2));
   await db.collection(messagesCollection).insertOne(pollMessage);
+  console.log('✅ Poll message stored successfully');
   
   return NextResponse.json({ success: true, poll: pollDoc, message: pollMessage, profile_type });
 }

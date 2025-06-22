@@ -22,6 +22,13 @@ interface MessageDocument {
   group_id: string;
   channel_id: string;
   attachments?: number;
+  message_type?: 'text' | 'poll';
+  poll_data?: {
+    poll_id: string;
+    question: string;
+    options: Array<{ option_id: string; text: string }>;
+    expires_at?: string;
+  };
   [key: string]: unknown;
 }
 
@@ -140,7 +147,12 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
           timestamp: 1,
           attachments: 1,
           sender_username: '$sender.username',
-          reply_to: 1
+          reply_to: 1,
+          message_type: 1,  // Include message_type for poll detection
+          poll_data: 1,     // Include poll_data for poll rendering
+          is_pinned: 1,     // Include pinned status
+          pinned_at: 1,     // Include pinned timestamp
+          pinned_by: 1      // Include who pinned the message
         }
       },
       { $sort: { timestamp: 1 } } // Final sort ascending for display
@@ -154,7 +166,19 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
         }
         
         const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-        return { ...message, content: decryptedContent };
+        const result = { ...message, content: decryptedContent };
+        
+        // Log poll messages for debugging
+        if (message.message_type === 'poll') {
+          console.log('📊 Channel poll message found:', {
+            message_id: message.message_id,
+            message_type: message.message_type,
+            has_poll_data: !!message.poll_data,
+            poll_data: message.poll_data
+          });
+        }
+        
+        return result;
       } catch {
         console.error('Failed to decrypt message for ID:', message.message_id);
         return { ...message, content: '[Decryption failed]' };
@@ -295,7 +319,8 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       content: encryptedContent,
       timestamp: new Date().toISOString(),
       edited: false,
-      attachments: attachments || []
+      attachments: attachments || [],
+      is_pinned: false
     };
 
     // Add reply_to information if provided

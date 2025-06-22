@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface PollOption {
   option_id: string;
@@ -25,16 +25,49 @@ interface PollResult {
 interface PollArtifactProps {
   pollData: PollData;
   onVote: (pollId: string, optionId: string) => void;
-  pollResults?: PollResult;
+  pollResults?: PollResult; // Make optional since component will fetch its own
   currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
+  groupId?: string; // Add groupId to fetch poll results
 }
 
 const PollArtifact: React.FC<PollArtifactProps> = ({
   pollData,
   onVote,
-  pollResults,
-  currentUser
+  pollResults: initialPollResults,
+  currentUser,
+  groupId
 }) => {
+  const [pollResults, setPollResults] = useState<PollResult | undefined>(initialPollResults);
+
+  // Fetch poll results if not provided
+  const fetchPollResults = useCallback(async () => {
+    if (!groupId) return;
+    try {
+      const response = await fetch(`/api/groups/${groupId}/polls/${pollData.poll_id}/votes`);
+      const data = await response.json();
+      if (data.success) {
+        setPollResults({ votes: data.votes, userVote: data.userVote });
+      }
+    } catch (error) {
+      console.error('Error fetching poll results:', error);
+    }
+  }, [groupId, pollData.poll_id]);
+
+  // Fetch poll results on mount if not provided
+  useEffect(() => {
+    if (!initialPollResults && groupId) {
+      fetchPollResults();
+    }
+  }, [initialPollResults, groupId, fetchPollResults]);
+
+  // Handle voting with local refresh
+  const handleVote = useCallback(async (pollId: string, optionId: string) => {
+    await onVote(pollId, optionId);
+    // Refresh poll results after voting
+    if (groupId) {
+      await fetchPollResults();
+    }
+  }, [onVote, groupId, fetchPollResults]);
   const isExpired = pollData.expires_at ? new Date() > new Date(pollData.expires_at) : false;
   const hasVoted = !!pollResults?.userVote;
   const totalVotes = pollResults?.votes.reduce((sum, vote) => sum + vote.count, 0) || 0;
@@ -91,7 +124,7 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
           return (
             <div key={option.option_id} className="relative">
               <button
-                onClick={() => canVote && onVote(pollData.poll_id, option.option_id)}
+                onClick={() => canVote && handleVote(pollData.poll_id, option.option_id)}
                 disabled={!canVote}
                 className={`w-full text-left p-3 rounded-none border-2 transition-all font-mono relative overflow-hidden ${
                   isUserChoice

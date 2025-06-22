@@ -2,34 +2,22 @@
 > pol@0.1.0 dev
 > next dev
 
- ⚠ Port 3000 is in use, trying 3001 instead.
    ▲ Next.js 15.0.3
-   - Local:        http://localhost:3001
+   - Local:        http://localhost:3000
+   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 19.7s
-Node.js[59591]: ../src/node.cc:701:void node::ResetStdio(): Assertion `!(err != 0) || (err == -1 && (*__errno_location ()) == 1)' failed.
- 1: 0x7b28b280633c node::Abort() [/lib/x86_64-linux-gnu/libnode.so.109]
- 2: 0x7b28b28063cb  [/lib/x86_64-linux-gnu/libnode.so.109]
- 3: 0x7b28b27b88c6  [/lib/x86_64-linux-gnu/libnode.so.109]
- 4: 0x7b28b1a47a76  [/lib/x86_64-linux-gnu/libc.so.6]
- 5: 0x7b28b1a47bbe  [/lib/x86_64-linux-gnu/libc.so.6]
- 6: 0x7b28b272dc5d node::DefaultProcessExitHandler(node::Environment*, int) [/lib/x86_64-linux-gnu/libnode.so.109]
- 7: 0x7b28b277e729 node::Environment::Exit(int) [/lib/x86_64-linux-gnu/libnode.so.109]
- 8: 0x7b28b2c5138e v8::internal::FunctionCallbackArguments::Call(v8::internal::CallHandlerInfo) [/lib/x86_64-linux-gnu/libnode.so.109]
- 9: 0x7b28b2c519b1  [/lib/x86_64-linux-gnu/libnode.so.109]
-10: 0x7b28b2c522af v8::internal::Builtin_HandleApiCall(int, unsigned long*, v8::internal::Isolate*) [/lib/x86_64-linux-gnu/libnode.so.109]
-11: 0x7b28b2afc2f9  [/lib/x86_64-linux-gnu/libnode.so.109]
-[?25h
-Node.js[59546]: ../src/node.cc:701:void node::ResetStdio(): Assertion `!(err != 0) || (err == -1 && (*__errno_location ()) == 1)' failed.
- 1: 0x7dd6cd80633c node::Abort() [/lib/x86_64-linux-gnu/libnode.so.109]
- 2: 0x7dd6cd8063cb  [/lib/x86_64-linux-gnu/libnode.so.109]
- 3: 0x7dd6cd7b88c6  [/lib/x86_64-linux-gnu/libnode.so.109]
- 4: 0x7dd6cca47a76  [/lib/x86_64-linux-gnu/libc.so.6]
- 5: 0x7dd6cca47bbe  [/lib/x86_64-linux-gnu/libc.so.6]
- 6: 0x7dd6cd72dc5d node::DefaultProcessExitHandler(node::Environment*, int) [/lib/x86_64-linux-gnu/libnode.so.109]
- 7: 0x7dd6cd77e729 node::Environment::Exit(int) [/lib/x86_64-linux-gnu/libnode.so.109]
- 8: 0x7dd6cdc5138e v8::internal::FunctionCallbackArguments::Call(v8::internal::CallHandlerInfo) [/lib/x86_64-linux-gnu/libnode.so.109]
- 9: 0x7dd6cdc519b1  [/lib/x86_64-linux-gnu/libnode.so.109]
-10: 0x7dd6cdc522af v8::internal::Builtin_HandleApiCall(int, unsigned long*, v8::internal::Isolate*) [/lib/x86_64-linux-gnu/libnode.so.109]
-11: 0x7dd6cdafc2f9  [/lib/x86_64-linux-gnu/libnode.so.109]
+ ✓ Ready in 1327ms
+ ✓ Compiled /middleware in 384ms (91 modules)
+ ○ Compiling /api/sse ...
+ ✓ Compiled /api/sse in 1023ms (308 modules)
+SSE connection attempt with token: c64c2c57-6...
+SSE: Attempting to authenticate user...
+SSE: Authentication result: SUCCESS
+SSE: User f47ac10b-58cc-4372-a567-0e02b2c3d479 connected via SSE
+SSE: Added connection for user f47ac10b-58cc-4372-a567-0e02b2c3d479
+ ✓ Compiled /api/groups/[id]/pin in 294ms (322 modules)
+ POST /api/groups/544f9653-ef43-48ee-9d82-cef684643d7d/pin 401 in 715ms
+ ✓ Compiled /api/groups/[id]/debug-pin in 126ms (317 modules)
+ POST /api/groups/544f9653-ef43-48ee-9d82-cef684643d7d/debug-pin 200 in 469ms
+ ✓ Compiled in 9ms

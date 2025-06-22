@@ -12,7 +12,8 @@ import {
   faEnvelope,
   faChevronDown,
   faPhone,
-  faChartBar
+  faChartBar,
+  faThumbtack
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
@@ -47,23 +48,6 @@ interface PollOption {
   text: string;
 }
 
-interface Poll {
-  poll_id: string;
-  question: string;
-  options: PollOption[];
-  created_at: string;
-}
-
-interface PollVote {
-  _id: string;
-  count: number;
-}
-
-interface PollResult {
-  votes: PollVote[];
-  userVote: string | null;
-}
-
 interface GroupMessage {
   message_id: string;
   group_id: string;
@@ -79,6 +63,9 @@ interface GroupMessage {
   read_count: number;
   read_by_others: boolean;
   message_type?: 'text' | 'poll';
+  is_pinned?: boolean;
+  pinned_at?: string;
+  pinned_by?: string;
   poll_data?: {
     poll_id: string;
     question: string;
@@ -143,6 +130,7 @@ interface ChatAreaProps {
   onBannedUsersClick: () => void;
   onCreateChannelClick: () => void;
   onChannelContextMenu: (e: React.MouseEvent, channel: Channel) => void;
+  onPinnedMessagesClick?: () => void;
   canManageMembers: boolean;
   // Typing indicator props
   typingUsers: TypingData[];
@@ -152,6 +140,8 @@ interface ChatAreaProps {
   onInitiateCall?: (otherUser: { user_id: string; username: string; display_name?: string }) => void;
   // Profile type prop
   activeProfileType: 'basic' | 'love' | 'business';
+  // Messages refresh function
+  onRefreshMessages?: () => Promise<void>;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -180,43 +170,24 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onBannedUsersClick,
   onCreateChannelClick,
   onChannelContextMenu,
+  onPinnedMessagesClick,
   canManageMembers,
   typingUsers,
   onTyping,
   onInitiateCall,
-  activeProfileType
+  activeProfileType,
+  onRefreshMessages
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
   // Poll state
   const [showPollModal, setShowPollModal] = useState(false);
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [pollResults, setPollResults] = useState<Record<string, PollResult>>({});
   const [newPollQuestion, setNewPollQuestion] = useState('');
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const [newPollExpiryHours, setNewPollExpiryHours] = useState<number>(0);
 
-  // Poll functions
-  const fetchPolls = useCallback(async (): Promise<void> => {
-    if (!selectedConversation) return;
-    try {
-      const res = await fetch(`/api/groups/${selectedConversation}/polls`);
-      const data = await res.json();
-      if (data.success) {
-        setPolls(data.polls as Poll[]);
-        const results: Record<string, PollResult> = {};
-        await Promise.all(data.polls.map(async (p: Poll) => {
-          const r = await fetch(`/api/groups/${selectedConversation}/polls/${p.poll_id}/votes`);
-          const d = await r.json();
-          if (d.success) results[p.poll_id] = { votes: d.votes, userVote: d.userVote };
-        }));
-        setPollResults(results);
-      }
-    } catch (error) {
-      console.error('Error fetching polls:', error);
-    }
-  }, [selectedConversation]);
+  // Poll functions - removed fetchPolls since polls are now only displayed as messages
 
   const handleCreatePoll = useCallback(async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -230,21 +201,32 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           question: newPollQuestion, 
           options: opts, 
           expires_in_hours: newPollExpiryHours || undefined,
-          profile_type: activeProfileType // Include activeProfileType in poll creation
+          profile_type: activeProfileType,
+          channel_id: selectedChannel // Include channel_id if in a specific channel
         })
       });
       const data = await res.json();
       if (data.success) {
+        console.log('Poll created successfully, refreshing messages...', data);
         setNewPollQuestion(''); 
         setNewPollOptions(['','']);
         setNewPollExpiryHours(0);
         setShowPollModal(false);
-        fetchPolls();
+        // Refresh messages to show the new poll artifact
+        if (onRefreshMessages) {
+          console.log('Calling onRefreshMessages...');
+          await onRefreshMessages();
+          console.log('Messages refreshed after poll creation');
+        } else {
+          console.warn('onRefreshMessages not available');
+        }
+      } else {
+        console.error('Failed to create poll:', data);
       }
     } catch (error) {
       console.error('Error creating poll:', error);
     }
-  }, [selectedConversation, newPollQuestion, newPollOptions, newPollExpiryHours, fetchPolls, activeProfileType]);
+  }, [selectedConversation, selectedChannel, newPollQuestion, newPollOptions, newPollExpiryHours, activeProfileType, onRefreshMessages]);
 
   const handleVote = useCallback(async (pollId: string, optionId: string): Promise<void> => {
     try {
@@ -253,11 +235,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ optionId })
       });
-      if ((await res.json()).success) fetchPolls();
+      if (!(await res.json()).success) {
+        console.error('Failed to vote');
+      }
     } catch (error) {
       console.error('Error voting:', error);
     }
-  }, [selectedConversation, fetchPolls]);
+  }, [selectedConversation]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -455,14 +439,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <FontAwesomeIcon icon={faUsers} />
             </button>
             <button
-              onClick={() => {
-                setShowPollModal(true);
-                fetchPolls();
-              }}
+              onClick={() => setShowPollModal(true)}
               className="p-2 bg-black text-purple-400 border border-purple-400 rounded-none hover:bg-purple-400 hover:text-black transition-all shadow-lg font-mono"
-              title="View and Create Polls"
+              title="Create Polls"
             >
               <FontAwesomeIcon icon={faChartBar} />
+            </button>
+            <button
+              onClick={onPinnedMessagesClick}
+              className="p-2 bg-black text-yellow-400 border border-yellow-400 rounded-none hover:bg-yellow-400 hover:text-black transition-all shadow-lg font-mono"
+              title="View Pinned Messages"
+            >
+              <FontAwesomeIcon icon={faThumbtack} />
             </button>
             {canManageMembers && (
               <>
@@ -708,24 +696,42 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       </div>
                     )}
                     
-                    {/* Poll Artifact */}
-                    {(message as GroupMessage).message_type === 'poll' && (message as GroupMessage).poll_data ? (
-                      <PollArtifact
-                        pollData={(message as GroupMessage).poll_data!}
-                        onVote={handleVote}
-                        pollResults={pollResults[(message as GroupMessage).poll_data!.poll_id]}
-                        currentUser={currentUser}
-                      />
-                    ) : (
-                      <div className="break-words">
-                        <MessageContent content={message.content} />
-                      </div>
-                    )}
+                    {/* Message Content - Poll Artifact or Regular Content */}
+                    {(() => {
+                      const groupMessage = message as GroupMessage;
+                      
+                      if (groupMessage.message_type === 'poll' && groupMessage.poll_data) {
+                        return (
+                          <PollArtifact
+                            pollData={groupMessage.poll_data!}
+                            onVote={handleVote}
+                            pollResults={undefined}
+                            currentUser={currentUser}
+                            groupId={selectedConversation}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div className="break-words">
+                            <MessageContent content={groupMessage.content} />
+                          </div>
+                        );
+                      }
+                    })()}
                     
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-600">
-                      <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </span>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </span>
+                        {/* Pin indicator for group messages */}
+                        {selectedConversationType === 'group' && (message as GroupMessage).is_pinned && (
+                          <div className="flex items-center space-x-1 text-xs text-yellow-400">
+                            <FontAwesomeIcon icon={faThumbtack} />
+                            <span className="font-mono uppercase tracking-widest">PINNED</span>
+                          </div>
+                        )}
+                      </div>
                       
                       {isCurrentUser && selectedConversationType === 'direct' && (
                         <div className="flex items-center space-x-1">
@@ -881,55 +887,23 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 >
                   Create Poll
                 </button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowPollModal(false)}
+                  className="px-4 py-2 bg-black text-red-400 border-2 border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all font-mono uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
 
-            {/* Polls List */}
-            <div className="space-y-4">
-              {polls.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="text-gray-400 font-mono uppercase tracking-wide">No polls created yet</div>
+            <div className="text-center text-gray-400 font-mono text-sm">
+              <div className="border border-gray-600 bg-gray-900/50 p-4 rounded-none">
+                <div className="text-yellow-400 mb-2">📊 POLL CREATION</div>
+                <div className="text-xs uppercase tracking-wider">
+                  Created polls will appear as message artifacts in the chat
                 </div>
-              ) : (
-                polls.map(poll => (
-                  <div key={poll.poll_id} className="bg-black border-2 border-gray-600 rounded-none p-4">
-                    <div className="text-white font-medium mb-3 font-mono uppercase tracking-wide border-b border-gray-600 pb-2">
-                      {poll.question}
-                    </div>
-                    <div className="space-y-2">
-                      {poll.options.map(opt => {
-                        const result = pollResults[poll.poll_id];
-                        const count = result?.votes.find(v => v._id === opt.option_id)?.count || 0;
-                        const isVoted = result?.userVote === opt.option_id;
-                        const hasVoted = !!result?.userVote;
-                        return (
-                          <div key={opt.option_id} className="flex items-center justify-between">
-                            <button 
-                              onClick={() => handleVote(poll.poll_id, opt.option_id)}
-                              disabled={hasVoted}
-                              className={`flex-1 text-left p-3 rounded-none border-2 transition-all font-mono ${
-                                isVoted 
-                                  ? 'bg-green-600 border-green-400 text-white shadow-green-400/30' 
-                                  : hasVoted
-                                    ? 'bg-gray-800 border-gray-600 text-gray-400 cursor-not-allowed'
-                                    : 'bg-black border-white text-white hover:bg-white hover:text-black'
-                              }`}
-                            >
-                              {opt.text}
-                            </button>
-                            <span className="text-gray-400 text-sm ml-3 font-mono min-w-[3rem] text-right">
-                              {count} {count === 1 ? 'vote' : 'votes'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-gray-600 text-xs text-gray-400 font-mono uppercase tracking-widest">
-                      Created: {new Date(poll.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))
-              )}
+              </div>
             </div>
           </div>
         </div>

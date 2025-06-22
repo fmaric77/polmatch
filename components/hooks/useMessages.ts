@@ -24,6 +24,9 @@ interface GroupMessage {
   total_members: number;
   read_count: number;
   read_by_others: boolean;
+  is_pinned?: boolean;
+  pinned_at?: string;
+  pinned_by?: string;
 }
 
 interface Channel {
@@ -98,6 +101,12 @@ export const useMessages = (
           
           setMessages(filteredMessages);
         } else if (type === 'group' && data.messages) {
+          console.log('🔍 Raw group messages from API:', data.messages.slice(0, 2).map((msg: GroupMessage) => ({
+            message_id: msg.message_id,
+            sender_id: msg.sender_id,
+            content_preview: msg.content?.substring(0, 30)
+          })));
+          
           (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
@@ -445,6 +454,107 @@ export const useMessages = (
     }
   }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType]);
 
+  // Pin a message
+  const pinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
+    try {
+      if (selectedConversationType !== 'group') {
+        console.error('Pin message only available for group messages');
+        return false;
+      }
+
+      console.log('🔍 Pinning message:', { 
+        messageId, 
+        channelId, 
+        selectedConversation, 
+        selectedChannel,
+        selectedConversationType 
+      });
+
+      const requestBody = { 
+        message_id: messageId,
+        channel_id: channelId || selectedChannel
+      };
+
+      console.log('📤 Pin request body:', requestBody);
+
+      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('📥 Pin response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to pin message - HTTP error:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('📥 Pin response data:', data);
+      
+      if (data.success) {
+        // Refresh messages to update the pinned status
+        if (selectedChannel) {
+          await fetchChannelMessages(selectedConversation, selectedChannel);
+        } else {
+          await fetchMessages(selectedConversation, selectedConversationType);
+        }
+        return true;
+      }
+      console.error('Failed to pin message:', data?.error || 'Unknown error', data);
+      return false;
+    } catch (error) {
+      console.error('Error pinning message:', error);
+      return false;
+    }
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
+
+  // Unpin a message
+  const unpinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
+    try {
+      if (selectedConversationType !== 'group') {
+        console.error('Unpin message only available for group messages');
+        return false;
+      }
+
+      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message_id: messageId,
+          channel_id: channelId
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to unpin message - HTTP error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        return false;
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh messages to update the pinned status
+        if (selectedChannel) {
+          await fetchChannelMessages(selectedConversation, selectedChannel);
+        } else {
+          await fetchMessages(selectedConversation, selectedConversationType);
+        }
+        return true;
+      }
+      console.error('Failed to unpin message:', data?.error || 'Unknown error', data);
+      return false;
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+      return false;
+    }
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
+
   return {
     messages,
     setMessages,
@@ -454,6 +564,8 @@ export const useMessages = (
     fetchMessages,
     fetchChannelMessages,
     sendMessage,
-    deleteMessage
+    deleteMessage,
+    pinMessage,
+    unpinMessage
   };
 };
