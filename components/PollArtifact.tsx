@@ -91,17 +91,17 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
   };
 
   return (
-    <div className="bg-gray-900 border-2 border-purple-400 rounded-none p-4 font-mono">
+    <div className="bg-black border-2 border-purple-400 rounded-none p-4 font-mono shadow-lg">
       {/* Poll Header */}
-      <div className="flex items-center justify-between mb-3 border-b border-purple-400 pb-2">
+      <div className="flex items-center justify-between mb-3 border-b-2 border-purple-400 pb-2">
         <div className="flex items-center space-x-2">
           <span className="text-purple-400 text-lg">📊</span>
-          <span className="text-purple-400 font-mono uppercase tracking-widest text-xs">Poll</span>
+          <span className="text-purple-400 font-mono uppercase tracking-widest text-sm font-bold">POLL</span>
         </div>
-        <div className="flex flex-col items-end text-xs text-gray-400 font-mono">
-          <div>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</div>
+        <div className="flex flex-col items-end text-xs text-gray-300 font-mono">
+          <div className="text-white">{totalVotes} {totalVotes === 1 ? 'VOTE' : 'VOTES'}</div>
           {pollData.expires_at && (
-            <div className={`${isExpired ? 'text-red-400' : 'text-yellow-400'}`}>
+            <div className={`${isExpired ? 'text-red-400' : 'text-yellow-400'} font-bold`}>
               {getTimeUntilExpiry()}
             </div>
           )}
@@ -109,12 +109,12 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
       </div>
 
       {/* Poll Question */}
-      <div className="text-white font-medium mb-4 font-mono uppercase tracking-wide">
+      <div className="text-white font-bold mb-4 font-mono uppercase tracking-wide text-lg bg-gray-800 border border-gray-600 rounded-none p-3">
         {pollData.question}
       </div>
 
       {/* Poll Options */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {pollData.options.map(option => {
           const voteCount = pollResults?.votes.find(v => v._id === option.option_id)?.count || 0;
           const isUserChoice = pollResults?.userVote === option.option_id;
@@ -126,33 +126,33 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
               <button
                 onClick={() => canVote && handleVote(pollData.poll_id, option.option_id)}
                 disabled={!canVote}
-                className={`w-full text-left p-3 rounded-none border-2 transition-all font-mono relative overflow-hidden ${
+                className={`w-full text-left p-4 rounded-none border-2 transition-all font-mono relative overflow-hidden shadow-lg ${
                   isUserChoice
-                    ? 'bg-green-600 border-green-400 text-white shadow-green-400/30'
+                    ? 'bg-green-600 border-green-400 text-white shadow-green-400/50'
                     : isExpired
                       ? 'bg-gray-800 border-gray-600 text-gray-400 cursor-not-allowed'
                       : hasVoted
-                        ? 'bg-gray-800 border-gray-600 text-gray-300 cursor-not-allowed'
+                        ? 'bg-gray-800 border-gray-500 text-gray-300 cursor-not-allowed'
                         : 'bg-black border-white text-white hover:bg-white hover:text-black'
                 }`}
               >
                 {/* Vote percentage bar */}
                 {hasVoted && (
                   <div 
-                    className="absolute inset-0 bg-blue-600/20 transition-all duration-500"
+                    className="absolute inset-0 bg-blue-600/30 transition-all duration-500 border-r-2 border-blue-400"
                     style={{ width: `${percentage}%` }}
                   />
                 )}
                 
                 <div className="relative flex items-center justify-between">
-                  <span className="flex-1">{option.text}</span>
-                  <div className="flex items-center space-x-2 text-sm">
-                    {isUserChoice && <span className="text-green-300">✓</span>}
+                  <span className="flex-1 font-mono uppercase tracking-wide font-medium">{option.text}</span>
+                  <div className="flex items-center space-x-3 text-sm font-mono">
+                    {isUserChoice && <span className="text-green-300 font-bold">✓ YOUR VOTE</span>}
                     {hasVoted && (
-                      <>
-                        <span>{voteCount}</span>
-                        <span className="text-gray-400">({percentage}%)</span>
-                      </>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-white font-bold">{voteCount}</span>
+                        <span className="text-gray-300">({percentage}%)</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -163,13 +163,13 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
       </div>
 
       {/* Poll Status */}
-      <div className="mt-3 pt-2 border-t border-gray-600 text-xs font-mono uppercase tracking-widest">
+      <div className="mt-4 pt-3 border-t-2 border-gray-600 text-sm font-mono uppercase tracking-widest text-center">
         {isExpired ? (
-          <span className="text-red-400">Poll Expired</span>
+          <span className="text-red-400 font-bold">❌ POLL EXPIRED</span>
         ) : hasVoted ? (
-          <span className="text-green-400">You Voted</span>
+          <span className="text-green-400 font-bold">✅ YOU VOTED</span>
         ) : (
-          <span className="text-blue-400">Click to Vote</span>
+          <span className="text-blue-400 font-bold">👆 CLICK TO VOTE</span>
         )}
       </div>
     </div>

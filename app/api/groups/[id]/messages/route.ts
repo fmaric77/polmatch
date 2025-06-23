@@ -81,14 +81,14 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       messageQuery.channel_id = channelId;
     }
 
-    // Get messages from profile-specific collection
-    const messagesRaw = await db.collection(messagesCollection)
+    // Get latest messages (limit) from profile-specific collection, then reverse for display
+    const messagesRawDesc = await db.collection(messagesCollection)
       .find(messageQuery)
-      .sort({ timestamp: 1 }) // Sort oldest first (ascending)
+      .sort({ timestamp: -1 }) // newest first
       .limit(limit)
       .toArray();
-
-    const messages = messagesRaw as MessageDocument[];
+    const messagesRawAsc = messagesRawDesc.reverse();
+    const messages = messagesRawAsc as MessageDocument[];
 
     // Get unique sender IDs to fetch user information
     const senderIds = [...new Set(messages.map((msg: MessageDocument) => msg.sender_id))];
@@ -113,6 +113,28 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Decrypt messages and enrich with user information
     const decryptedMessages = messages.map((msg: MessageDocument) => {
       try {
+        // Handle poll messages differently - they should display poll question, not encrypted content
+        if (msg.message_type === 'poll' && msg.poll_data) {
+          console.log('📊 Poll message found:', {
+            message_id: msg.message_id,
+            message_type: msg.message_type,
+            has_poll_data: !!msg.poll_data,
+            poll_data: msg.poll_data
+          });
+          
+          const username = userMap.get(msg.sender_id) || 'Unknown';
+          const profileDisplayName = profileMap.get(msg.sender_id);
+          
+          // For poll messages, use the poll question as the content
+          return {
+            ...msg,
+            content: msg.poll_data.question || '[Poll Question Missing]',
+            sender_username: username,
+            sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
+          };
+        }
+        
+        // Regular text messages need decryption
         const decryptedBytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
         const content = decryptedBytes.toString(CryptoJS.enc.Utf8);
         const username = userMap.get(msg.sender_id) || 'Unknown';
@@ -126,20 +148,23 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
           sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
         };
         
-        // Log poll messages for debugging
-        if (msg.message_type === 'poll') {
-          console.log('📊 Poll message found:', {
-            message_id: msg.message_id,
-            message_type: msg.message_type,
-            has_poll_data: !!msg.poll_data,
-            poll_data: msg.poll_data
-          });
-        }
-        
         return result;
-      } catch {
+      } catch (error) {
+        console.error('Failed to decrypt message for ID:', msg.message_id, error);
+        
         const username = userMap.get(msg.sender_id) || 'Unknown';
         const profileDisplayName = profileMap.get(msg.sender_id);
+        
+        // If it's a poll message that failed decryption, try to use poll question
+        if (msg.message_type === 'poll' && msg.poll_data) {
+          return {
+            ...msg,
+            content: msg.poll_data.question || '[Poll Question Missing]',
+            sender_username: username,
+            sender_display_name: profileDisplayName && profileDisplayName.trim() ? profileDisplayName : '[NO PROFILE NAME]'
+          };
+        }
+        
         return {
           ...msg,
           content: '[Decryption failed]',

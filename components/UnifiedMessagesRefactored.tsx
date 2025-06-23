@@ -67,6 +67,16 @@ interface GroupMessage {
   is_pinned?: boolean;
   pinned_at?: string;
   pinned_by?: string;
+  message_type?: 'text' | 'poll';
+  poll_data?: {
+    poll_id: string;
+    question: string;
+    options: Array<{
+      option_id: string;
+      text: string;
+    }>;
+    expires_at?: string;
+  };
   reply_to?: {
     message_id: string;
     content: string;

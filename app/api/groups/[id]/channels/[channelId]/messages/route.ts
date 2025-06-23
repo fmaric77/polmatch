@@ -115,71 +115,55 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     }
 
     // OPTIMIZATION 4: Simplified aggregation pipeline (removed complex read status lookup)
-    const messages = await db.collection(messagesCollection).aggregate([
-      { $match: { group_id: groupId, channel_id: channelId } },
-      { $sort: { timestamp: 1 } }, // Sort oldest first (ascending)
-      { $limit: 50 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'sender_id',
-          foreignField: 'user_id',
-          as: 'sender',
-          pipeline: [{ $project: { user_id: 1, username: 1 } }] // Only get needed fields
-        }
-      },
-      { $unwind: '$sender' },
-      {
-        $project: {
-          _id: 1, // Include MongoDB ObjectId for deletion
-          message_id: 1,
-          group_id: 1,
-          channel_id: 1,
-          sender_id: 1,
-          // Handle both field names - some messages use 'content', others use 'encrypted_content'
-          content: { 
-            $cond: { 
-              if: { $ifNull: ['$content', false] }, 
-              then: '$content', 
-              else: '$encrypted_content' 
-            } 
-          },
-          timestamp: 1,
-          attachments: 1,
-          sender_username: '$sender.username',
-          reply_to: 1,
-          message_type: 1,  // Include message_type for poll detection
-          poll_data: 1,     // Include poll_data for poll rendering
-          is_pinned: 1,     // Include pinned status
-          pinned_at: 1,     // Include pinned timestamp
-          pinned_by: 1      // Include who pinned the message
-        }
-      }
-    ]).toArray();
+    // Fetch all messages for the channel (no limit) to ensure new polls appear
+    const messagesRawDesc = await db.collection(messagesCollection)
+      .find({ group_id: groupId, channel_id: channelId })
+      .sort({ timestamp: -1 }) // newest first
+      .toArray();
+    // Reverse to ascending order
+    const messagesRawAsc = messagesRawDesc.reverse();
+
+    const messages = messagesRawAsc as MessageDocument[];
 
     // Decrypt message content
     const decryptedMessages = (messages as MessageDocument[]).map((message: MessageDocument) => {
       try {
-        if (!message.content) {
-          return { ...message, content: '[No content field]' };
-        }
-        
-        const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-        const result = { ...message, content: decryptedContent };
-        
-        // Log poll messages for debugging
-        if (message.message_type === 'poll') {
+        // Handle poll messages differently - they should display poll question, not encrypted content
+        if (message.message_type === 'poll' && message.poll_data) {
           console.log('📊 Channel poll message found:', {
             message_id: message.message_id,
             message_type: message.message_type,
             has_poll_data: !!message.poll_data,
             poll_data: message.poll_data
           });
+          
+          // For poll messages, use the poll question as the content
+          return { 
+            ...message, 
+            content: message.poll_data.question || '[Poll Question Missing]'
+          };
         }
         
+        // Regular text messages need decryption
+        if (!message.content) {
+          return { ...message, content: '[No content field]' };
+        }
+        
+        const decryptedContent = CryptoJS.AES.decrypt(message.content, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+        const result = { ...message, content: decryptedContent || '[Decryption failed]' };
+        
         return result;
-      } catch {
-        console.error('Failed to decrypt message for ID:', message.message_id);
+      } catch (error) {
+        console.error('Failed to decrypt message for ID:', message.message_id, error);
+        
+        // If it's a poll message that failed decryption, try to use poll question
+        if (message.message_type === 'poll' && message.poll_data) {
+          return { 
+            ...message, 
+            content: message.poll_data.question || '[Poll Question Missing]'
+          };
+        }
+        
         return { ...message, content: '[Decryption failed]' };
       }
     });

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { connectToDatabase } from '../../../../../lib/mongodb-connection';
 import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
+import { notifyNewGroupMessage } from '../../../../../lib/sse-notifications';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await db.collection('group_polls').insertOne(pollDoc);
   
   // Get user profile information for the message
-  const userProfileCollection = profile_type === 'basic' ? 'user_profiles' : `user_profiles_${profile_type}`;
+  const userProfileCollection = profile_type === 'basic' ? 'basicprofiles' : `${profile_type}profiles`;
   const userProfile = await db.collection(userProfileCollection).findOne(
     { user_id: session.user_id },
     { projection: { display_name: 1 } }
@@ -145,6 +146,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   console.log('📝 Poll message data:', JSON.stringify(pollMessage, null, 2));
   await db.collection(messagesCollection).insertOne(pollMessage);
   console.log('✅ Poll message stored successfully');
+  
+  // Send SSE notification to notify group members about the new poll message
+  try {
+    await notifyNewGroupMessage({
+      message_id: messageId,
+      group_id: groupId,
+      channel_id: channel_id,
+      sender_id: session.user_id,
+      content: question, // Use the poll question as the content
+      timestamp: now.toISOString(),
+      attachments: [],
+      sender_username: user?.username || 'Unknown',
+      sender_display_name: userProfile?.display_name || '[NO PROFILE NAME]',
+      profile_type
+    });
+    console.log('🔔 SSE notification sent for new poll message');
+  } catch (error) {
+    console.error('❌ Failed to send SSE notification for poll:', error);
+  }
   
   return NextResponse.json({ success: true, poll: pollDoc, message: pollMessage, profile_type });
 }
