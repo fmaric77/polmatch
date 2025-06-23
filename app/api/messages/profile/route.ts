@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '../../../../lib/mongodb-connection';
+import { cleanupExpiredMessages } from '../../../../lib/message-expiry-cleanup';
 
 interface PrivateMessage {
   conversation_id: string;
@@ -67,6 +68,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const user_id = session.user_id;
+    
+    // 🧹 Auto-cleanup expired messages for this user and profile type
+    try {
+      const cleanupResult = await cleanupExpiredMessages(user_id, profile_type);
+      if (cleanupResult.deleted_count > 0) {
+        console.log(`🗑️ Auto-deleted ${cleanupResult.deleted_count} expired messages for user ${user_id} in ${profile_type} profile`);
+      }
+    } catch (cleanupError) {
+      // Don't fail the request if cleanup fails
+      console.error('Error during message cleanup:', cleanupError);
+    }
+    
     const sortedParticipants = getSortedParticipants(user_id, other_user_id);
     
     // Find the conversation for this profile type

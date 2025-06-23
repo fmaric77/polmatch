@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import * as CryptoJS from 'crypto-js';
-import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase } from '../../../../../../../lib/mongodb-connection';
 import { notifyNewGroupMessage } from '../../../../../../../lib/sse-notifications';
 
@@ -118,7 +117,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // OPTIMIZATION 4: Simplified aggregation pipeline (removed complex read status lookup)
     const messages = await db.collection(messagesCollection).aggregate([
       { $match: { group_id: groupId, channel_id: channelId } },
-      { $sort: { timestamp: -1 } },
+      { $sort: { timestamp: 1 } }, // Sort oldest first (ascending)
       { $limit: 50 },
       {
         $lookup: {
@@ -132,6 +131,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
       { $unwind: '$sender' },
       {
         $project: {
+          _id: 1, // Include MongoDB ObjectId for deletion
           message_id: 1,
           group_id: 1,
           channel_id: 1,
@@ -154,8 +154,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
           pinned_at: 1,     // Include pinned timestamp
           pinned_by: 1      // Include who pinned the message
         }
-      },
-      { $sort: { timestamp: 1 } } // Final sort ascending for display
+      }
     ]).toArray();
 
     // Decrypt message content
@@ -392,10 +391,13 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const channelId = params.channelId;
 
     const body = await req.json();
-    const { messageId, profile_type = 'basic' } = body;
+    const { messageId, message_id, profile_type = 'basic' } = body;
 
-    if (!messageId) {
-      return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
+    // Handle both field names - frontend might send either messageId or message_id
+    const actualMessageId = messageId || message_id;
+
+    if (!actualMessageId) {
+      return NextResponse.json({ error: 'Missing messageId or message_id' }, { status: 400 });
     }
 
     // Validate profile_type
@@ -409,30 +411,36 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
     const messagesCollection = profile_type === 'basic' ? 'group_messages' : `group_messages_${profile_type}`;
 
-    // Convert messageId string to ObjectId
-    let objectId: ObjectId;
-    try {
-      objectId = new ObjectId(messageId);
-    } catch {
-      return NextResponse.json({ error: 'Invalid messageId format' }, { status: 400 });
-    }
+    // Try to find the message by message_id first (UUID), then by _id (ObjectId) if needed
+    let message = await db.collection(messagesCollection).findOne({
+      message_id: actualMessageId,
+      group_id: groupId,
+      channel_id: channelId
+    });
 
-    // Verify user can delete this message (either sender or group owner/admin)
-    const [message, membership] = await Promise.all([
-      db.collection(messagesCollection).findOne({
-        _id: objectId,
-        group_id: groupId,
-        channel_id: channelId
-      }),
-      db.collection(membersCollection).findOne({
-        group_id: groupId,
-        user_id: auth.userId
-      })
-    ]);
+    // If not found by message_id and actualMessageId looks like an ObjectId, try _id
+    if (!message && actualMessageId.length === 24) {
+      try {
+        const { ObjectId } = await import('mongodb');
+        const objectId = new ObjectId(actualMessageId);
+        message = await db.collection(messagesCollection).findOne({
+          _id: objectId,
+          group_id: groupId,
+          channel_id: channelId
+        });
+      } catch {
+        // Invalid ObjectId format, continue with message_id search
+      }
+    }
 
     if (!message) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 });
     }
+
+    const membership = await db.collection(membersCollection).findOne({
+      group_id: groupId,
+      user_id: auth.userId
+    });
 
     if (!membership) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
@@ -449,11 +457,19 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
       }, { status: 403 });
     }
 
-    const result = await db.collection(messagesCollection).deleteOne({
-      _id: objectId,
+    // Delete by the same field we found the message with
+    const deleteQuery: Record<string, unknown> = {
       group_id: groupId,
       channel_id: channelId
-    });
+    };
+
+    if (message._id && actualMessageId.length === 24) {
+      deleteQuery._id = message._id;
+    } else {
+      deleteQuery.message_id = message.message_id;
+    }
+
+    const result = await db.collection(messagesCollection).deleteOne(deleteQuery);
 
     return NextResponse.json({ 
       success: true, 

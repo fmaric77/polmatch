@@ -4,6 +4,7 @@ import CryptoJS from 'crypto-js';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser, connectToDatabase, getPrivateMessages } from '../../../lib/mongodb-connection';
 import { notifyNewMessage, notifyNewConversation } from '../../../lib/sse-notifications';
+import { cleanupExpiredMessages } from '../../../lib/message-expiry-cleanup';
 import { 
   validateUserId, 
   validateProfileType, 
@@ -73,6 +74,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const { db } = await connectToDatabase();
+    
+    // 🧹 Auto-cleanup expired messages for this user
+    try {
+      const cleanupResult = await cleanupExpiredMessages(auth.userId);
+      if (cleanupResult.deleted_count > 0) {
+        console.log(`🗑️ Auto-deleted ${cleanupResult.deleted_count} expired messages for user ${auth.userId}`);
+      }
+    } catch (cleanupError) {
+      // Don't fail the request if cleanup fails
+      console.error('Error during message cleanup:', cleanupError);
+    }
     
     const url = new URL(request.url);
     const otherUserId = url.searchParams.get('other_user_id') || url.searchParams.get('user_id'); // Support both parameter names

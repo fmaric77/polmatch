@@ -11,6 +11,7 @@ interface PrivateMessage {
 }
 
 interface GroupMessage {
+  _id?: string; // MongoDB ObjectId for channel messages
   message_id: string;
   group_id: string;
   channel_id?: string;
@@ -246,35 +247,72 @@ export const useMessages = (
       if (data.success) {
         lastMessageTimestampRef.current = '';
         
-        // Add the message optimistically to avoid loading screen
-        if (data.message) {
+        // Add optimistic update for direct messages
+        if (selectedConversationType === 'direct' && data.message) {
           setMessages(prevMessages => {
             const newMessage = data.message;
             
-            // For group messages, ensure we have the required fields
-            if (selectedConversationType === 'group') {
-              newMessage.sender_username = currentUser.username;
-              newMessage.sender_display_name = currentUser.display_name;
-              newMessage.current_user_read = true;
-              newMessage.read_count = 1;
-              newMessage.total_members = 1;
-              newMessage.read_by_others = false;
-            }
-            
             // For direct messages, ensure we have the required fields
-            if (selectedConversationType === 'direct') {
-              // Direct messages use 'read' instead of 'is_read' in some cases
-              if (newMessage.is_read !== undefined) {
-                newMessage.read = newMessage.is_read;
-              }
-              // Ensure we have a proper _id for direct messages
-              if (!newMessage._id && newMessage.message_id) {
-                newMessage._id = newMessage.message_id;
-              }
+            if (newMessage.is_read !== undefined) {
+              newMessage.read = newMessage.is_read;
+            }
+            // Ensure we have a proper _id for direct messages
+            if (!newMessage._id && newMessage.message_id) {
+              newMessage._id = newMessage.message_id;
             }
             
             // Sort messages by timestamp to maintain order
             const updatedMessages = [...prevMessages, newMessage];
+            return updatedMessages.sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+          });
+        }
+        
+        // Add optimistic update for group messages (sender only)
+        // SSE will handle updates for other group members
+        if (selectedConversationType === 'group' && data.message) {
+          const newGroupMessage = {
+            _id: data.message._id,
+            message_id: data.message.message_id,
+            group_id: data.message.group_id,
+            channel_id: data.message.channel_id || '',
+            sender_id: currentUser.user_id,
+            content: content, // Use the original content, not encrypted
+            timestamp: data.message.timestamp,
+            attachments: data.message.attachments || [],
+            sender_username: currentUser.username,
+            sender_display_name: currentUser.display_name,
+            current_user_read: true, // Sender has read their own message
+            total_members: 0, // Will be updated via SSE
+            read_count: 1, // Only sender has read it initially
+            read_by_others: false,
+            ...(replyTo && {
+              reply_to: {
+                message_id: replyTo.id,
+                content: replyTo.content,
+                sender_name: replyTo.sender_name
+              }
+            })
+          };
+          
+          setMessages(prevMessages => {
+            console.log('Adding optimistic group message for sender:', newGroupMessage.message_id);
+            
+            // Check for duplicates using message_id
+            const messageExists = prevMessages.some(msg => {
+              if ('message_id' in msg) {
+                return (msg as GroupMessage).message_id === newGroupMessage.message_id;
+              }
+              return false;
+            });
+            
+            if (messageExists) {
+              console.log('Group message already exists, skipping optimistic update');
+              return prevMessages;
+            }
+            
+            const updatedMessages = [...prevMessages, newGroupMessage];
             return updatedMessages.sort((a, b) => 
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             );
@@ -439,7 +477,7 @@ export const useMessages = (
         console.error('Failed to delete direct message:', data?.message || data?.error || 'Unknown error', data);
         return false;
       } else if (selectedConversationType === 'group') {
-        // Group message - need to find the correct message and use the right ID field
+        // Group message - find the message to get the correct ID
         const messageToDelete = messages.find(msg => {
           if ('message_id' in msg) {
             return msg.message_id === messageId;
@@ -456,24 +494,37 @@ export const useMessages = (
         let requestBody: Record<string, unknown>;
         
         if (selectedChannel) {
-          // Channel-specific message - API expects '_id' field (ObjectId) as 'messageId'
+          // Channel-specific message deletion
           deleteUrl = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
-          // For channel messages, we need the MongoDB _id field if available
-          const messageId = '_id' in messageToDelete ? messageToDelete._id : messageToDelete.message_id;
+          
+          // For channel messages, we need to use the MongoDB _id if available, 
+          // otherwise use message_id but it might fail if it's not a valid ObjectId
+          const messageIdForChannel = ('_id' in messageToDelete && messageToDelete._id) 
+            ? messageToDelete._id 
+            : messageToDelete.message_id;
+            
           requestBody = { 
-            messageId,
+            messageId: messageIdForChannel,
             ...(profileType && { profile_type: profileType })
           };
         } else {
-          // General group message - API expects 'message_id' field (UUID)
+          // General group message deletion
           deleteUrl = `/api/groups/${selectedConversation}/messages`;
           requestBody = { 
-            message_id: messageToDelete.message_id,
+            message_id: messageToDelete.message_id, // Use message_id directly for group endpoint
             ...(profileType && { profile_type: profileType })
           };
         }
         
-        console.log('🗑️ Delete request:', { deleteUrl, requestBody });
+        console.log('🗑️ Delete request:', { 
+          deleteUrl, 
+          requestBody, 
+          messageToDelete: {
+            message_id: messageToDelete.message_id,
+            _id: ('_id' in messageToDelete) ? messageToDelete._id : 'not present',
+            sender_id: messageToDelete.sender_id
+          }
+        });
         
         const response = await fetch(deleteUrl, {
           method: 'DELETE',
@@ -483,8 +534,12 @@ export const useMessages = (
         
         if (!response.ok) {
           console.error('Failed to delete group message - HTTP error:', response.status, response.statusText);
-          const errorText = await response.text();
-          console.error('Error response body:', errorText);
+          try {
+            const errorText = await response.text();
+            console.error('Error response body:', errorText);
+          } catch (e) {
+            console.error('Could not read error response body:', e);
+          }
           return false;
         }
         

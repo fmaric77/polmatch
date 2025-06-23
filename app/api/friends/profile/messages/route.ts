@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '../../../../../lib/mongodb-connection';
 import { notifyNewMessage, notifyNewConversation } from '../../../../../lib/sse-notifications';
+import { cleanupExpiredMessages } from '../../../../../lib/message-expiry-cleanup';
 import CryptoJS from 'crypto-js';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
@@ -48,6 +49,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const userId = session.user_id;
+    
+    // 🧹 Auto-cleanup expired messages for this user and profile type
+    try {
+      const cleanupResult = await cleanupExpiredMessages(userId, profileType);
+      if (cleanupResult.deleted_count > 0) {
+        console.log(`🗑️ Auto-deleted ${cleanupResult.deleted_count} expired messages for user ${userId} in ${profileType} profile`);
+      }
+    } catch (cleanupError) {
+      // Don't fail the request if cleanup fails
+      console.error('Error during message cleanup:', cleanupError);
+    }
+    
     const collectionName = `friends_${profileType}`;
 
     // Check if users are friends in the specified profile type

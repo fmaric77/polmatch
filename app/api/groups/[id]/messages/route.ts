@@ -84,7 +84,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
     // Get messages from profile-specific collection
     const messagesRaw = await db.collection(messagesCollection)
       .find(messageQuery)
-      .sort({ timestamp: -1 })
+      .sort({ timestamp: 1 }) // Sort oldest first (ascending)
       .limit(limit)
       .toArray();
 
@@ -152,7 +152,7 @@ export async function GET(req: NextRequest, context: RouteContext): Promise<Next
 
     return NextResponse.json({ 
       success: true, 
-      messages: decryptedMessages.reverse(), // Show oldest first
+      messages: decryptedMessages, // Already in correct order (oldest first)
       profile_type
     });
   } catch (error) {
@@ -302,10 +302,13 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const groupId = params.id;
 
     const body = await req.json();
-    const { message_id, profile_type = 'basic' } = body;
+    const { message_id, messageId, profile_type = 'basic' } = body;
 
-    if (!message_id) {
-      return NextResponse.json({ error: 'Missing message_id' }, { status: 400 });
+    // Handle both field names - frontend might send either message_id or messageId
+    const actualMessageId = message_id || messageId;
+    
+    if (!actualMessageId) {
+      return NextResponse.json({ error: 'Missing message_id or messageId' }, { status: 400 });
     }
 
     // Validate profile_type
@@ -321,7 +324,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     // Verify user can delete this message (either sender or admin)
     const message = await db.collection(messagesCollection).findOne({
-      message_id,
+      message_id: actualMessageId,
       group_id: groupId
     });
 
@@ -353,7 +356,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
 
     // Delete the message from profile-specific collection
     const result = await db.collection(messagesCollection).deleteOne({
-      message_id,
+      message_id: actualMessageId,
       group_id: groupId
     });
 

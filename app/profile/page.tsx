@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Navigation from '../../components/Navigation';
 import Friends from '../../components/Friends';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import MessageExpirySettings from '../../components/MessageExpirySettings';
 import "./styles.css";
 
 // Profile settings interfaces
@@ -794,6 +795,9 @@ export default function ProfilePage() {
                       {profileMessage && (
                         <div className="text-green-400 text-center mt-4 font-mono uppercase tracking-wider">{profileMessage}</div>
                       )}
+
+                      {/* Message Expiry Settings */}
+                      <MessageExpirySettings className="mt-8" />
                     </>
                   )}
                 </div>

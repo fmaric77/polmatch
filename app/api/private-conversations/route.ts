@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import CryptoJS from 'crypto-js';
 import { getAuthenticatedUser, connectToDatabase } from '../../../lib/mongodb-connection';
+import { cleanupExpiredMessages } from '../../../lib/message-expiry-cleanup';
 
 const SECRET_KEY = process.env.MESSAGE_SECRET_KEY || 'default_secret_key';
 
@@ -69,6 +70,17 @@ export async function GET(request: Request) {
     if (!auth) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
     const { db } = await connectToDatabase();
+
+    // 🧹 Auto-cleanup expired messages for this user
+    try {
+      const cleanupResult = await cleanupExpiredMessages(auth.user.user_id);
+      if (cleanupResult.deleted_count > 0) {
+        console.log(`🗑️ Auto-deleted ${cleanupResult.deleted_count} expired messages for user ${auth.user.user_id}`);
+      }
+    } catch (cleanupError) {
+      // Don't fail the request if cleanup fails
+      console.error('Error during message cleanup:', cleanupError);
+    }
 
     // Get optional profile type filter from query params
     const url = new URL(request.url);
