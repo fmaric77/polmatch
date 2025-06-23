@@ -630,9 +630,28 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               new Date(message.timestamp).getTime() - new Date(messages[index - 1].timestamp).getTime() > 300000
             );
 
+            // Generate a robust, unique key for React rendering
+            const messageKey = (() => {
+              const privateMsg = message as PrivateMessage;
+              const groupMsg = message as GroupMessage;
+              
+              // For private messages, prefer _id, fallback to a combination of fields
+              if (privateMsg._id) {
+                return `private-${privateMsg._id}`;
+              }
+              
+              // For group messages, prefer message_id, fallback to a combination of fields
+              if (groupMsg.message_id) {
+                return `group-${groupMsg.message_id}`;
+              }
+              
+              // Fallback: create a unique key from timestamp and sender
+              return `msg-${message.sender_id}-${message.timestamp}-${index}`;
+            })();
+
             return (
               <div
-                key={(message as PrivateMessage)._id || (message as GroupMessage).message_id}
+                key={messageKey}
                 className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
                   showAvatar ? 'mt-4' : 'mt-1'
                 }`}

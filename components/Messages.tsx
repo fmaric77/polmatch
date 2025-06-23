@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ProfileAvatar from './ProfileAvatar';
-import { useWebSocket } from './hooks/useWebSocket';
+import { useSSE } from './providers/SSEProvider';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
 import TypingIndicator from './TypingIndicator';
 import { getAnonymousDisplayName } from '../lib/anonymization';
+import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 //d
 interface Message {
   _id?: string;
@@ -39,15 +40,27 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [refresh, setRefresh] = useState(0);
-  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string } | null>(null);
+  // currentUser is now provided by SSEProvider
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [autoDeleteDays, setAutoDeleteDays] = useState('');
   const [conversations, setConversations] = useState<User[]>([]);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  // sessionToken is now provided by SSEProvider
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // SSE connection for real-time messaging
+  const { 
+    isConnected, 
+    connectionError, 
+    sessionToken, 
+    currentUser,
+    setMessageHandler,
+    setConversationHandler,
+    setTypingStartHandler,
+    setTypingStopHandler
+  } = useSSE();
 
   // Typing indicator hook
   const typingIndicator = useTypingIndicator({
@@ -62,9 +75,10 @@ const Messages = () => {
     console.log('Session token changed:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
   }, [sessionToken]);
 
-  // WebSocket integration for real-time updates
-  const { isConnected, connectionError } = useWebSocket(sessionToken, {
-    onNewMessage: (data) => {
+  // Register SSE handlers for real-time updates
+  useEffect(() => {
+    // Register message handler
+    setMessageHandler((data: NewMessageData) => {
       console.log('Received new message via SSE:', data);
       
       // If this message is for the current conversation, add it to messages
@@ -95,50 +109,39 @@ const Messages = () => {
       
       // Refresh conversations list to update last message/unread count
       setRefresh(r => r + 1);
-    },
-    
-    onNewConversation: (data) => {
+    });
+
+    // Register conversation handler
+    setConversationHandler((data: NewConversationData) => {
       console.log('Received new conversation via SSE:', data);
       
       // If this involves the current user, refresh conversations
       if (currentUser && data.participants.includes(currentUser.user_id)) {
         setRefresh(r => r + 1);
       }
-    },
-    
-    onConnectionEstablished: () => {
-      console.log('SSE connection established');
-    },
-    
-    onTypingStart: (data) => {
+    });
+
+    // Register typing handlers
+    setTypingStartHandler((data) => {
       console.log('Received typing start via SSE:', data);
       typingIndicator.handleTypingReceived(data);
-    },
-    
-    onTypingStop: (data) => {
+    });
+
+    setTypingStopHandler((data) => {
       console.log('Received typing stop via SSE:', data);
       typingIndicator.handleStoppedTyping(data);
-    }
-  });
+    });
 
-  // Fetch current user info and session token
-  useEffect(() => {
-    fetch('/api/session')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Session API response:', data);
-        if (data.valid && data.user && data.sessionToken) {
-          setCurrentUser({ user_id: data.user.user_id, username: data.user.username });
-          setSessionToken(data.sessionToken);
-          console.log('Session token received from API:', data.sessionToken.substring(0, 10) + '...');
-        } else {
-          console.error('Invalid session, no user data, or no session token:', data);
-        }
-      })
-      .catch(error => {
-        console.error('Failed to fetch session:', error);
-      });
-  }, []);
+    // Cleanup handlers when component unmounts
+    return () => {
+      setMessageHandler(null);
+      setConversationHandler(null);
+      setTypingStartHandler(null);
+      setTypingStopHandler(null);
+    };
+  }, [selectedUser, currentUser, typingIndicator, setMessageHandler, setConversationHandler, setTypingStartHandler, setTypingStopHandler]);
+
+  // Session data is now provided by SSEProvider - no need to fetch it here
 
   // Fetch all users for recipient selection
   useEffect(() => {

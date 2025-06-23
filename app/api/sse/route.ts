@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser } from '../../../lib/mongodb-connection';
-import { addSSEConnection, removeSSEConnection } from '../../../lib/sse-notifications';
+import { addSSEConnection, removeSSEConnection, getActiveConnections, type SSEWriter } from '../../../lib/sse-notifications';
 
 interface SSEMessage {
   type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP' | 'INCOMING_CALL' | 'CALL_STATUS_UPDATE';
@@ -42,20 +42,32 @@ export async function GET(request: NextRequest): Promise<Response> {
     start(controller) {
       const encoder = new TextEncoder();
       
-      // Create a writable stream writer for the notification system
-      const writableStream = new WritableStream({
-        write(chunk) {
+      // Create a custom writer that uses the controller directly
+      const customWriter: SSEWriter = {
+        write: async (chunk: Uint8Array): Promise<void> => {
           try {
             controller.enqueue(chunk);
           } catch (error) {
             console.error('Error writing to SSE stream:', error);
+            throw error;
           }
-        }
-      });
-      const writer = writableStream.getWriter();
+        },
+        // Add properties to make it compatible with WritableStreamDefaultWriter interface
+        closed: Promise.resolve(),
+        desiredSize: 1,
+        ready: Promise.resolve(),
+        abort: async () => {},
+        close: async () => {},
+        releaseLock: () => {}
+      };
       
       // Register connection with notification system
-      addSSEConnection(userId, writer);
+      console.log(`🔗 SSE: Registering connection for user ${userId}`);
+      addSSEConnection(userId, customWriter);
+      
+      // Debug: Check if connection was actually added - use the imported function instead of require
+      const activeConnections = getActiveConnections();
+      console.log(`🔗 SSE: Active connections after adding user ${userId}:`, Object.fromEntries(activeConnections));
       
       // Track connection start time
       const connectionStartTime = Date.now();
@@ -76,7 +88,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         } catch (error) {
           console.error('SSE ping failed:', error);
           clearInterval(pingInterval);
-          removeSSEConnection(userId, writer);
+          removeSSEConnection(userId, customWriter);
         }
       }, 30000); // Ping every 30 seconds
       
@@ -85,7 +97,11 @@ export async function GET(request: NextRequest): Promise<Response> {
         console.log(`🔌 User ${userId} disconnected from SSE (reason: ${request.signal.reason || 'unknown'})`);
         console.log(`🔌 Connection lasted: ${Date.now() - connectionStartTime}ms`);
         clearInterval(pingInterval);
-        removeSSEConnection(userId, writer);
+        removeSSEConnection(userId, customWriter);
+        
+        // Debug: Check connections after removal
+        const activeConnections = getActiveConnections();
+        console.log(`🔌 SSE: Active connections after removing user ${userId}:`, Object.fromEntries(activeConnections));
       });
     }
   });

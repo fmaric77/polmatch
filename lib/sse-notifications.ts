@@ -3,7 +3,26 @@ import { NewMessageData, NewConversationData } from '../components/hooks/useWebS
 import { connectToDatabase } from './mongodb-connection';
 
 // Global map to store active SSE connections by user ID
-const sseConnections = new Map<string, WritableStreamDefaultWriter<Uint8Array>[]>();
+export type SSEWriter = {
+  write: (chunk: Uint8Array) => Promise<void>;
+  close?: () => void;
+  abort?: () => void;
+  [key: string]: unknown; // Allow additional properties from WritableStream
+};
+
+// Use globalThis to persist SSE connections across API route invocations
+declare global {
+  interface GlobalThis {
+    __sseConnectionsGlobal?: Map<string, SSEWriter[]>;
+  }
+}
+
+// Initialize or reuse the global connections map
+const globalScope = (typeof globalThis !== 'undefined' ? globalThis : global) as GlobalThis;
+const sseConnections: Map<string, SSEWriter[]> = globalScope.__sseConnectionsGlobal || new Map();
+if (!globalScope.__sseConnectionsGlobal) {
+  globalScope.__sseConnectionsGlobal = sseConnections;
+}
 
 // Helper function to format SSE data
 function formatSSEData(type: string, data: unknown): string {
@@ -11,24 +30,40 @@ function formatSSEData(type: string, data: unknown): string {
 }
 
 // Add a new SSE connection for a user
-export function addSSEConnection(userId: string, writer: WritableStreamDefaultWriter<Uint8Array>): void {
+export function addSSEConnection(userId: string, writer: SSEWriter): void {
+  console.log(`📝 addSSEConnection called for user ${userId}`);
+  console.log(`📝 Current connections before adding:`, Array.from(sseConnections.keys()));
+  
   if (!sseConnections.has(userId)) {
     sseConnections.set(userId, []);
   }
   sseConnections.get(userId)!.push(writer);
+  
+  console.log(`📝 Connections after adding user ${userId}:`, Array.from(sseConnections.keys()));
+  console.log(`📝 User ${userId} now has ${sseConnections.get(userId)?.length} connections`);
 }
 
 // Remove an SSE connection for a user
-export function removeSSEConnection(userId: string, writer: WritableStreamDefaultWriter<Uint8Array>): void {
+export function removeSSEConnection(userId: string, writer: SSEWriter): void {
+  console.log(`🗑️ removeSSEConnection called for user ${userId}`);
   const userConnections = sseConnections.get(userId);
   if (userConnections) {
+    console.log(`🗑️ User ${userId} had ${userConnections.length} connections before removal`);
     const index = userConnections.indexOf(writer);
     if (index > -1) {
       userConnections.splice(index, 1);
+      console.log(`🗑️ Removed connection at index ${index} for user ${userId}`);
+    } else {
+      console.log(`🗑️ Writer not found in connections for user ${userId}`);
     }
     if (userConnections.length === 0) {
       sseConnections.delete(userId);
+      console.log(`🗑️ Removed user ${userId} from connections map (no connections left)`);
+    } else {
+      console.log(`🗑️ User ${userId} still has ${userConnections.length} connections`);
     }
+  } else {
+    console.log(`🗑️ No connections found for user ${userId} during removal`);
   }
 }
 
@@ -57,35 +92,57 @@ export function logActiveConnections(): void {
 // Send data to all connections for a specific user
 async function sendToUser(userId: string, data: string): Promise<void> {
   const userConnections = sseConnections.get(userId);
+  console.log(`📤 sendToUser called for user ${userId}, connections: ${userConnections?.length || 0}`);
+  
   if (!userConnections || userConnections.length === 0) {
+    console.log(`📤 No connections found for user ${userId}`);
     return;
   }
 
   const encoder = new TextEncoder();
-  const promises = userConnections.map(async (writer) => {
+  const promises = userConnections.map(async (writer, index) => {
     try {
+      console.log(`📤 Sending data to user ${userId} connection ${index + 1}/${userConnections.length}`);
       await writer.write(encoder.encode(data));
+      console.log(`📤 Successfully sent data to user ${userId} connection ${index + 1}`);
     } catch (error) {
-      console.error(`Error sending SSE data to user ${userId}:`, error);
+      console.error(`📤 Error sending SSE data to user ${userId} connection ${index + 1}:`, error);
       // Remove failed connection
       removeSSEConnection(userId, writer);
     }
   });
 
   await Promise.all(promises);
+  console.log(`📤 Finished sending data to all connections for user ${userId}`);
 }
 
 // Notify about a new message
 export async function notifyNewMessage(data: NewMessageData): Promise<void> {
+  console.log('🔔 SSE notifyNewMessage called with data:', {
+    message_id: data.message_id,
+    sender_id: data.sender_id,
+    receiver_id: data.receiver_id,
+    content: data.content?.substring(0, 50) + '...',
+    conversation_participants: data.conversation_participants
+  });
+  
+  // Log active connections
+  logActiveConnections();
+  
   const sseData = formatSSEData('NEW_MESSAGE', data);
+  console.log('🔔 SSE data formatted:', sseData.substring(0, 100) + '...');
   
   // Send to receiver
   if (data.receiver_id) {
+    console.log(`🔔 Sending SSE to receiver: ${data.receiver_id}`);
     await sendToUser(data.receiver_id, sseData);
   }
   
   // Also send to sender (for multi-device sync)
+  console.log(`🔔 Sending SSE to sender: ${data.sender_id}`);
   await sendToUser(data.sender_id, sseData);
+  
+  console.log('🔔 SSE notifications sent successfully');
 }
 
 // Notify about a new conversation

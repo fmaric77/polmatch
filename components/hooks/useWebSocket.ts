@@ -61,12 +61,17 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
   const healthCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
   const optionsRef = useRef(options);
+  const sessionTokenRef = useRef(sessionToken);
   const maxReconnectAttempts = 5;
 
-  // Update options ref when options change
+  // Update refs when values change
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
+
+  useEffect(() => {
+    sessionTokenRef.current = sessionToken;
+  }, [sessionToken]);
 
   // Debug: Set global window flag for SSE connection status
   useEffect(() => {
@@ -79,7 +84,8 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
   console.log('useWebSocket hook called with token:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
 
   const connect = useCallback(() => {
-    if (!sessionToken) {
+    const currentSessionToken = sessionTokenRef.current;
+    if (!currentSessionToken) {
       console.log('🔌 No session token available for SSE connection');
       return;
     }
@@ -97,9 +103,9 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
     }
 
     try {
-      console.log('🔌 Attempting to connect to SSE with token:', sessionToken?.substring(0, 10) + '...');
+      console.log('🔌 Attempting to connect to SSE with token:', currentSessionToken?.substring(0, 10) + '...');
       
-      const sseUrl = `/api/sse?sessionToken=${encodeURIComponent(sessionToken)}`;
+      const sseUrl = `/api/sse?sessionToken=${encodeURIComponent(currentSessionToken)}`;
       console.log('🔌 SSE URL:', sseUrl);
       const eventSource = new EventSource(sseUrl);
       eventSourceRef.current = eventSource;
@@ -137,7 +143,7 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
           } else {
             console.log('🩺 Health check: SSE connection is healthy (readyState:', eventSourceRef.current?.readyState, ')');
           }
-        }, 2000); // Check every 2 seconds for very responsive reconnection
+        }, 5000); // Increased interval to reduce spam
       };
 
       eventSource.onmessage = (event) => {
@@ -237,7 +243,7 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
       console.error('Error creating SSE connection:', error);
       setConnectionError('Failed to create SSE connection');
     }
-  }, [sessionToken]);
+  }, []); // Empty dependencies - use refs for dynamic values
 
   const disconnect = useCallback(() => {
     console.log('� Disconnecting SSE...');
@@ -270,9 +276,9 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
     setTimeout(() => {
       connect();
     }, 100);
-  }, [connect, disconnect]);
+  }, []); // Remove dependencies to make it stable
 
-  // Connect when session token is available
+  // Connect when session token is available - simplified dependencies
   useEffect(() => {
     console.log('useWebSocket useEffect triggered with sessionToken:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
     if (sessionToken) {
@@ -280,24 +286,23 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
       connect();
     } else {
       console.log('No session token yet, waiting...');
-      // Don't disconnect when sessionToken is null initially
-      // Only disconnect when we explicitly want to close the connection
     }
 
     return () => {
       console.log('useWebSocket cleanup called');
       disconnect();
     };
-  }, [sessionToken, connect, disconnect]);
+  }, [sessionToken]); // Only depend on sessionToken now
 
   // Listen for custom reconnection requests (e.g., from VoiceCall component)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handleReconnectionRequest = () => {
-      if (sessionToken && !isConnected) {
+      if (sessionTokenRef.current && !isConnected) {
         console.log('🔄 Received SSE reconnection request, attempting reconnect...');
-        reconnect();
+        disconnect();
+        setTimeout(() => connect(), 100);
       }
     };
 
@@ -306,7 +311,7 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
     return () => {
       window.removeEventListener('requestSSEReconnection', handleReconnectionRequest);
     };
-  }, [sessionToken, isConnected, reconnect]);
+  }, [isConnected]); // Only depend on isConnected
 
   // Monitor for audio context changes that might affect SSE connections
   useEffect(() => {
@@ -331,7 +336,9 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
           console.log('🎵 Audio context is running, ensuring SSE connection...');
           if (!isConnected) {
             console.log('🔄 Audio active but SSE disconnected, reconnecting...');
-            reconnect();
+            // Use disconnect and connect directly
+            disconnect();
+            setTimeout(() => connect(), 100);
           }
         }
       } catch {
@@ -339,24 +346,25 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
       }
     };
 
-    // Check audio state periodically when we have a session token
-    const audioContextMonitor = setInterval(checkAudioState, 3000);
+    // Check audio state periodically when we have a session token - reduced frequency
+    const audioContextMonitor = setInterval(checkAudioState, 10000); // Check every 10 seconds instead of 3
 
     return () => {
       if (audioContextMonitor) {
         clearInterval(audioContextMonitor);
       }
     };
-  }, [sessionToken, isConnected, reconnect]);
+  }, [sessionToken, isConnected]); // Remove connect and disconnect from dependencies
 
   // Reconnect when page becomes visible (useful for mobile and tab switching)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && sessionToken) {
+      if (!document.hidden && sessionTokenRef.current) {
         console.log('📱 Page became visible, checking SSE connection...');
         if (!isConnected) {
           console.log('🔄 Page visible but SSE disconnected, attempting reconnect...');
-          reconnect();
+          disconnect();
+          setTimeout(() => connect(), 100);
         } else {
           console.log('✅ Page visible and SSE already connected');
         }
@@ -364,11 +372,12 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
     };
 
     const handleFocus = () => {
-      if (sessionToken) {
+      if (sessionTokenRef.current) {
         console.log('👁️ Window focused, checking SSE connection...');
         if (!isConnected) {
           console.log('🔄 Window focused but SSE disconnected, attempting reconnect...');
-          reconnect();
+          disconnect();
+          setTimeout(() => connect(), 100);
         }
       }
     };
@@ -384,7 +393,7 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
         window.removeEventListener('focus', handleFocus);
       }
     };
-  }, [sessionToken, isConnected, reconnect]);
+  }, [isConnected]); // Only depend on isConnected, use sessionTokenRef for token access
 
   // Cleanup on unmount
   useEffect(() => {

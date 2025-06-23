@@ -7,9 +7,10 @@ import type { ProfileMessage } from './hooks/useProfileMessaging';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
-import { useWebSocket, VoiceCallEventData } from './hooks/useWebSocket';
+import { VoiceCallEventData } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
+import { useSSE } from './providers/SSEProvider';
 import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
@@ -115,8 +116,7 @@ interface Channel {
 }
 
 const UnifiedMessages: React.FC = () => {
-  // Core state
-  const [currentUser, setCurrentUser] = useState<{ user_id: string; username: string; display_name?: string; is_admin?: boolean } | null>(null);
+  // Core state - currentUser is now provided by SSEProvider
   const [loading, setLoading] = useState(true);
   
   // Profile separation state
@@ -152,7 +152,23 @@ const UnifiedMessages: React.FC = () => {
     extra?: unknown;
   } | null>(null);
 
-  // Custom hooks
+  // SSE connection for real-time messaging
+  const { 
+    isConnected, 
+    connectionError, 
+    sessionToken, 
+    currentUser, 
+    refreshConnection,
+    setMessageHandler,
+    setConversationHandler,
+    setConnectionHandler,
+    setTypingStartHandler,
+    setTypingStopHandler,
+    setIncomingCallHandler,
+    setCallStatusUpdateHandler
+  } = useSSE();
+
+  // Custom hooks that depend on currentUser
   const conversations = useConversations(currentUser, activeProfileType, selectedCategory === 'groups' ? 'groups' : 'all');
   const profileConversations = useProfileConversations(activeProfileType);
   const profileMessages = useProfileMessages(activeProfileType);
@@ -166,9 +182,6 @@ const UnifiedMessages: React.FC = () => {
     groupManagement.groupChannels,
     activeProfileType
   );
-
-  // Session token for SSE
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
   // Voice call state management using SSE
   const [incomingCalls, setIncomingCalls] = useState<{
@@ -195,9 +208,9 @@ const UnifiedMessages: React.FC = () => {
     isActive: false,
     otherUser: null,
     callId: null,
-  });
+  }  );
 
-  // Typing indicator hook
+  // Typing indicator hook (after currentUser is available from SSE)
   const typingIndicator = useTypingIndicator({
     currentUser,
     selectedConversation,
@@ -211,8 +224,7 @@ const UnifiedMessages: React.FC = () => {
     console.log('🔧 Session token changed:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
   }, [sessionToken]);
 
-  // Real-time messaging integration
-  // Define call management functions
+  // Register SSE handlers when component mounts
   useEffect(() => {
     // Setup call management functions
     const declineCall = async (callId: string): Promise<void> => {
@@ -342,16 +354,11 @@ const UnifiedMessages: React.FC = () => {
     }
   }, [incomingCalls.incomingCalls.length, stopCallSound]);
 
-  // Memoize the WebSocket options to prevent excessive re-renders
-  const webSocketOptions = useMemo(() => ({
-    onNewMessage: (data: NewMessageData) => {
+  // Register SSE handlers when component mounts
+  useEffect(() => {
+    // Register message handler
+    setMessageHandler((data: NewMessageData) => {
       console.log('Received new message via SSE:', data);
-      
-      // Skip if this user is the sender (they already have the message from the send API)
-      if (data.sender_id === currentUser?.user_id) {
-        console.log('Skipping SSE message from self:', data.message_id);
-        return;
-      }
       
       // Handle direct messages - check if we're in profile mode
       if (selectedConversation && selectedConversationType === 'direct' && 
@@ -373,9 +380,23 @@ const UnifiedMessages: React.FC = () => {
           };
           
           profileMessages.setMessages(prevMessages => {
-            // Check for duplicates
-            const messageExists = prevMessages.some(msg => msg._id === data.message_id);
+            // Comprehensive duplicate check using all possible ID fields
+            const messageExists = prevMessages.some(msg => {
+              // Check all possible message ID combinations
+              return (
+                msg._id === data.message_id ||
+                msg._id === newProfileMessage._id ||
+                (msg as { message_id?: string }).message_id === data.message_id ||
+                // Additional check: same sender, receiver, timestamp and content
+                (msg.sender_id === newProfileMessage.sender_id &&
+                 msg.receiver_id === newProfileMessage.receiver_id &&
+                 msg.timestamp === newProfileMessage.timestamp &&
+                 msg.content === newProfileMessage.content)
+              );
+            });
+            
             if (messageExists) {
+              console.log('Profile message already exists, skipping duplicate:', data.message_id);
               return prevMessages;
             }
             
@@ -399,10 +420,20 @@ const UnifiedMessages: React.FC = () => {
           messages.setMessages(prevMessages => {
             console.log('Adding SSE direct message. Current count:', prevMessages.length);
             
-            // Comprehensive duplicate check using both _id and message_id
+            // Comprehensive duplicate check using all possible ID fields and content comparison
             const messageExists = prevMessages.some(msg => {
               const msgId = ('_id' in msg) ? msg._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
-              return msgId === newMessage._id || msgId === data.message_id;
+              
+              // Check ID matches or content/timestamp matches
+              return (
+                msgId === newMessage._id || 
+                msgId === data.message_id ||
+                // Additional content-based duplicate check
+                (msg.sender_id === newMessage.sender_id &&
+                 ('receiver_id' in msg ? msg.receiver_id : null) === newMessage.receiver_id &&
+                 msg.timestamp === newMessage.timestamp &&
+                 msg.content === newMessage.content)
+              );
             });
             
             if (messageExists) {
@@ -444,14 +475,27 @@ const UnifiedMessages: React.FC = () => {
           messages.setMessages(prevMessages => {
             console.log('Adding SSE group message. Current count:', prevMessages.length);
             
-            // Comprehensive duplicate check using both _id and message_id
+            // Comprehensive duplicate check using all possible ID fields and content comparison
             const messageExists = prevMessages.some(msg => {
               const msgId = ('_id' in msg) ? (msg as PrivateMessage)._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
-              return msgId === newMessage.message_id || msgId === groupData.message_id;
+              
+              // Check ID matches or content/timestamp matches
+              return (
+                msgId === newMessage.message_id || 
+                msgId === groupData.message_id ||
+                // Additional content-based duplicate check for group messages
+                (('message_id' in msg) && 
+                 (msg as GroupMessage).group_id === newMessage.group_id &&
+                 msg.sender_id === newMessage.sender_id &&
+                 msg.timestamp === newMessage.timestamp &&
+                 msg.content === newMessage.content)
+              );
             });
             if (messageExists) {
+              console.log('Group message already exists, skipping duplicate:', groupData.message_id);
               return prevMessages;
             }
+            
             const updatedMessages = [...prevMessages, newMessage];
             return updatedMessages.sort((a, b) => 
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -461,11 +505,13 @@ const UnifiedMessages: React.FC = () => {
       }
       
       // Refresh conversations list to update last message/unread count
-      conversations.fetchConversations();
-      profileConversations.fetchConversations();
-    },
-    
-    onNewConversation: (data: NewConversationData) => {
+      // TODO: Incrementally update conversation last_message instead of full refresh to avoid UI flicker
+      // conversations.fetchConversations();
+      // profileConversations.fetchConversations();
+    });
+
+    // Register conversation handler
+    setConversationHandler((data: NewConversationData) => {
       console.log('Received new conversation via SSE:', data);
       
       // If this involves the current user, refresh conversations
@@ -473,23 +519,26 @@ const UnifiedMessages: React.FC = () => {
         conversations.fetchConversations();
         profileConversations.fetchConversations();
       }
-    },
-    
-    onConnectionEstablished: () => {
+    });
+
+    // Register connection handler
+    setConnectionHandler(() => {
       console.log('SSE connection established successfully');
-    },
-    
-    onTypingStart: (data: TypingData) => {
+    });
+
+    // Register typing handlers
+    setTypingStartHandler((data: TypingData) => {
       console.log('Received typing start via SSE:', data);
       typingIndicator.handleTypingReceived(data);
-    },
-    
-    onTypingStop: (data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => {
+    });
+
+    setTypingStopHandler((data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => {
       console.log('Received typing stop via SSE:', data);
       typingIndicator.handleStoppedTyping(data);
-    },
+    });
 
-    onIncomingCall: (data: VoiceCallEventData) => {
+    // Register call handlers
+    setIncomingCallHandler((data: VoiceCallEventData) => {
       console.log('Received incoming call via SSE:', data);
       // Only show incoming call if it's for this user
       if (data.recipient_id === currentUser?.user_id && data.status === 'calling') {
@@ -501,9 +550,9 @@ const UnifiedMessages: React.FC = () => {
         // Play call sound for incoming call
         playCallSound();
       }
-    },
+    });
 
-    onCallStatusUpdate: (data: VoiceCallEventData) => {
+    setCallStatusUpdateHandler((data: VoiceCallEventData) => {
       console.log('Received call status update via SSE:', data);
       
       // Handle outgoing call status updates (for calls we initiated)
@@ -587,10 +636,20 @@ const UnifiedMessages: React.FC = () => {
           incomingCalls: updatedCalls
         };
       });
-    }
-  }), [currentUser, selectedConversation, selectedConversationType, selectedCategory, activeProfileType, profileMessages, incomingCalls, outgoingCall, voiceCallRef, playCallSound, stopCallSound]);
+    });
 
-  const { isConnected, connectionError, reconnect } = useWebSocket(sessionToken, webSocketOptions);
+    // Cleanup handlers when component unmounts
+    return () => {
+      setMessageHandler(null);
+      setConversationHandler(null);
+      setConnectionHandler(null);
+      setTypingStartHandler(null);
+      setTypingStopHandler(null);
+      setIncomingCallHandler(null);
+      setCallStatusUpdateHandler(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, selectedConversation, selectedConversationType, selectedCategory, activeProfileType, setMessageHandler, setConversationHandler, setConnectionHandler, setTypingStartHandler, setTypingStopHandler, setIncomingCallHandler, setCallStatusUpdateHandler]);
 
   // Ensure SSE reconnection after calls end or any call state changes
   useEffect(() => {
@@ -598,24 +657,24 @@ const UnifiedMessages: React.FC = () => {
     if (sessionToken && !isConnected && !outgoingCall && incomingCalls.incomingCalls.length === 0) {
       console.log('🔄 No active calls and SSE disconnected, attempting reconnection...');
       const reconnectTimer = setTimeout(() => {
-        reconnect();
+        refreshConnection();
       }, 2000); // Small delay to avoid rapid reconnections
       
       return () => clearTimeout(reconnectTimer);
     }
-  }, [sessionToken, isConnected, outgoingCall, incomingCalls.incomingCalls.length, reconnect]);
+  }, [sessionToken, isConnected, outgoingCall, incomingCalls.incomingCalls.length, refreshConnection]);
 
   // Force reconnection after any call status changes (more aggressive)
   useEffect(() => {
     if (sessionToken && !isConnected) {
       console.log('🔄 SSE disconnected, forcing reconnection attempt...');
       const forceReconnectTimer = setTimeout(() => {
-        reconnect();
+        refreshConnection();
       }, 1000);
       
       return () => clearTimeout(forceReconnectTimer);
     }
-  }, [sessionToken, isConnected, reconnect]);
+  }, [sessionToken, isConnected, refreshConnection]);
 
   // Debug SSE connection status
   useEffect(() => {
@@ -624,34 +683,14 @@ const UnifiedMessages: React.FC = () => {
 
   const searchParams = useSearchParams();
 
-  // Fetch current user and session token
+  // Session data is now provided by SSEProvider - no need to fetch it here
+  
+  // Set loading to false when we have currentUser from SSEProvider
   useEffect(() => {
-    console.log('🔧 Fetching session data...');
-    fetch('/api/session')
-      .then(res => res.json())
-      .then(data => {
-        console.log('🔧 Session response:', data);
-        if (data.valid && data.user) {
-          setCurrentUser({ 
-            user_id: data.user.user_id, 
-            username: data.user.username, 
-            is_admin: data.user.is_admin 
-          });
-          // Set session token for SSE authentication
-          if (data.sessionToken) {
-            console.log('🔧 Setting session token:', data.sessionToken.substring(0, 10) + '...');
-            setSessionToken(data.sessionToken);
-          } else {
-            console.error('🔧 No session token in response!');
-          }
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('🔧 Session fetch error:', err);
-        setLoading(false);
-      });
-  }, []);
+    if (currentUser) {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
   // Fetch users list
   useEffect(() => {
@@ -675,6 +714,7 @@ const UnifiedMessages: React.FC = () => {
       groupManagement.fetchInvitationSummary(); // Fetch summary of all profile invitations
       profileConversations.fetchConversations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]); // Only depend on currentUser to prevent infinite loops
 
   // Fetch profile conversations when profile type changes - ONLY for direct messages
@@ -683,6 +723,7 @@ const UnifiedMessages: React.FC = () => {
       console.log('🔄 Fetching profile conversations for category:', selectedCategory, 'profile:', activeProfileType);
       profileConversations.fetchConversations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileType, currentUser, selectedCategory]);
 
   // Refresh invitations when profile type changes (for all categories)
@@ -692,6 +733,7 @@ const UnifiedMessages: React.FC = () => {
       groupManagement.fetchInvitations();
       groupManagement.fetchInvitationSummary(); // Also refresh the summary
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileType, currentUser]);
 
   // Clear selected group/channel when profile type changes and we're in groups category
@@ -708,6 +750,7 @@ const UnifiedMessages: React.FC = () => {
       conversations.fetchConversations();
       groupManagement.fetchInvitations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileType, selectedCategory]);
 
   // Log when category changes
@@ -735,6 +778,7 @@ const UnifiedMessages: React.FC = () => {
       // Fetch messages for the new profile type (clearing is handled by the hook)
       profileMessages.fetchMessages(selectedConversation);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileType, selectedConversation, selectedConversationType, selectedCategory]); // Removed currentUser dependency to reduce re-renders
 
   // Handle conversation selection
@@ -1291,7 +1335,7 @@ const UnifiedMessages: React.FC = () => {
         isConnected={isConnected}
         connectionError={connectionError}
         sessionToken={sessionToken}
-        onReconnect={reconnect}
+        onReconnect={refreshConnection}
         currentUser={currentUser}
         // Profile switcher props
         activeProfileType={activeProfileType}

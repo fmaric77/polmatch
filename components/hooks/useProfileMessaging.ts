@@ -42,6 +42,32 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Comprehensive deduplication function for profile messages
+  const deduplicateMessages = useCallback((messageList: ProfileMessage[]): ProfileMessage[] => {
+    const seen = new Set<string>();
+    const deduplicated: ProfileMessage[] = [];
+    
+    for (const message of messageList) {
+      let uniqueId: string;
+      
+      if (message._id) {
+        uniqueId = `profile-${message._id}`;
+      } else {
+        // Fallback: create unique ID from content and timestamp
+        uniqueId = `fallback-${message.sender_id}-${message.receiver_id}-${message.timestamp}-${message.content.substring(0, 20)}`;
+      }
+      
+      if (!seen.has(uniqueId)) {
+        seen.add(uniqueId);
+        deduplicated.push(message);
+      } else {
+        console.log('🚫 Duplicate profile message detected and removed:', uniqueId);
+      }
+    }
+    
+    return deduplicated;
+  }, []);
+
   const fetchMessages = useCallback(async (otherUserId: string): Promise<void> => {
     try {
       // Clear messages at the start of fetch to avoid showing stale data
@@ -55,7 +81,10 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
 
       if (data.success) {
         console.log(`Fetched ${data.messages?.length || 0} ${profileType} messages`);
-        setMessages(data.messages || []);
+        const sortedMessages = (data.messages || []).sort((a: ProfileMessage, b: ProfileMessage) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        setMessages(deduplicateMessages(sortedMessages));
       } else {
         setError(data.message || 'Failed to fetch messages');
         setMessages([]);
@@ -102,9 +131,10 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
           setMessages(prevMessages => {
             const newMessage = { ...data.message, profile_type: profileType };
             const updatedMessages = [...prevMessages, newMessage];
-            return updatedMessages.sort((a, b) => 
+            const sortedMessages = updatedMessages.sort((a, b) => 
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             );
+            return deduplicateMessages(sortedMessages);
           });
         }
         return true;
@@ -150,9 +180,17 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
     }
   }, [profileType]);
 
+  // Safe setMessages that always deduplicates
+  const setMessagesSafe = useCallback((updater: (prev: ProfileMessage[]) => ProfileMessage[]) => {
+    setMessages(prev => {
+      const updated = updater(prev);
+      return deduplicateMessages(updated);
+    });
+  }, [deduplicateMessages]);
+
   return {
     messages,
-    setMessages,
+    setMessages: setMessagesSafe,
     loading,
     error,
     fetchMessages,

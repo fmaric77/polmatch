@@ -61,6 +61,38 @@ export const useMessages = (
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasMarkedReadRef = useRef<boolean>(false);
 
+  // Comprehensive deduplication function
+  const deduplicateMessages = useCallback((messageList: (PrivateMessage | GroupMessage)[]): (PrivateMessage | GroupMessage)[] => {
+    const seen = new Set<string>();
+    const deduplicated: (PrivateMessage | GroupMessage)[] = [];
+    
+    for (const message of messageList) {
+      // Create a unique identifier for each message
+      const privateMsg = message as PrivateMessage;
+      const groupMsg = message as GroupMessage;
+      
+      let uniqueId: string;
+      
+      if (privateMsg._id) {
+        uniqueId = `private-${privateMsg._id}`;
+      } else if (groupMsg.message_id) {
+        uniqueId = `group-${groupMsg.message_id}`;
+      } else {
+        // Fallback: create unique ID from content and timestamp
+        uniqueId = `fallback-${message.sender_id}-${message.timestamp}-${message.content.substring(0, 20)}`;
+      }
+      
+      if (!seen.has(uniqueId)) {
+        seen.add(uniqueId);
+        deduplicated.push(message);
+      } else {
+        console.log('🚫 Duplicate message detected and removed:', uniqueId);
+      }
+    }
+    
+    return deduplicated;
+  }, []);
+
   // Fetch messages for selected conversation or channel
   const fetchMessages = useCallback(async (conversationId: string, type: 'direct' | 'group'): Promise<void> => {
     try {
@@ -99,7 +131,7 @@ export const useMessages = (
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
           
-          setMessages(filteredMessages);
+          setMessages(deduplicateMessages(filteredMessages));
         } else if (type === 'group' && data.messages) {
           console.log('🔍 Raw group messages from API:', data.messages.slice(0, 2).map((msg: GroupMessage) => ({
             message_id: msg.message_id,
@@ -110,7 +142,7 @@ export const useMessages = (
           (data.messages as GroupMessage[]).sort((a: GroupMessage, b: GroupMessage) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-          setMessages(data.messages);
+          setMessages(deduplicateMessages(data.messages));
         }
       } else {
         setMessages([]);
@@ -578,9 +610,17 @@ export const useMessages = (
     }
   }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages]);
 
+  // Safe setMessages that always deduplicates
+  const setMessagesSafe = useCallback((updater: (prev: (PrivateMessage | GroupMessage)[]) => (PrivateMessage | GroupMessage)[]) => {
+    setMessages(prev => {
+      const updated = updater(prev);
+      return deduplicateMessages(updated);
+    });
+  }, [deduplicateMessages]);
+
   return {
     messages,
-    setMessages,
+    setMessages: setMessagesSafe,
     channelLoading,
     contextSwitchLoading,
     setContextSwitchLoading,
