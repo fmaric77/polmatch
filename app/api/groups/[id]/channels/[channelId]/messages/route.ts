@@ -374,7 +374,12 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const groupId = params.id;
     const channelId = params.channelId;
 
-    const body = await req.json();
+    let body : any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // no body sent
+    }
     const { messageId, message_id, profile_type = 'basic' } = body;
 
     // Handle both field names - frontend might send either messageId or message_id

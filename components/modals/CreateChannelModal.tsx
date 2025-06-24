@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faHashtag } from '@fortawesome/free-solid-svg-icons';
+import { useCSRFToken } from '../hooks/useCSRFToken';
 
 interface CreateChannelModalProps {
   selectedConversation: string;
@@ -15,6 +16,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   onSuccess,
   profileType
 }) => {
+  const { protectedFetch } = useCSRFToken();
   const [form, setForm] = useState({
     name: '',
     description: ''
@@ -55,7 +57,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     setError('');
 
     try {
-      const res = await fetch(`/api/groups/${selectedConversation}/channels`, {
+      const res = await protectedFetch(`/api/groups/${selectedConversation}/channels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

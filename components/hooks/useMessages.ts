@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useCSRFToken } from './useCSRFToken';
 
 interface PrivateMessage {
   _id?: string;
@@ -76,6 +77,8 @@ export const useMessages = (
   const failedChannelsRef = useRef<Set<string>>(new Set());
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasMarkedReadRef = useRef<boolean>(false);
+
+  const { protectedFetch } = useCSRFToken();
 
   // Comprehensive deduplication function
   const deduplicateMessages = useCallback((messageList: (PrivateMessage | GroupMessage)[]): (PrivateMessage | GroupMessage)[] => {
@@ -252,7 +255,7 @@ export const useMessages = (
         };
       }
 
-      const res = await fetch(url, {
+      const res = await protectedFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -541,16 +544,16 @@ export const useMessages = (
           }
         });
         
-        const response = await fetch(deleteUrl, {
+        const deleteResponse = await protectedFetch(deleteUrl, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
         });
         
-        if (!response.ok) {
-          console.error('Failed to delete group message - HTTP error:', response.status, response.statusText);
+        if (!deleteResponse.ok) {
+          console.error('Failed to delete group message - HTTP error:', deleteResponse.status, deleteResponse.statusText);
           try {
-            const errorText = await response.text();
+            const errorText = await deleteResponse.text();
             console.error('Error response body:', errorText);
           } catch (e) {
             console.error('Could not read error response body:', e);
@@ -558,7 +561,7 @@ export const useMessages = (
           return false;
         }
         
-        const data = await response.json();
+        const data = await deleteResponse.json();
         
         if (data.success) {
           // Refresh messages using the appropriate fetch method
@@ -602,7 +605,7 @@ export const useMessages = (
 
       console.log('📤 Pin request body:', requestBody);
 
-      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+      const response = await protectedFetch(`/api/groups/${selectedConversation}/pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -645,7 +648,7 @@ export const useMessages = (
         return false;
       }
 
-      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+      const response = await protectedFetch(`/api/groups/${selectedConversation}/pin`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
