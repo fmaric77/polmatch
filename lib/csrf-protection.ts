@@ -1,29 +1,31 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-interface CSRFTokenData {
-  token: string;
-  expires: number;
+// CSRF token cache - in production you'd want to use Redis or database
+const csrfTokens = new Map<string, {
   sessionId: string;
-}
+  expires: number;
+  used: boolean;
+}>();
 
-// In-memory storage for CSRF tokens (in production, use Redis or database)
-const csrfTokens = new Map<string, CSRFTokenData>();
+// Token expiry time (30 minutes)
+const TOKEN_EXPIRY = 30 * 60 * 1000;
 
-// CSRF token expiry time (1 hour)
-const CSRF_TOKEN_EXPIRY = 60 * 60 * 1000;
+// Cleanup interval (5 minutes)
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 /**
- * Generate a CSRF token for a session
+ * Generate a secure CSRF token
  */
 export function generateCSRFToken(sessionId: string): string {
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = Date.now() + CSRF_TOKEN_EXPIRY;
+  const expires = Date.now() + TOKEN_EXPIRY;
   
   csrfTokens.set(token, {
-    token,
+    sessionId,
     expires,
-    sessionId
+    used: false
   });
   
   return token;
@@ -50,19 +52,27 @@ export function validateCSRFToken(token: string, sessionId: string): boolean {
     return false;
   }
   
+  // Mark token as used (optional: implement one-time use)
+  // tokenData.used = true;
+  
   return true;
 }
 
 /**
- * Clean up expired CSRF tokens
+ * Clean up expired tokens
  */
-export function cleanupExpiredCSRFTokens(): void {
+function cleanupExpiredTokens(): void {
   const now = Date.now();
   for (const [token, data] of csrfTokens.entries()) {
     if (now > data.expires) {
       csrfTokens.delete(token);
     }
   }
+}
+
+// Set up periodic cleanup
+if (typeof globalThis !== 'undefined') {
+  setInterval(cleanupExpiredTokens, CLEANUP_INTERVAL);
 }
 
 /**
@@ -73,6 +83,23 @@ export function checkCSRFToken(request: NextRequest): { valid: boolean; error?: 
   
   // Only check CSRF for state-changing methods
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return { valid: true };
+  }
+  
+  // Skip CSRF check for certain endpoints
+  const pathname = request.nextUrl.pathname;
+  const skipCSRFPaths = [
+    '/api/login',
+    '/api/auth/register',
+    '/api/logout',
+    '/api/session',
+    '/api/internal/',
+    '/api/csrf-token',
+    '/api/sse',
+    '/api/users/profile-pictures-batch'
+  ];
+  
+  if (skipCSRFPaths.some(path => pathname.startsWith(path))) {
     return { valid: true };
   }
   
@@ -102,5 +129,45 @@ export function checkCSRFToken(request: NextRequest): { valid: boolean; error?: 
   return { valid: true };
 }
 
-// Cleanup expired tokens every 10 minutes
-setInterval(cleanupExpiredCSRFTokens, 10 * 60 * 1000);
+/**
+ * API handler to generate CSRF tokens
+ */
+export async function handleCSRFTokenRequest(): Promise<NextResponse> {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    }
+    
+    const csrfToken = generateCSRFToken(sessionToken);
+    
+    return NextResponse.json({ 
+      csrfToken,
+      expires: Date.now() + TOKEN_EXPIRY
+    });
+  } catch (error) {
+    console.error('Error generating CSRF token:', error);
+    return NextResponse.json({ error: 'Failed to generate CSRF token' }, { status: 500 });
+  }
+}
+
+/**
+ * Helper function to create CSRF error response
+ */
+export function createCSRFErrorResponse(error: string): NextResponse {
+  return NextResponse.json(
+    { 
+      success: false, 
+      message: 'CSRF validation failed',
+      error: error 
+    }, 
+    { 
+      status: 403,
+      headers: {
+        'X-CSRF-Error': error
+      }
+    }
+  );
+}

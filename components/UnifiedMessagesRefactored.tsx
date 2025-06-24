@@ -23,6 +23,7 @@ import InvitationsModal from './modals/InvitationsModal';
 import CreateChannelModal from './modals/CreateChannelModal';
 import PinnedMessagesModal from './modals/PinnedMessagesModal';
 import ContextMenu from './modals/ContextMenu';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 // Dynamically import VoiceCall to prevent SSR issues
 const VoiceCall = dynamic(() => import('./VoiceCall'), {
@@ -126,6 +127,8 @@ interface Channel {
 }
 
 const UnifiedMessages: React.FC = () => {
+  const { protectedFetch } = useCSRFToken();
+  
   // Core state - currentUser is now provided by SSEProvider
   const [loading, setLoading] = useState(true);
   
@@ -240,7 +243,7 @@ const UnifiedMessages: React.FC = () => {
     const declineCall = async (callId: string): Promise<void> => {
       try {
         console.log('Declining call:', callId);
-        const response = await fetch('/api/voice-calls', {
+        const response = await protectedFetch('/api/voice-calls', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -269,7 +272,7 @@ const UnifiedMessages: React.FC = () => {
     const endCall = async (callId: string): Promise<void> => {
       try {
         console.log('Ending call:', callId);
-        const response = await fetch('/api/voice-calls', {
+        const response = await protectedFetch('/api/voice-calls', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1003,7 +1006,7 @@ const UnifiedMessages: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`/api/groups/${selectedConversation}/polls`, {
+      const res = await protectedFetch(`/api/groups/${selectedConversation}/polls`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1019,7 +1022,7 @@ const UnifiedMessages: React.FC = () => {
       console.error('Error creating poll from command:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, activeProfileType]);
+  }, [selectedConversation, selectedConversationType, activeProfileType, protectedFetch]);
 
   // Send message handler
   const handleSendMessage = useCallback(async () => {

@@ -333,12 +333,64 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         </div>
         
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center bg-black border-2 border-white rounded-none p-8 shadow-2xl">
-            <h2 className="text-2xl mb-4 font-mono uppercase tracking-wider">POLMATCH</h2>
-            <div className="w-16 h-px bg-white mx-auto mb-4"></div>
-            <p className="text-gray-300 font-mono text-sm">Select a conversation to start messaging</p>
+        <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+          {/* Animated Background Grid */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="grid grid-cols-8 sm:grid-cols-12 gap-px h-full w-full">
+              {Array.from({ length: 96 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="border border-green-500/20 animate-pulse"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                />
+              ))}
+            </div>
           </div>
+
+          {/* Scanline Effect */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div 
+              className="w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent opacity-30 absolute animate-scanline" 
+            />
+          </div>
+
+          {/* Main Content */}
+          <div className="text-center bg-black/80 border-2 border-white rounded-none p-8 sm:p-12 shadow-2xl relative z-10 backdrop-blur-sm">
+            {/* Main Title with Glow */}
+            <h2 className="text-3xl sm:text-4xl mb-6 font-mono uppercase tracking-wider text-white animate-pulse shadow-lg" 
+                style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.5)' }}>
+              POLMATCH
+            </h2>
+
+            {/* Animated Divider */}
+            <div className="flex justify-center items-center mb-6">
+              <div className="w-8 h-px bg-white/30"></div>
+              <div className="w-16 h-px bg-gradient-to-r from-transparent via-white to-transparent mx-2 animate-pulse"></div>
+              <div className="w-8 h-px bg-white/30"></div>
+            </div>
+
+            {/* Status Message */}
+            <div className="space-y-3">
+              <p className="text-green-400 font-mono text-sm uppercase tracking-widest animate-pulse">
+                SYSTEM READY
+              </p>
+              <p className="text-gray-300 font-mono text-sm">
+                Select a conversation to start messaging
+              </p>
+            </div>
+          </div>
+
+          {/* CSS for custom animations */}
+          <style jsx>{`
+            @keyframes scanline {
+              0% { transform: translateY(-100vh); opacity: 0; }
+              50% { opacity: 0.3; }
+              100% { transform: translateY(100vh); opacity: 0; }
+            }
+            .animate-scanline {
+              animation: scanline 3s linear infinite;
+            }
+          `}</style>
         </div>
       </div>
     );

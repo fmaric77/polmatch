@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
-import { getAnonymousDisplayName, generateAnonymousId } from '../../lib/anonymization';
+import { getAnonymousDisplayName } from '../../lib/anonymization';
 
 interface User {
   user_id: string;
@@ -77,20 +77,20 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   const getProfileIcon = (profileType: string): React.ReactElement => {
     switch (profileType) {
       case 'love':
-        return <FontAwesomeIcon icon={faHeart} className="text-red-400" />;
+        return <FontAwesomeIcon icon={faHeart} />;
       case 'business':
-        return <FontAwesomeIcon icon={faBriefcase} className="text-yellow-400" />;
+        return <FontAwesomeIcon icon={faBriefcase} />;
       default:
-        return <FontAwesomeIcon icon={faUser} className="text-green-400" />;
+        return <FontAwesomeIcon icon={faUser} />;
     }
   };
 
   const getProfileLabel = (profileType: string): string => {
     switch (profileType) {
       case 'love':
-        return 'Personal';
+        return 'Dating';
       case 'business':
-        return 'Corporate';
+        return 'Business';
       default:
         return 'General';
     }
@@ -148,37 +148,32 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
-        {/* FBI-Style Header */}
-        <div className="border-b-2 border-white bg-white text-black p-4">
+      <div className="bg-black border border-white/30 rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="border-b border-white/30 bg-white/5 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="font-mono text-xs"></div>
-            </div>
+            <h2 className="text-lg font-semibold text-white">Start New Conversation</h2>
             <button
               onClick={onClose}
-              className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
+              className="text-white hover:text-gray-300 transition-colors text-xl"
             >
               ×
             </button>
-          </div>
-          <div className="font-mono text-xs mt-1 text-center uppercase tracking-wider">
-            Start New Conversation
           </div>
         </div>
 
         <div className="p-4 space-y-4 flex-1 flex flex-col bg-black text-white">
           {/* Profile Context Info */}
-          <div className="bg-gray-900 border border-white p-3 rounded-none">
-            <div className="font-mono text-xs text-center uppercase tracking-wider">
-              <span className="text-gray-400">Select a user to message</span>
+          <div className="bg-white/5 border border-white/30 p-3 rounded-lg">
+            <div className="text-sm text-center text-gray-400">
+              Select a user to message
             </div>
           </div>
 
           {fetchingUsers ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="font-mono text-white uppercase tracking-wider">
-                [SCANNING PERSONNEL DATABASE...]
+              <div className="text-white">
+                Loading users...
               </div>
             </div>
           ) : (
@@ -194,45 +189,46 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
-                  className="w-full bg-black text-white border-2 border-white rounded-none p-2 pl-10 focus:outline-none focus:ring-2 focus:ring-white font-mono uppercase tracking-wider text-xs"
+                  className="w-full bg-black text-white border border-white/30 rounded-lg p-3 pl-10 focus:outline-none focus:border-white/60"
                   disabled={loading}
                 />
               </div>
 
               {/* Users List */}
-              <div className="flex-1 min-h-0 border-2 border-white rounded-none p-2 bg-gray-900">
-                <div className="h-full overflow-y-auto space-y-1">
+              <div className="flex-1 min-h-0 border border-white/30 rounded-lg p-3 bg-white/5">
+                <div className="h-full overflow-y-auto space-y-2">
                   {filteredUsers.length === 0 ? (
-                    <div className="text-gray-400 text-center py-4 font-mono uppercase tracking-wider text-xs">
-                      {searchQuery ? 'No matching users' : `No ${getProfileLabel(receiverProfileType)} users available`}
+                    <div className="text-gray-400 text-center py-4">
+                      {searchQuery ? 'No matching users found' : `No ${getProfileLabel(receiverProfileType).toLowerCase()} users available`}
                     </div>
                   ) : (
                     filteredUsers.map((user) => (
                       <button
                         key={user.user_id}
                         onClick={() => handleUserSelect(user)}
-                        className={`w-full text-left p-3 rounded-none border transition-colors font-mono ${
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
                           selectedUser?.user_id === user.user_id
                             ? 'bg-white text-black border-white'
-                            : 'bg-transparent text-white border-gray-600 hover:bg-white/10 hover:border-white'
+                            : 'bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/60'
                         }`}
                         disabled={loading}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            {getProfileIcon(receiverProfileType)}
+                          <div className="flex items-center space-x-3">
+                            <div className="text-gray-400">
+                              {getProfileIcon(receiverProfileType)}
+                            </div>
                             <div>
-                              <div className="font-bold text-xs uppercase tracking-wider">
+                              <div className="font-semibold">
                                 {getAnonymousDisplayName(user.display_name, user.username, user.user_id)}
                               </div>
-                              <div className="text-xs opacity-70">ID: {generateAnonymousId(user.user_id)}</div>
                               {user.bio && (
-                                <div className="text-xs opacity-70 mt-1">{user.bio}</div>
+                                <div className="text-sm opacity-70 mt-1">{user.bio}</div>
                               )}
                             </div>
                           </div>
-                          <div className="text-xs opacity-50 font-mono uppercase">
-                            {user.visibility === 'friends' ? 'ALLIED' : 'PUBLIC'}
+                          <div className="text-xs opacity-50">
+                            {user.visibility === 'friends' ? 'Friends only' : 'Public'}
                           </div>
                         </div>
                       </button>
@@ -243,10 +239,10 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
 
               {/* Selected User Display */}
               {selectedUser && (
-                <div className="bg-gray-900 border border-white rounded-none p-2">
-                  <div className="text-white font-mono text-xs uppercase tracking-wider">
-                    <span className="text-gray-400">TARGET SELECTED: </span>
-                    <span className="font-bold">{getAnonymousDisplayName(selectedUser.display_name, selectedUser.username, selectedUser.user_id)}</span>
+                <div className="bg-white/5 border border-white/30 rounded-lg p-3">
+                  <div className="text-white text-sm">
+                    <span className="text-gray-400">Selected: </span>
+                    <span className="font-semibold">{getAnonymousDisplayName(selectedUser.display_name, selectedUser.username, selectedUser.user_id)}</span>
                   </div>
                 </div>
               )}
@@ -254,27 +250,27 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
           )}
 
           {error && (
-            <div className="text-red-400 font-mono text-xs uppercase tracking-wider border border-red-400 bg-red-900/20 p-2">
-              [ERROR: {error.toUpperCase()}]
+            <div className="text-red-400 text-sm border border-red-400/50 bg-red-900/20 rounded-lg p-3">
+              {error}
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded-none border-2 border-gray-600 hover:bg-gray-700 hover:border-white transition-colors font-mono uppercase tracking-wider text-xs"
+              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded-lg border border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-colors"
               disabled={loading}
             >
-              ABORT
+              Cancel
             </button>
             <button
               onClick={handleStartConversation}
-              className="flex-1 bg-white text-black py-2 px-4 rounded-none border-2 border-white hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:border-gray-600 disabled:cursor-not-allowed font-mono uppercase tracking-wider text-xs font-bold"
+              className="flex-1 bg-white text-black py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
               disabled={loading || !selectedUser || fetchingUsers}
             >
-              {loading ? 'ESTABLISHING...' : 'ESTABLISH CHANNEL'}
+              {loading ? 'Starting...' : 'Start Conversation'}
             </button>
           </div>
         </div>

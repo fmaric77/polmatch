@@ -1,4 +1,6 @@
 // Profile picture cache and request deduplication utility
+import { csrfFetch } from './csrf-client';
+
 class ProfilePictureCache {
   private cache = new Map<string, string | null>();
   private pendingRequests = new Map<string, Promise<string | null>>();
@@ -110,7 +112,7 @@ class ProfilePictureCache {
 
   private async fetchBatchProfilePictures(userIds: string[]): Promise<void> {
     try {
-      const response = await fetch('/api/users/profile-pictures-batch', {
+      const response = await csrfFetch('/api/users/profile-pictures-batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,9 @@ import {
   faKey,
   faTimes,
   faBookmark,
-  faBriefcase
+  faBriefcase,
+  faCompass,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons';
 
 interface SidebarNavigationProps {
@@ -43,31 +45,30 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   setIsConversationsSidebarHidden
 }) => {
   return (
-    <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} w-20 bg-black border-2 border-white rounded-none shadow-2xl flex flex-col h-full transition-transform duration-300 ${
+    <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} w-20 bg-black border border-white rounded-lg flex flex-col h-full transition-transform duration-300 ${
       isMobile ? (isSidebarVisible ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
     }`}>
-      {/* FBI Header */}
-      <div className="border-b-2 border-white bg-white text-black p-2 text-center">
+      {/* Header */}
+      <div className="border-b border-white bg-white/5 p-2">
       </div>
       
-      <div className="p-2 space-y-3">
+      <div className="p-2 space-y-2">
         {/* Home Navigation */}
         <div 
-          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/';
             }
           }}
-          title="HOME BASE"
+          title="Home"
         >
-          <FontAwesomeIcon icon={faHome} className="text-green-400 mb-1" />
-          <div className="text-xs font-mono text-white">HOME</div>
+          <FontAwesomeIcon icon={faHome} />
         </div>
         
         {/* Profile Navigation */}
         <div 
-          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/profile';
@@ -75,102 +76,107 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           }}
           title="Profile"
         >
-          <FontAwesomeIcon icon={faUser} className="text-yellow-400 mb-1" />
-          <div className="text-xs font-mono text-white">FILE</div>
+          <FontAwesomeIcon icon={faUser} />
         </div>
         
         {/* Search Navigation */}
         <div 
-          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/search';
             }
           }}
-          title="SUBJECT SEARCH"
+          title="Search"
         >
-          <FontAwesomeIcon icon={faSearch} className="text-pink-400 mb-1" />
-          <div className="text-xs font-mono text-white">SEARCH</div>
+          <FontAwesomeIcon icon={faSearch} />
         </div>
         
         {/* Catalogue Navigation */}
         <div 
-          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/catalogue';
             }
           }}
-          title="Archive"
+          title="Catalogue"
         >
-          <FontAwesomeIcon icon={faBookmark} className="text-purple-400 mb-1" />
-          <div className="text-xs font-mono text-white">ARCHIVE</div>
+          <FontAwesomeIcon icon={faBookmark} />
         </div>
         
         {/* Jobs Navigation */}
         <div 
-          className="w-14 h-14 bg-black border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/jobs';
             }
           }}
-          title="JOB OPERATIONS"
+          title="Jobs"
         >
-          <FontAwesomeIcon icon={faBriefcase} className="text-orange-400 mb-1" />
-          <div className="text-xs font-mono text-white">JOBS</div>
+          <FontAwesomeIcon icon={faBriefcase} />
         </div>
         
-        {/* First Separator */}
-        <div className="w-12 h-px bg-white mx-auto border-t border-white"></div>
+        {/* Discover Groups Navigation */}
+        <div 
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/discover-groups';
+            }
+          }}
+          title="Discover Groups"
+        >
+          <FontAwesomeIcon icon={faCompass} />
+        </div>
+        
+        {/* Separator */}
+        <div className="w-8 h-px bg-white mx-auto"></div>
         
         {/* Direct Messages Category */}
         <div 
-          className={`w-14 h-14 border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors ${
+          className={`w-12 h-12 border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             selectedCategory === 'direct' ? 'bg-white text-black' : 'bg-black text-white'
           }`}
           onClick={() => onCategoryChange('direct')}
           title="Direct Messages"
         >
-          <FontAwesomeIcon icon={faEnvelope} className={`mb-1 ${selectedCategory === 'direct' ? 'text-blue-600' : 'text-blue-400'}`} />
-          <div className="text-xs font-mono font-bold">DIRECT</div>
+          <FontAwesomeIcon icon={faEnvelope} />
         </div>
         
         {/* Groups Category */}
         <div 
-          className={`w-14 h-14 border-2 border-white rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-900 transition-colors ${
+          className={`w-12 h-12 border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
             selectedCategory === 'groups' ? 'bg-white text-black' : 'bg-black text-white'
           }`}
           onClick={() => onCategoryChange('groups')}
-          title="GROUP OPERATIONS"
+          title="Groups"
         >
-          <FontAwesomeIcon icon={faUsers} className={`mb-1 ${selectedCategory === 'groups' ? 'text-cyan-600' : 'text-cyan-400'}`} />
-          <div className="text-xs font-mono font-bold">GROUPS</div>
+          <FontAwesomeIcon icon={faUsers} />
         </div>
         
-        {/* Second Separator */}
-        <div className="w-12 h-px bg-white mx-auto border-t border-white"></div>
+        {/* Separator */}
+        <div className="w-8 h-px bg-white mx-auto"></div>
         
-        {/* Actions */}
+        {/* New Action */}
         <div 
-          className="w-14 h-14 bg-green-900 border-2 border-green-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-green-800 transition-colors"
+          className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={onNewAction}
           title={selectedCategory === 'direct' ? 'New Message' : 'Create Group'}
         >
-          <FontAwesomeIcon icon={faUserPlus} className="text-green-200 mb-1" />
-          <div className="text-xs font-mono font-bold text-green-200">NEW</div>
+          <FontAwesomeIcon icon={selectedCategory === 'direct' ? faPlus : faUserPlus} />
         </div>
         
         {/* Invitations */}
         <div 
-          className="relative w-14 h-14 bg-blue-900 border-2 border-blue-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-800 transition-colors"
+          className="relative w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
           onClick={onInvitationsClick}
           title="Invitations"
         >
-          <FontAwesomeIcon icon={faBell} className="text-blue-200 mb-1" />
-          <div className="text-xs font-mono font-bold text-blue-200">ALERTS</div>
+          <FontAwesomeIcon icon={faBell} />
           {invitationsCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-mono font-bold rounded-none h-5 w-5 flex items-center justify-center border border-white">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
               {invitationsCount}
             </span>
           )}
@@ -179,33 +185,28 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Admin Dashboard */}
         {currentUser?.is_admin && (
           <div 
-            className="w-14 h-14 bg-red-900 border-2 border-red-700 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+            className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
             onClick={() => {
               if (typeof window !== 'undefined') {
                 window.location.href = '/admindashboard';
               }
             }}
-            title="COMMAND CENTER"
+            title="Admin Dashboard"
           >
-            <FontAwesomeIcon icon={faKey} className="text-red-200 mb-1" />
-            <div className="text-xs font-mono font-bold text-red-200">ADMIN</div>
+            <FontAwesomeIcon icon={faKey} />
           </div>
         )}
         
         {/* Mobile Chat Sidebar Toggle */}
         {isMobile && (
           <div 
-            className="w-14 h-14 bg-gray-800 border-2 border-gray-600 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-700 transition-colors"
+            className="w-12 h-12 bg-black border border-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
             onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
-            title={isConversationsSidebarHidden ? "SHOW COMMS" : "HIDE COMMS"}
+            title={isConversationsSidebarHidden ? "Show Conversations" : "Hide Conversations"}
           >
             <FontAwesomeIcon 
               icon={isConversationsSidebarHidden ? faEnvelope : faTimes} 
-              className={`mb-1 ${isConversationsSidebarHidden ? "text-white" : "text-red-400"}`}
             />
-            <div className={`text-xs font-mono font-bold ${isConversationsSidebarHidden ? "text-white" : "text-red-400"}`}>
-              {isConversationsSidebarHidden ? "SHOW" : "HIDE"}
-            </div>
           </div>
         )}
       </div>
@@ -213,17 +214,16 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       {/* Bottom Navigation - Logout */}
       <div className="mt-auto p-2 pb-4">
         <div 
-          className="w-14 h-14 bg-red-900 border-2 border-red-500 rounded-none shadow-lg flex flex-col items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+          className="w-12 h-12 bg-red-900 border border-red-500 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
           onClick={async () => {
             await fetch('/api/logout', { method: 'POST' });
             if (typeof window !== 'undefined') {
               window.location.href = '/';
             }
           }}
-          title="TERMINATE SESSION"
+          title="Logout"
         >
-          <FontAwesomeIcon icon={faSignOutAlt} className="text-red-300 mb-1" />
-          <div className="text-xs font-mono font-bold text-red-300">EXIT</div>
+          <FontAwesomeIcon icon={faSignOutAlt} className="text-red-300" />
         </div>
       </div>
     </div>

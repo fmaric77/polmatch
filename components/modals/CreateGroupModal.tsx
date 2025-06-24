@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUsers, faLock } from '@fortawesome/free-solid-svg-icons';
+import { useCSRFToken } from '../hooks/useCSRFToken';
 
 interface CreateGroupModalProps {
   onClose: () => void;
@@ -15,6 +16,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onSuccess,
   activeProfileType = 'basic'
 }) => {
+  const { protectedFetch } = useCSRFToken();
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -79,7 +81,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     setError('');
 
     try {
-      const res = await fetch('/api/groups/create', {
+      const res = await protectedFetch('/api/groups/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

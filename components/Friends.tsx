@@ -2,13 +2,8 @@ import { useEffect, useState } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileModal from './ProfileModal';
 import { profilePictureCache } from '../lib/profilePictureCache';
-import { getAnonymousDisplayName, generateAnonymousId } from '../lib/anonymization';
 
-interface User {
-  user_id: string;
-  username: string;
-  display_name?: string;
-}
+type ProfileType = 'basic' | 'love' | 'business';
 
 interface FriendRequest {
   user_id: string;
@@ -16,8 +11,6 @@ interface FriendRequest {
   status: string;
   created_at: string;
 }
-
-type ProfileType = 'basic' | 'love' | 'business';
 
 export default function Friends() {
   // Profile separation state
@@ -28,11 +21,13 @@ export default function Friends() {
   const [profileIncoming, setProfileIncoming] = useState<FriendRequest[]>([]);
   const [profileOutgoing, setProfileOutgoing] = useState<FriendRequest[]>([]);
   
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [myId, setMyId] = useState<string | null>(null);
+  
+  // Cache for user display names
+  const [userDisplayNames, setUserDisplayNames] = useState<Record<string, string>>({});
   
   // Profile modal state
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -41,7 +36,6 @@ export default function Friends() {
 
   useEffect(() => {
     fetchFriends();
-    fetchUsers();
     fetchProfileFriends();
   }, []);
 
@@ -101,6 +95,9 @@ export default function Friends() {
       if (allUserIds.length > 0) {
         profilePictureCache.prefetchMultiple(allUserIds)
           .catch(err => console.warn('Error prefetching friend profile pictures:', err));
+        
+        // Fetch display names for all users
+        fetchUserDisplayNames(allUserIds);
       }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -111,37 +108,20 @@ export default function Friends() {
     }
   }
 
-  async function fetchUsers() {
+  async function fetchUserDisplayNames(userIds: string[]) {
     try {
-      const res = await fetch('/api/users/with-profiles', { credentials: 'include' });
-      const data = await res.json();
-      if (data.success) {
-        setUsers(data.users);
-
-        // Prefetch profile pictures for all users
-        const userIds = data.users.map((u: User) => u.user_id).filter(Boolean);
-        if (userIds.length > 0) {
-          profilePictureCache.prefetchMultiple(userIds)
-            .catch(err => console.warn('Error prefetching user profile pictures:', err));
-        }
-      }
-    } catch {}
-  }
-
-  async function sendRequest(friend_id: string) {
-    setActionMessage('');
-    try {
-      const res = await fetch('/api/friends/profile', {
+      const res = await fetch('/api/users/display-names', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friend_id, profile_type: activeProfileType })
+        credentials: 'include',
+        body: JSON.stringify({ userIds })
       });
       const data = await res.json();
-      setActionMessage(data.message);
-      fetchProfileFriends();
-    } catch {
-      setActionMessage('Failed to send request');
+      if (data.success) {
+        setUserDisplayNames(prev => ({ ...prev, ...data.displayNames }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch user display names:', err);
     }
   }
 
@@ -191,312 +171,197 @@ export default function Friends() {
     setSelectedUsername('');
   }
 
-  // Users not already friends or pending for current profile type
-  const availableUsers = users.filter(u =>
-    u.user_id !== myId &&
-    !profileFriends.some(f => f.user_id === u.user_id || f.friend_id === u.user_id) &&
-    !profileOutgoing.some(f => f.friend_id === u.user_id) &&
-    !profileIncoming.some(f => f.user_id === u.user_id)
-  );
-
   const getProfileTypeLabel = (type: ProfileType): string => {
     const labels = {
-      basic: 'GENERAL',
-      love: 'PERSONAL', 
-      business: 'CORPORATE'
+      basic: 'General',
+      love: 'Dating', 
+      business: 'Business'
     };
     return labels[type];
   };
 
-  const categoryColors = {
-    basic: 'bg-gray-900 hover:bg-gray-800 border-gray-700',
-    love: 'bg-red-900 hover:bg-red-800 border-red-700',
-    business: 'bg-green-900 hover:bg-green-800 border-green-700'
-  };
-
   return (
     <>
-      {/* FBI-Style Header */}
-      <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-        <div className="border-b-2 border-white bg-white text-black p-3 md:p-4 text-center">
-          <div className="font-mono text-xs mb-1">CLASSIFIED</div>
-          <h1 className="text-lg md:text-2xl font-bold tracking-widest">CONTACT NETWORK REGISTRY</h1>
-          <div className="font-mono text-xs mt-1">AUTHORIZED PERSONNEL ONLY</div>
-        </div>
-        <div className="p-3 md:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">
-            <div>
-              <div className="text-gray-400">ACTIVE CONTACTS</div>
-              <div className="text-lg md:text-xl font-bold">{profileFriends.length.toString().padStart(3, '0')}</div>
-            </div>
-            <div>
-              <div className="text-gray-400">PENDING REQUESTS</div>
-              <div className="text-lg md:text-xl font-bold">{(profileIncoming.length + profileOutgoing.length).toString().padStart(3, '0')}</div>
-            </div>
-            <div>
-              <div className="text-gray-400">CLEARANCE LEVEL</div>
-              <div className="text-lg md:text-xl font-bold text-red-400">RESTRICTED</div>
+      {/* Header */}
+      <div className="bg-black/40 border border-white/30 rounded-lg mb-6">
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-xl font-mono font-bold uppercase tracking-wider">Friends</h1>
+            <div className="text-sm font-mono text-gray-400">
+              {profileFriends.length} friends
             </div>
           </div>
           
           {/* Profile Type Selection */}
-          <div className="flex flex-col sm:flex-row justify-center gap-2 mb-4">
-            <div className="text-sm font-mono text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">SECURITY LEVEL:</div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {(['basic', 'love', 'business'] as ProfileType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setActiveProfileType(type)}
-                  className={`px-3 md:px-4 py-2 border-2 font-mono text-xs md:text-sm tracking-wider transition-all ${
-                    activeProfileType === type 
-                      ? `${categoryColors[type]} text-white`
-                      : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
-                  }`}
-                >
-                  {getProfileTypeLabel(type)}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {(['basic', 'love', 'business'] as ProfileType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => setActiveProfileType(type)}
+                className={`px-3 py-2 rounded font-mono text-xs uppercase tracking-wider transition-colors ${
+                  activeProfileType === type 
+                    ? 'bg-white text-black'
+                    : 'bg-black border border-white text-white hover:bg-white/10'
+                }`}
+              >
+                {getProfileTypeLabel(type)}
+              </button>
+            ))}
           </div>
 
           {actionMessage && (
-            <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
-              ⚠ {actionMessage.toUpperCase()}
+            <div className="mb-4 text-center text-red-400 text-sm font-mono bg-red-900/20 border border-red-500/50 rounded p-2">
+              {actionMessage}
             </div>
           )}
         </div>
       </div>
-      {/* Contact Registry Container */}
-      <div className="bg-black border-2 border-white rounded-none shadow-2xl">
+
+      {/* Friends Container */}
+      <div className="bg-black/40 border border-white/30 rounded-lg">
         {loading ? (
-          <div className="text-center py-8 md:py-12 px-4">
-            <div className="font-mono text-gray-400 mb-2 text-sm md:text-base">ACCESSING CONTACT REGISTRY...</div>
-            <div className="text-red-400 animate-pulse">● ● ●</div>
+          <div className="text-center py-8 px-4">
+            <div className="font-mono text-gray-400 mb-2 text-sm">Loading...</div>
           </div>
         ) : error ? (
-          <div className="text-center py-8 md:py-12 px-4">
-            <div className="text-red-400 font-mono text-sm md:text-base">⚠ {error.toUpperCase()}</div>
+          <div className="text-center py-8 px-4">
+            <div className="text-red-400 font-mono text-sm">{error}</div>
           </div>
         ) : (
-          <div className="p-3 md:p-6">
-            {/* Active Contacts Section */}
+          <div className="p-4">
+            {/* Friends List */}
             <div className="mb-6">
-              <div className="border-b border-white pb-2 mb-4">
-                <h3 className="font-mono text-sm md:text-base font-bold tracking-wider text-white">
-                  ACTIVE {getProfileTypeLabel(activeProfileType)} CONTACTS
-                </h3>
-              </div>
+              <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                {getProfileTypeLabel(activeProfileType)} Friends
+              </h3>
               {profileFriends.length === 0 ? (
                 <div className="text-center py-6">
-                  <div className="font-mono text-gray-400 text-xs md:text-sm">
-                    NO {getProfileTypeLabel(activeProfileType)} CONTACTS ON RECORD
+                  <div className="font-mono text-gray-400 text-sm">
+                    No friends yet
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {profileFriends.map((f, index) => {
+                  {profileFriends.map((f) => {
                     const friendId = f.user_id === myId ? f.friend_id : f.user_id;
-                    const friendUser = users.find(u => u.user_id === friendId);
+                    const displayName = userDisplayNames[friendId] || friendId;
                     return (
-                      <div key={f.user_id + f.friend_id} className="border border-gray-600 bg-gray-900/50">
-                        {/* Contact Header */}
-                        <div className="bg-white text-black p-2 font-mono text-xs flex justify-between">
-                          <span className="font-bold">CONTACT #{(index + 1).toString().padStart(3, '0')}</span>
-                          <span>LEVEL: {getProfileTypeLabel(activeProfileType)}</span>
-                        </div>
-                        
-                        {/* Contact Content */}
-                        <div className="p-3 flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="border-2 border-white bg-gray-800 p-1">
-                              <ProfileAvatar userId={friendId} size={32} className="border border-gray-600" />
-                            </div>
-                            <div className="font-mono">
-                              <button 
-                                onClick={() => openProfileModal(friendId, getAnonymousDisplayName(friendUser?.display_name, friendUser?.username, friendId))}
-                                className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
-                              >
-                                {getAnonymousDisplayName(friendUser?.display_name, friendUser?.username, friendId)}
-                              </button>
-                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(friendId)}</div>
-                            </div>
+                      <div key={f.user_id + f.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <ProfileAvatar userId={friendId} size={32} />
+                          <div className="font-mono">
+                            <button 
+                              onClick={() => openProfileModal(friendId, displayName)}
+                              className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
+                            >
+                              {displayName}
+                            </button>
                           </div>
+                        </div>
+                        <button 
+                          onClick={() => removeFriend(friendId)} 
+                          className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors rounded"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Incoming Requests */}
+            {profileIncoming.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                  Friend Requests
+                </h3>
+                <div className="space-y-3">
+                  {profileIncoming.map((req) => {
+                    const displayName = userDisplayNames[req.user_id] || req.user_id;
+                    return (
+                      <div key={req.user_id + req.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <ProfileAvatar userId={req.user_id} size={32} />
+                          <div className="font-mono">
+                            <button 
+                              onClick={() => openProfileModal(req.user_id, displayName)}
+                              className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
+                            >
+                              {displayName}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
                           <button 
-                            onClick={() => removeFriend(friendId)} 
-                            className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+                            onClick={() => respondRequest(req.user_id, 'accept')} 
+                            className="px-3 py-1 bg-green-900 text-white font-mono text-xs border border-green-700 hover:bg-green-800 transition-colors rounded"
                           >
-                            TERMINATE LINK
+                            Accept
+                          </button>
+                          <button 
+                            onClick={() => respondRequest(req.user_id, 'reject')} 
+                            className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors rounded"
+                          >
+                            Decline
                           </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
-            {/* Incoming Requests Section */}
-            <div className="mb-6">
-              <div className="border-b border-white pb-2 mb-4">
-                <h3 className="font-mono text-sm md:text-base font-bold tracking-wider text-white">
-                  INCOMING {getProfileTypeLabel(activeProfileType)} CLEARANCE REQUESTS
-                </h3>
               </div>
-              {profileIncoming.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="font-mono text-gray-400 text-xs md:text-sm">
-                    NO INCOMING {getProfileTypeLabel(activeProfileType)} REQUESTS
-                  </div>
-                </div>
-              ) : (
+            )}
+
+            {/* Outgoing Requests */}
+            {profileOutgoing.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                  Sent Requests
+                </h3>
                 <div className="space-y-3">
-                  {profileIncoming.map((req, index) => {
-                    const fromUser = users.find(u => u.user_id === req.user_id);
+                  {profileOutgoing.map((req) => {
+                    const displayName = userDisplayNames[req.friend_id] || req.friend_id;
                     return (
-                      <div key={req.user_id + req.friend_id} className="border border-gray-600 bg-gray-900/50">
-                        {/* Request Header */}
-                        <div className="bg-yellow-900 text-white p-2 font-mono text-xs flex justify-between border-b border-yellow-700">
-                          <span className="font-bold">REQUEST #{(index + 1).toString().padStart(3, '0')}</span>
-                          <span>STATUS: PENDING</span>
-                        </div>
-                        
-                        {/* Request Content */}
-                        <div className="p-3 flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="border-2 border-white bg-gray-800 p-1">
-                              <ProfileAvatar userId={req.user_id} size={32} className="border border-gray-600" />
-                            </div>
-                            <div className="font-mono">
-                              <button 
-                                onClick={() => openProfileModal(req.user_id, getAnonymousDisplayName(fromUser?.display_name, fromUser?.username, req.user_id))}
-                                className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
-                              >
-                                {getAnonymousDisplayName(fromUser?.display_name, fromUser?.username, req.user_id)}
-                              </button>
-                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(req.user_id)}</div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <button 
-                              onClick={() => respondRequest(req.user_id, 'accept')} 
-                              className="px-3 py-1 bg-green-900 text-white font-mono text-xs border border-green-700 hover:bg-green-800 transition-colors tracking-wider"
-                            >
-                              APPROVE
-                            </button>
-                            <button 
-                              onClick={() => respondRequest(req.user_id, 'reject')} 
-                              className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors tracking-wider"
-                            >
-                              DENY
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            {/* Outgoing Requests Section */}
-            <div className="mb-6">
-              <div className="border-b border-white pb-2 mb-4">
-                <h3 className="font-mono text-sm md:text-base font-bold tracking-wider text-white">
-                  OUTGOING {getProfileTypeLabel(activeProfileType)} CLEARANCE REQUESTS
-                </h3>
-              </div>
-              {profileOutgoing.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="font-mono text-gray-400 text-xs md:text-sm">
-                    NO OUTGOING {getProfileTypeLabel(activeProfileType)} REQUESTS
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {profileOutgoing.map((req, index) => {
-                    const toUser = users.find(u => u.user_id === req.friend_id);
-                    return (
-                      <div key={req.user_id + req.friend_id} className="border border-gray-600 bg-gray-900/50">
-                        {/* Request Header */}
-                        <div className="bg-blue-900 text-white p-2 font-mono text-xs flex justify-between border-b border-blue-700">
-                          <span className="font-bold">SENT #{(index + 1).toString().padStart(3, '0')}</span>
-                          <span>STATUS: AWAITING RESPONSE</span>
-                        </div>
-                        
-                        {/* Request Content */}
-                        <div className="p-3 flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="border-2 border-white bg-gray-800 p-1">
-                              <ProfileAvatar userId={req.friend_id} size={32} className="border border-gray-600" />
-                            </div>
-                            <div className="font-mono">
-                              <button 
-                                onClick={() => openProfileModal(req.friend_id, getAnonymousDisplayName(toUser?.display_name, toUser?.username, req.friend_id))}
-                                className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
-                              >
-                                {getAnonymousDisplayName(toUser?.display_name, toUser?.username, req.friend_id)}
-                              </button>
-                              <div className="text-xs text-gray-400">ID: {generateAnonymousId(req.friend_id)}</div>
-                            </div>
-                          </div>
-                          <div className="text-yellow-400 font-mono text-xs tracking-wider">
-                            PENDING APPROVAL
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            {/* Add New Contacts Section */}
-            <div>
-              <div className="border-b border-white pb-2 mb-4">
-                <h3 className="font-mono text-sm md:text-base font-bold tracking-wider text-white">
-                  ESTABLISH NEW {getProfileTypeLabel(activeProfileType)} CONTACT
-                </h3>
-              </div>
-              {availableUsers.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="font-mono text-gray-400 text-xs md:text-sm">
-                    NO SUBJECTS AVAILABLE FOR {getProfileTypeLabel(activeProfileType)} CONTACT
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {availableUsers.map((u, index) => (
-                    <div key={u.user_id} className="border border-gray-600 bg-gray-900/50">
-                      {/* Subject Header */}
-                      <div className="bg-white text-black p-2 font-mono text-xs flex justify-between">
-                        <span className="font-bold">SUBJECT #{(index + 1).toString().padStart(3, '0')}</span>
-                        <span>CLEARANCE: UNVERIFIED</span>
-                      </div>
-                      
-                      {/* Subject Content */}
-                      <div className="p-3 flex items-center justify-between">
+                      <div key={req.user_id + req.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="border-2 border-white bg-gray-800 p-1">
-                            <ProfileAvatar userId={u.user_id} size={32} className="border border-gray-600" />
-                          </div>
+                          <ProfileAvatar userId={req.friend_id} size={32} />
                           <div className="font-mono">
                             <button 
-                              onClick={() => openProfileModal(u.user_id, getAnonymousDisplayName(u.display_name, u.username, u.user_id))}
+                              onClick={() => openProfileModal(req.friend_id, displayName)}
                               className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                             >
-                              {getAnonymousDisplayName(u.display_name, u.username, u.user_id)}
+                              {displayName}
                             </button>
-                            <div className="text-xs text-gray-400">ID: {generateAnonymousId(u.user_id)}</div>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => sendRequest(u.user_id)} 
-                          className="px-3 py-1 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
-                        >
-                          INITIATE CONTACT
-                        </button>
+                        <div className="text-yellow-400 font-mono text-xs">
+                          Pending
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Add Friends */}
+            <div>
+              <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                Add Friends
+              </h3>
+              <div className="text-center py-6">
+                <div className="font-mono text-gray-400 text-sm mb-4">
+                  Search for users to add as friends
+                </div>
+                <a 
+                  href="/search" 
+                  className="inline-block px-4 py-2 bg-white text-black font-mono text-sm rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                >
+                  Search Users
+                </a>
+              </div>
             </div>
           </div>
         )}

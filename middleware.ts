@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkCSRFToken, createCSRFErrorResponse } from './lib/csrf-protection';
 
 // In-memory cache for IP ban status
 interface BanCacheEntry {
@@ -165,6 +166,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return addSecurityHeaders(response);
   }
 
+  // CSRF Protection for API routes
+  if (pathname.startsWith('/api/')) {
+    const csrfCheck = checkCSRFToken(request);
+    if (!csrfCheck.valid) {
+      console.warn(`CSRF validation failed for ${pathname}: ${csrfCheck.error}`);
+      return createCSRFErrorResponse(csrfCheck.error || 'CSRF validation failed');
+    }
+  }
+
   // Get client IP address
   const clientIP = getClientIP(request);
 
@@ -198,17 +208,34 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
+            text-align: center;
           }
           .skull {
             font-size: 8rem;
-            margin-bottom: 2rem;
-            text-shadow: 0 0 16px #fff;
+            animation: pulse 2s ease-in-out infinite;
+          }
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+          .message {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+          }
+          audio {
+            margin-top: 2rem;
           }
         </style>
       </head>
       <body>
         <div class="skull">💀</div>
-        <audio src="/sounds/ww.mp3" autoplay loop></audio>
+        <div class="message">Access Denied</div>
+        <audio autoplay loop>
+          <source src="/sounds/skull.mp3" type="audio/mpeg">
+        </audio>
       </body>
       </html>
       `,
@@ -216,14 +243,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         status: 403,
         headers: {
           'Content-Type': 'text/html',
-          'X-XSS-Protection': '1; mode=block',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'DENY',
-        },
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       }
     );
   }
 
+  // Continue with the request
   const response = NextResponse.next();
   return addSecurityHeaders(response);
 }

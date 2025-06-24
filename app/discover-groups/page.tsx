@@ -103,9 +103,7 @@ export default function DiscoverGroups() {
       if (data.success) {
         // Remove the joined group from the list
         setGroups(prev => prev.filter(group => group.group_id !== groupId));
-        // Show success message with FBI terminology
         setError(''); // Clear any previous errors
-        // You could add a success message state here if desired
       } else {
         setError(data.error || 'Failed to join group');
       }
@@ -136,135 +134,108 @@ export default function DiscoverGroups() {
       <Navigation currentPage="discover" />
       
       <main className="flex-1 flex flex-col overflow-y-auto">
-        <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
+        <div className="w-full max-w-6xl mx-auto mt-4 lg:mt-6 p-4 lg:p-6 pb-8">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white mb-2">Discover Groups</h1>
+            <p className="text-gray-400 text-sm">Find and join public groups that match your interests</p>
+          </div>
+
           {/* Search Section */}
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-            <div className="p-3 md:p-6">
-              {/* Search Section */}
-              <div className="mb-4">
-                <div className="text-xs font-mono text-gray-400 mb-2 text-center">SEARCH GROUPS:</div>
-                <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="GROUP NAME, DESCRIPTION, OR TOPIC..."
-                      className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-4 md:px-6 py-3 bg-white text-black font-mono text-xs md:text-sm tracking-wider hover:bg-gray-200 transition-colors"
-                  >
-                    SEARCH
-                  </button>
-                </form>
-              </div>
+          <div className="bg-black/40 border border-white/30 rounded-lg mb-6">
+            <div className="p-4">
+              <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search groups..."
+                    className="w-full p-3 bg-black text-white border border-white/30 rounded text-sm focus:outline-none focus:border-white/60"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors"
+                >
+                  Search
+                </button>
+              </form>
 
               {error && (
-                <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
-                  ⚠ {error.toUpperCase()}
-                </div>
-              )}
-              {error && (
-                <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
-                  ⚠ {error}
+                <div className="mt-3 text-center text-red-400 text-sm bg-red-900/20 border border-red-400/50 rounded p-2">
+                  {error}
                 </div>
               )}
             </div>
           </div>
 
           {/* Groups Container */}
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl">
+          <div className="bg-black/40 border border-white/30 rounded-lg">
             {loading ? (
-              <div className="text-center py-8 md:py-12 px-4">
-                <div className="font-mono text-gray-400 mb-2 text-sm md:text-base">LOADING GROUPS...</div>
-                <div className="text-red-400 animate-pulse">● ● ●</div>
+              <div className="text-center py-12 px-4">
+                <div className="text-gray-400 mb-2">Loading groups...</div>
+                <div className="text-white/60 animate-pulse">● ● ●</div>
               </div>
             ) : groups.length === 0 ? (
-              <div className="text-center py-8 md:py-12 px-4">
-                <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  {searchQuery ? `NO GROUPS MATCHING "${searchQuery.toUpperCase()}"` : 'NO GROUPS FOUND'}
+              <div className="text-center py-12 px-4">
+                <div className="text-gray-400 mb-4">
+                  {searchQuery ? `No groups found matching &quot;${searchQuery}&quot;` : 'No groups available'}
                 </div>
-                <div className="text-xs md:text-sm text-gray-500 font-mono">
-                  {searchQuery ? 'TRY DIFFERENT SEARCH TERMS' : 'BE THE FIRST TO CREATE A GROUP'}
+                <div className="text-sm text-gray-500">
+                  {searchQuery ? 'Try different search terms' : 'Be the first to create a group'}
                 </div>
               </div>
             ) : (
-              <div className="p-3 md:p-6">
+              <div className="p-4">
                 {/* Results Info */}
-                <div className="mb-4 md:mb-6 text-center">
-                  <div className="text-xs md:text-sm font-mono text-gray-400 mb-2">
-                    SHOWING {groups.length} OF {pagination.totalCount} GROUPS
+                <div className="mb-6 text-center">
+                  <div className="text-sm text-gray-400 mb-1">
+                    {groups.length} of {pagination.totalCount} groups
                     {searchQuery && (
-                      <span className="block sm:inline sm:ml-2">MATCHING &quot;{searchQuery.toUpperCase()}&quot;</span>
+                      <span className="ml-2">matching &quot;{searchQuery}&quot;</span>
                     )}
                   </div>
-                  <div className="text-xs font-mono text-gray-500">
-                    PAGE {pagination.currentPage} OF {pagination.totalPages}
+                  <div className="text-xs text-gray-500">
+                    Page {pagination.currentPage} of {pagination.totalPages}
                   </div>
                 </div>
 
-                {/* Networks Grid */}
-                <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {groups.map((group, index) => (
-                    <div key={group.group_id} className="border border-gray-600 bg-gray-900/50 relative">
-                      {/* Network Header */}
-                      <div className="bg-white text-black p-2 font-mono text-xs">
-                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                            <span className="font-bold">GROUP #{(index + 1).toString().padStart(3, '0')}</span>
-                            <span className="text-xs">STATUS: PUBLIC</span>
-                          </div>
-                          <div className="text-xs">
-                            MEMBERS: {group.members_count.toString().padStart(3, '0')}
-                          </div>
-                        </div>
-                      </div>
-                      
+                {/* Groups Grid */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {groups.map((group) => (
+                    <div key={group.group_id} className="border border-white/30 bg-black/60 rounded-lg overflow-hidden">
                       {/* Group Content */}
-                      <div className="p-3 md:p-4">
-                        {/* Group Info */}
-                        <div className="mb-4">
-                          <div className="font-mono text-sm md:text-base font-bold text-white mb-2 tracking-wider">
-                            {group.name.toUpperCase()}
-                          </div>
+                      <div className="p-4">
+                        {/* Group Name */}
+                        <div className="mb-3">
+                          <h3 className="text-lg font-semibold text-white mb-1">
+                            {group.name}
+                          </h3>
                           {group.topic && (
-                            <div className="text-xs font-mono text-gray-400 mb-2">
-                              TOPIC: {group.topic.toUpperCase()}
+                            <div className="text-xs text-gray-400 mb-2">
+                              {group.topic}
                             </div>
                           )}
-                          <div className="text-xs md:text-sm text-gray-300 leading-relaxed mb-3">
-                            {group.description || 'NO DESCRIPTION PROVIDED'}
-                          </div>
+                          <p className="text-sm text-gray-300 leading-relaxed">
+                            {group.description || 'No description available'}
+                          </p>
                         </div>
 
                         {/* Group Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs font-mono mb-4">
-                          <div>
-                            <span className="text-gray-400">MEMBERS:</span>
-                            <div className="text-white font-bold">{group.members_count}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">CREATED:</span>
-                            <div className="text-white">{formatDate(group.creation_date).toUpperCase()}</div>
-                          </div>
+                        <div className="flex justify-between text-xs text-gray-400 mb-4">
+                          <span>{group.members_count} members</span>
+                          <span>created {formatDate(group.creation_date)}</span>
                         </div>
 
                         {/* Join Group Button */}
                         <button
                           onClick={() => handleJoinGroup(group.group_id)}
                           disabled={joiningGroupId === group.group_id}
-                          className="w-full py-2 px-3 bg-white text-black font-mono text-xs md:text-sm tracking-wider hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full py-2 px-3 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {joiningGroupId === group.group_id ? 'JOINING...' : 'JOIN GROUP'}
+                          {joiningGroupId === group.group_id ? 'Joining...' : 'Join Group'}
                         </button>
-                      </div>
-                      
-                      {/* Public Footer */}
-                      <div className="bg-green-900 text-white p-1 text-xs font-mono text-center border-t border-green-700">
-                        ⚠ PUBLIC GROUP - OPEN ACCESS ⚠
                       </div>
                     </div>
                   ))}
@@ -272,25 +243,25 @@ export default function DiscoverGroups() {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mt-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
                     <button
                       onClick={() => handlePageChange(pagination.currentPage - 1)}
                       disabled={!pagination.hasPrev}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white text-black font-mono text-xs tracking-wider hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      ◄ PREVIOUS
+                      ← Previous
                     </button>
                     
-                    <span className="text-xs font-mono text-gray-400 px-2">
-                      PAGE {pagination.currentPage} OF {pagination.totalPages}
+                    <span className="text-sm text-gray-400 px-3">
+                      Page {pagination.currentPage} of {pagination.totalPages}
                     </span>
                     
                     <button
                       onClick={() => handlePageChange(pagination.currentPage + 1)}
                       disabled={!pagination.hasNext}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white text-black font-mono text-xs tracking-wider hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      NEXT ►
+                      Next →
                     </button>
                   </div>
                 )}

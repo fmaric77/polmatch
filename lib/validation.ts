@@ -94,6 +94,12 @@ export function validateEmail(email: unknown): ValidationResult {
     return { isValid: false, error: 'Email is too long' };
   }
   
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: 'Invalid email format' };
+  }
+  
   return { isValid: true };
 }
 
@@ -116,11 +122,31 @@ export function validatePassword(password: unknown): ValidationResult {
   if (!password || typeof password !== 'string') {
     return { isValid: false, error: 'Password is required' };
   }
-  
-  if (password.length > 128) {
+  const str = password as string;
+  if (str.length < 6) {
+    return { isValid: false, error: 'Password must be at least 6 characters' };
+  }
+  if (str.length > 128) {
     return { isValid: false, error: 'Password is too long' };
   }
-  
+
+  // Require at least one number
+  if (!/\d/.test(str)) {
+    return { isValid: false, error: 'Password must contain at least one number' };
+  }
+  // Require at least one special character
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(str)) {
+    return { isValid: false, error: 'Password must contain at least one special character' };
+  }
+  // Block common password patterns
+  const lower = str.toLowerCase();
+  const common = ['password', '123456', '12345678', 'qwerty', 'abc123', 'password123', '123456789'];
+  for (const pat of common) {
+    if (lower.includes(pat)) {
+      return { isValid: false, error: 'Password is too common' };
+    }
+  }
+
   return { isValid: true };
 }
 

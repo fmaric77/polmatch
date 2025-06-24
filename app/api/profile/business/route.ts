@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { MongoClient } from 'mongodb';
-import MONGODB_URI from '../../mongo-uri';
 import { v4 as uuidv4 } from 'uuid';
+import { validateImageUrl } from '../../../../lib/image-validation';
 
-const client = new MongoClient(MONGODB_URI);
+const client = new MongoClient(process.env.MONGODB_URI!);
 
 export async function GET() {
   try {
@@ -38,6 +38,18 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     const user_id = session.user_id;
     const data = await request.json();
+    
+    // Validate image URL if provided
+    if (data.profile_picture_url && data.profile_picture_url.trim()) {
+      const imageValidation = validateImageUrl(data.profile_picture_url.trim());
+      if (!imageValidation.isValid) {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Invalid image URL: ${imageValidation.error}` 
+        }, { status: 400 });
+      }
+    }
+    
     // Ensure required fields
     const profile = await db.collection('businessprofiles').findOne({ user_id });
     const profile_id = profile?.profile_id || data.profile_id || uuidv4();
@@ -46,7 +58,7 @@ export async function POST(request: Request) {
       user_id,
       display_name: data.display_name || '',
       bio: data.bio || '',
-      profile_picture_url: data.profile_picture_url || '',
+      profile_picture_url: data.profile_picture_url ? data.profile_picture_url.trim() : '',
       visibility: data.visibility || 'public',
       ai_excluded: data.ai_excluded || false,
       last_updated: new Date().toISOString(),

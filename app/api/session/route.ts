@@ -26,6 +26,7 @@ export async function GET(): Promise<NextResponse> {
         is_admin: auth.user.is_admin,
         is_superadmin: auth.user.is_superadmin,
         account_status: auth.user.account_status,
+        two_factor_enabled: auth.user.two_factor_enabled || false,
       }
     });
   } catch (err) {

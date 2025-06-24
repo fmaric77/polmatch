@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { Db } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import speakeasy from 'speakeasy';
+import CryptoJS from 'crypto-js';
 import { connectToDatabase } from '../../../lib/mongodb-connection';
 import { 
   validateEmail, 
@@ -10,6 +12,8 @@ import {
   createValidationErrorResponse
 } from '../../../lib/validation';
 import { createSession, cleanupExpiredSessions } from '../../../lib/auth';
+
+const SECRET_KEY = process.env.SECRET_KEY || 'default-secret-key';
 
 // Brute force protection configuration
 const BRUTE_FORCE_CONFIG = {
@@ -158,20 +162,24 @@ export async function POST(request: Request) {
     let body;
     try {
       body = await request.json();
-      console.log('Request body parsed:', { email: body.email ? 'provided' : 'missing', password: body.password ? 'provided' : 'missing' });
+      console.log('Request body parsed:', { 
+        email: body.email ? 'provided' : 'missing', 
+        password: body.password ? 'provided' : 'missing',
+        twoFactorCode: body.twoFactorCode ? 'provided' : 'missing'
+      });
     } catch {
       console.log('Failed to parse JSON request body');
       return createValidationErrorResponse('Invalid JSON in request body', 400);
     }
 
-    // Validate request structure
-    const bodyValidation = validateRequestBody(body, ['email', 'password'], []);
+    // Validate request structure - twoFactorCode is optional
+    const bodyValidation = validateRequestBody(body, ['email', 'password'], ['twoFactorCode']);
     if (!bodyValidation.isValid) {
       console.log('Body validation failed:', bodyValidation.error);
       return createValidationErrorResponse(bodyValidation.error!, 400);
     }
 
-    const { email, password } = body;
+    const { email, password, twoFactorCode } = body;
     console.log('Email and password extracted from body');
 
     // Validate email format
@@ -297,6 +305,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Invalid email or password' }, { status: 401 });
     }
 
+    // Check if 2FA is enabled for this user
+    if (user.two_factor_enabled && user.two_factor_secret) {
+      if (!twoFactorCode) {
+        return NextResponse.json({ 
+          success: false, 
+          requires2FA: true,
+          message: 'Two-factor authentication code required' 
+        }, { status: 200 });
+      }
+
+      // Validate 2FA code format
+      if (twoFactorCode.length !== 6 || !/^\d{6}$/.test(twoFactorCode)) {
+        await recordFailedAttempt(db, email, ip_address, user_agent);
+        return NextResponse.json({ 
+          success: false, 
+          requires2FA: true,
+          message: 'Invalid 2FA code format. Please enter a 6-digit code.' 
+        }, { status: 401 });
+      }
+
+      // Decrypt the user's 2FA secret
+      const decryptedSecret = CryptoJS.AES.decrypt(user.two_factor_secret, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+
+      // Verify the 2FA code
+      const verified = speakeasy.totp.verify({
+        secret: decryptedSecret,
+        encoding: 'base32',
+        token: twoFactorCode,
+        window: 1 // Allow 1 step of time drift (30 seconds)
+      });
+
+      if (!verified) {
+        await recordFailedAttempt(db, email, ip_address, user_agent);
+        return NextResponse.json({ 
+          success: false, 
+          requires2FA: true,
+          message: 'Invalid 2FA code. Please try again.' 
+        }, { status: 401 });
+      }
+    }
+
     // Successful login - clear any failed attempts
     await clearFailedAttempts(db, email, ip_address);
 
@@ -341,7 +390,8 @@ export async function POST(request: Request) {
       email: user.email,
       ip_address,
       user_agent,
-      timestamp: new Date()
+      timestamp: new Date(),
+      two_factor_used: !!user.two_factor_enabled
     });
 
     return NextResponse.json({
@@ -353,6 +403,7 @@ export async function POST(request: Request) {
         is_admin: user.is_admin,
         is_superadmin: user.is_superadmin,
         account_status: user.account_status,
+        two_factor_enabled: user.two_factor_enabled || false,
       },
     });
   } catch (err) {

@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Polmatch - Messsinger",
+  title: "Polmatch - Messenger",
   description: "A simple communication platform",
 };
 

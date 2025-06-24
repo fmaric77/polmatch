@@ -9,11 +9,12 @@ import {
   faEnvelope, 
   faSignOutAlt,
   faKey,
-  faUsers,
   faBookmark,
-  faBriefcase
+  faBriefcase,
+  faCompass
 } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 interface NavigationProps {
   currentPage?: string;
@@ -22,6 +23,7 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
+  const { protectedFetch } = useCSRFToken();
 
   useEffect(() => {
     async function checkAdmin() {
@@ -39,6 +41,17 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
   const isActive = (page: string): boolean => {
     if (currentPage) return currentPage === page;
     return pathname === `/${page}` || (page === 'frontpage' && pathname === '/frontpage');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await protectedFetch('/api/logout', { method: 'POST' });
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if logout fails, redirect to login page
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -121,7 +134,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/discover-groups'}
           title="Discover Groups"
         >
-          <FontAwesomeIcon icon={faUsers} />
+          <FontAwesomeIcon icon={faCompass} />
         </div>
 
         {/* Admin Dashboard */}
@@ -142,10 +155,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
       <div className="mt-auto p-2 pb-4">
         <div 
           className="w-12 h-12 bg-red-900 border border-red-500 rounded-none flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
-          onClick={async () => {
-            await fetch('/api/logout', { method: 'POST' });
-            window.location.href = '/';
-          }}
+          onClick={handleLogout}
           title="Logout"
         >
           <FontAwesomeIcon icon={faSignOutAlt} className="text-red-300" />
