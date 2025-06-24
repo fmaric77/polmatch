@@ -49,7 +49,7 @@ const TwoFactorSettings: React.FC<TwoFactorSettingsProps> = ({ currentUser }) =>
         setError(data.error);
       } else {
         setQrCode(data.qrCode);
-        setManualKey(data.manualKey);
+        setManualKey(data.manualEntryKey); // Fixed: was data.manualKey
         setShowSetup(true);
       }
     } catch {

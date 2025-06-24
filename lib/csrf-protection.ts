@@ -1,94 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 
-// CSRF token cache - in production you'd want to use Redis or database
-const csrfTokens = new Map<string, {
-  sessionId: string;
-  expires: number;
-  used: boolean;
-}>();
+/*
+  Stateless CSRF protection --------------------------------------------------
+  A cryptographically-signed token includes:
+    sessionId :  The user session this token belongs to
+    expires   :  Absolute expiry timestamp (ms)
+    mac       :  HMAC-SHA256(sessionId:expires, secret)
+  The token is base64url-encoded so it is safe for HTTP headers.
+  Because the token is self-validating we do *not* need any server-side cache
+  and the logic works in development, serverless, edge and multi-process envs.
+*/
 
-// Token expiry time (30 minutes)
-const TOKEN_EXPIRY = 30 * 60 * 1000;
+const TOKEN_TTL_MS = 30 * 60 * 1000;     // 30 minutes
+const CSRF_SECRET = process.env.CSRF_SECRET || 'dev-secret';
 
-// Cleanup interval (5 minutes)
-const CLEANUP_INTERVAL = 5 * 60 * 1000;
+function b64uEncode(str: string): string {
+  return Buffer.from(str, 'utf8').toString('base64url');
+}
+function b64uDecode(str: string): string {
+  return Buffer.from(str, 'base64url').toString('utf8');
+}
 
-/**
- * Generate a secure CSRF token
- */
+function hmac(payload: string): string {
+  return CryptoJS.HmacSHA256(payload, CSRF_SECRET).toString(CryptoJS.enc.Hex);
+}
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let res = 0;
+  for (let i = 0; i < a.length; i++) {
+    res |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return res === 0;
+}
+
 export function generateCSRFToken(sessionId: string): string {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = Date.now() + TOKEN_EXPIRY;
-  
-  csrfTokens.set(token, {
-    sessionId,
-    expires,
-    used: false
-  });
-  
-  return token;
+  const expires = Date.now() + TOKEN_TTL_MS;
+  const payload = `${sessionId}:${expires}`;
+  const mac = hmac(payload);
+  return b64uEncode(`${payload}:${mac}`);
 }
 
-/**
- * Validate CSRF token
- */
 export function validateCSRFToken(token: string, sessionId: string): boolean {
-  const tokenData = csrfTokens.get(token);
-  
-  if (!tokenData) {
+  let decoded: string;
+  try {
+    decoded = b64uDecode(token);
+  } catch {
     return false;
   }
-  
-  // Check if token has expired
-  if (Date.now() > tokenData.expires) {
-    csrfTokens.delete(token);
-    return false;
-  }
-  
-  // Check if token belongs to the session
-  if (tokenData.sessionId !== sessionId) {
-    return false;
-  }
-  
-  // Mark token as used (optional: implement one-time use)
-  // tokenData.used = true;
-  
-  return true;
+
+  const [sid, expStr, mac] = decoded.split(':');
+  if (!sid || !expStr || !mac) return false;
+  if (sid !== sessionId) return false;
+
+  const exp = Number(expStr);
+  if (!exp || Date.now() > exp) return false;
+
+  const expectedMac = hmac(`${sid}:${exp}`);
+  return safeEqual(mac, expectedMac);
 }
 
-/**
- * Clean up expired tokens
- */
-function cleanupExpiredTokens(): void {
-  const now = Date.now();
-  for (const [token, data] of csrfTokens.entries()) {
-    if (now > data.expires) {
-      csrfTokens.delete(token);
-    }
-  }
-}
+/* ------------------------------------------------------------------------- */
 
-// Set up periodic cleanup
-if (typeof globalThis !== 'undefined') {
-  setInterval(cleanupExpiredTokens, CLEANUP_INTERVAL);
-}
-
-/**
- * Middleware to check CSRF token for state-changing operations
- */
 export function checkCSRFToken(request: NextRequest): { valid: boolean; error?: string } {
   const method = request.method;
-  
-  // Only check CSRF for state-changing methods
+
+  // Only protect state-changing methods
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     return { valid: true };
   }
-  
-  // Skip CSRF check for certain endpoints
+
+  // Skip CSRF for some public endpoints
   const pathname = request.nextUrl.pathname;
-  const skipCSRFPaths = [
+  const skip = [
     '/api/login',
     '/api/auth/register',
     '/api/logout',
@@ -98,76 +84,48 @@ export function checkCSRFToken(request: NextRequest): { valid: boolean; error?: 
     '/api/sse',
     '/api/users/profile-pictures-batch'
   ];
-  
-  if (skipCSRFPaths.some(path => pathname.startsWith(path))) {
+  if (skip.some(p => pathname.startsWith(p))) {
     return { valid: true };
   }
-  
-  // Get CSRF token from header
+
   const csrfToken = request.headers.get('x-csrf-token');
-  if (!csrfToken) {
-    return { valid: false, error: 'CSRF token missing' };
-  }
-  
-  // Get session ID from cookies
+  if (!csrfToken) return { valid: false, error: 'CSRF token missing' };
+
   const cookieHeader = request.headers.get('cookie');
-  if (!cookieHeader) {
-    return { valid: false, error: 'Session cookie missing' };
-  }
-  
-  const sessionMatch = cookieHeader.match(/session=([^;]+)/);
-  if (!sessionMatch) {
-    return { valid: false, error: 'Session token missing' };
-  }
-  
-  const sessionId = sessionMatch[1];
-  
+  if (!cookieHeader) return { valid: false, error: 'Session cookie missing' };
+
+  const m = cookieHeader.match(/session=([^;]+)/);
+  if (!m) return { valid: false, error: 'Session token missing' };
+  const sessionId = m[1];
+
   if (!validateCSRFToken(csrfToken, sessionId)) {
     return { valid: false, error: 'Invalid CSRF token' };
   }
-  
+
   return { valid: true };
 }
 
-/**
- * API handler to generate CSRF tokens
- */
 export async function handleCSRFTokenRequest(): Promise<NextResponse> {
-  try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    
-    if (!sessionToken) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
-    }
-    
-    const csrfToken = generateCSRFToken(sessionToken);
-    
-    return NextResponse.json({ 
-      csrfToken,
-      expires: Date.now() + TOKEN_EXPIRY
-    });
-  } catch (error) {
-    console.error('Error generating CSRF token:', error);
-    return NextResponse.json({ error: 'Failed to generate CSRF token' }, { status: 500 });
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('session')?.value;
+  if (!sessionToken) {
+    return NextResponse.json({ error: 'No session found' }, { status: 401 });
   }
+
+  const csrfToken = generateCSRFToken(sessionToken);
+  return NextResponse.json({ csrfToken, expires: Date.now() + TOKEN_TTL_MS });
 }
 
-/**
- * Helper function to create CSRF error response
- */
 export function createCSRFErrorResponse(error: string): NextResponse {
   return NextResponse.json(
-    { 
-      success: false, 
+    {
+      success: false,
       message: 'CSRF validation failed',
-      error: error 
-    }, 
-    { 
+      error
+    },
+    {
       status: 403,
-      headers: {
-        'X-CSRF-Error': error
-      }
+      headers: { 'X-CSRF-Error': error }
     }
   );
 }

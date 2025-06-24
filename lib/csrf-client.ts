@@ -69,13 +69,43 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
       
       // Add CSRF token to headers
       const headers = new Headers(options.headers);
-      headers.set('X-CSRF-Token', token);
+      headers.set('x-csrf-token', token);
       
       options = {
         ...options,
         headers,
         credentials: 'include' // Ensure cookies are sent
       };
+      
+      // Make the request
+      const response = await fetch(url, options);
+      
+      // If CSRF failed due to server restart, retry once with fresh token
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.includes('CSRF token cache empty') || 
+            errorData.error?.includes('server may have restarted') ||
+            errorData.error?.includes('development hot-reload detected')) {
+          console.log('CSRF cache was cleared, retrying with fresh token...');
+          
+          // Clear our cached token and get a fresh one
+          clearCSRFToken();
+          const freshToken = await getCSRFToken();
+          
+          // Update headers with fresh token
+          const freshHeaders = new Headers(options.headers);
+          freshHeaders.set('x-csrf-token', freshToken);
+          
+          // Retry the request
+          return fetch(url, {
+            ...options,
+            headers: freshHeaders
+          });
+        }
+      }
+      
+      return response;
+      
     } catch (error) {
       if (error instanceof Error && error.message === 'NO_SESSION') {
         console.log('No session available for CSRF token - proceeding without CSRF protection');

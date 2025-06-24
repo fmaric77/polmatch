@@ -4,7 +4,10 @@ import { cookies } from 'next/headers';
 import CryptoJS from 'crypto-js';
 import MONGODB_URI from '../../mongo-uri';
 
-const SECRET_KEY = process.env.SECRET_KEY || 'default-secret-key';
+const SECRET_KEY = process.env.SECRET_KEY as string;
+if (!SECRET_KEY) {
+  throw new Error('SECRET_KEY environment variable is not defined');
+}
 
 // Helper function to get sorted participant IDs for consistent conversation identification
 function getSortedParticipants(userId1: string, userId2: string): string[] {

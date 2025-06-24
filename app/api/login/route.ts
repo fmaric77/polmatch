@@ -13,7 +13,10 @@ import {
 } from '../../../lib/validation';
 import { createSession, cleanupExpiredSessions } from '../../../lib/auth';
 
-const SECRET_KEY = process.env.SECRET_KEY || 'default-secret-key';
+const SECRET_KEY = process.env.SECRET_KEY as string;
+if (!SECRET_KEY) {
+  throw new Error('SECRET_KEY environment variable is not defined');
+}
 
 // Brute force protection configuration
 const BRUTE_FORCE_CONFIG = {

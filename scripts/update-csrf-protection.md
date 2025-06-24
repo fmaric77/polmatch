@@ -174,7 +174,7 @@ curl -X GET http://localhost:3001/api/csrf-token \
 # Use token in request
 curl -X POST http://localhost:3001/api/some-endpoint \
   -H "Cookie: session=your-session-token" \
-  -H "X-CSRF-Token: your-csrf-token" \
+  -H "x-csrf-token: your-csrf-token" \
   -H "Content-Type: application/json" \
   -d '{"data": "value"}'
 ```
@@ -190,7 +190,7 @@ curl -X POST http://localhost:3001/api/some-endpoint \
 # Invalid CSRF token
 curl -X POST http://localhost:3001/api/some-endpoint \
   -H "Cookie: session=your-session-token" \
-  -H "X-CSRF-Token: invalid-token" \
+  -H "x-csrf-token: invalid-token" \
   -H "Content-Type: application/json" \
   -d '{"data": "value"}'
 ```
@@ -200,14 +200,14 @@ curl -X POST http://localhost:3001/api/some-endpoint \
 # Test valid image URL
 curl -X POST http://localhost:3001/api/profile/basic \
   -H "Cookie: session=your-session-token" \
-  -H "X-CSRF-Token: your-csrf-token" \
+  -H "x-csrf-token: your-csrf-token" \
   -H "Content-Type: application/json" \
   -d '{"profile_picture_url": "https://picsum.photos/200/300.jpg"}'
 
 # Test invalid image URL (should fail)
 curl -X POST http://localhost:3001/api/profile/basic \
   -H "Cookie: session=your-session-token" \
-  -H "X-CSRF-Token: your-csrf-token" \
+  -H "x-csrf-token: your-csrf-token" \
   -H "Content-Type: application/json" \
   -d '{"profile_picture_url": "http://localhost/image.jpg"}'
 ```
@@ -275,7 +275,7 @@ curl -X POST http://localhost:3001/api/profile/basic \
 
 ### Debug Steps
 1. Check browser network tab for CSRF token requests
-2. Verify X-CSRF-Token header is sent
+2. Verify x-csrf-token header is sent
 3. Check server logs for validation errors
 4. Confirm session cookie is valid
 5. Test image URLs manually in browser

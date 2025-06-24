@@ -5,7 +5,10 @@ import speakeasy from 'speakeasy';
 import CryptoJS from 'crypto-js';
 import MONGODB_URI from '../../../mongo-uri';
 
-const SECRET_KEY = process.env.SECRET_KEY || 'default-secret-key';
+const SECRET_KEY = process.env.SECRET_KEY as string;
+if (!SECRET_KEY) {
+  throw new Error('SECRET_KEY environment variable is not defined');
+}
 
 if (!MONGODB_URI) {
   throw new Error('MONGODB_URI is not defined');
@@ -58,6 +61,15 @@ export async function POST(req: NextRequest) {
 
     // Decrypt the temporary secret
     const decryptedSecret = CryptoJS.AES.decrypt(user.two_factor_temp_secret, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+    
+    console.log('2FA Debug Info:');
+    console.log('- User has temp secret:', !!user.two_factor_temp_secret);
+    console.log('- Encrypted secret length:', user.two_factor_temp_secret?.length || 0);
+    console.log('- SECRET_KEY being used:', SECRET_KEY.substring(0, 8) + '...');
+    console.log('- Decrypted secret length:', decryptedSecret.length);
+    console.log('- Decrypted secret preview:', decryptedSecret.substring(0, 8) + '...');
+    console.log('- User entered code:', code);
+    console.log('- Current server time:', new Date().toISOString());
 
     // Verify the code
     const verified = speakeasy.totp.verify({
@@ -66,10 +78,58 @@ export async function POST(req: NextRequest) {
       token: code,
       window: 1 // Allow 1 step of time drift (30 seconds)
     });
+    
+    console.log('- TOTP verification result:', verified);
+    
+    // Also try with a wider window for debugging
+    const verifiedWide = speakeasy.totp.verify({
+      secret: decryptedSecret,
+      encoding: 'base32',
+      token: code,
+      window: 3 // Allow 3 steps (±90 seconds)
+    });
+    
+    console.log('- TOTP verification (wide window):', verifiedWide);
+    
+    // Generate what the server thinks the current code should be
+    const serverCode = speakeasy.totp({
+      secret: decryptedSecret,
+      encoding: 'base32'
+    });
+    
+    console.log('- Server calculated code:', serverCode);
+    
+    // Check codes for previous/next time windows
+    const now = Math.floor(Date.now() / 1000);
+    const step = 30; // TOTP step in seconds
+    
+    const prevCode = speakeasy.totp({
+      secret: decryptedSecret,
+      encoding: 'base32',
+      time: now - step
+    });
+    
+    const nextCode = speakeasy.totp({
+      secret: decryptedSecret,
+      encoding: 'base32', 
+      time: now + step
+    });
+    
+    console.log('- Previous window code (-30s):', prevCode);
+    console.log('- Next window code (+30s):', nextCode);
+    console.log('- User code matches any window:', [prevCode, serverCode, nextCode].includes(code));
 
     if (!verified) {
       await client.close();
-      return NextResponse.json({ error: 'Invalid code. Please try again.' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Invalid code. Please try again.',
+        debug: {
+          serverCalculated: serverCode,
+          userEntered: code,
+          secretLength: decryptedSecret.length,
+          serverTime: new Date().toISOString()
+        }
+      }, { status: 400 });
     }
 
     // Code is valid - enable 2FA
