@@ -13,6 +13,11 @@ export interface NewMessageData {
   content: string;
   timestamp: string;
   conversation_participants: string[];
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 export interface NewConversationData {
@@ -246,7 +251,7 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
   }, []); // Empty dependencies - use refs for dynamic values
 
   const disconnect = useCallback(() => {
-    console.log('� Disconnecting SSE...');
+    console.log('🔌 Disconnecting SSE...');
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;

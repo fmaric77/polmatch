@@ -21,6 +21,7 @@ import TypingIndicator from './TypingIndicator';
 import PollArtifact from './PollArtifact';
 import { TypingData } from './hooks/useTypingIndicator';
 import { profilePictureCache } from '../lib/profilePictureCache';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 interface PrivateMessage {
   _id?: string;
@@ -178,6 +179,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   activeProfileType,
   onRefreshMessages
 }) => {
+  const { protectedFetch } = useCSRFToken();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
@@ -194,7 +196,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     const opts = newPollOptions.filter(o => o.trim());
     if (!newPollQuestion.trim() || opts.length < 2) return;
     try {
-      const res = await fetch(`/api/groups/${selectedConversation}/polls`, {
+      const res = await protectedFetch(`/api/groups/${selectedConversation}/polls`, {
         method: 'POST', 
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ 
@@ -226,11 +228,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     } catch (error) {
       console.error('Error creating poll:', error);
     }
-  }, [selectedConversation, selectedChannel, newPollQuestion, newPollOptions, newPollExpiryHours, activeProfileType, onRefreshMessages]);
+  }, [selectedConversation, selectedChannel, newPollQuestion, newPollOptions, newPollExpiryHours, activeProfileType, onRefreshMessages, protectedFetch]);
 
   const handleVote = useCallback(async (pollId: string, optionId: string): Promise<void> => {
     try {
-      const res = await fetch(`/api/groups/${selectedConversation}/polls/${pollId}/votes`, {
+      const res = await protectedFetch(`/api/groups/${selectedConversation}/polls/${pollId}/votes`, {
         method: 'POST', 
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ optionId })
@@ -241,7 +243,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     } catch (error) {
       console.error('Error voting:', error);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, protectedFetch]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

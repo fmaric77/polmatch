@@ -337,7 +337,8 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
       attachments: attachments || [],
       sender_username: auth.user.username, // Keep username for backward compatibility
       sender_display_name: senderDisplayName, // Use profile display name based on group type
-      profile_type: profile_type // Include profile type for SSE notification
+      profile_type: profile_type, // Include profile type for SSE notification
+      ...(reply_to && { reply_to })
     });
 
     return NextResponse.json({ 
@@ -374,7 +375,7 @@ export async function DELETE(req: NextRequest, context: RouteContext): Promise<N
     const groupId = params.id;
     const channelId = params.channelId;
 
-    let body : any = {};
+    let body: { messageId?: string; message_id?: string; profile_type?: 'basic' | 'love' | 'business' } = {};
     try {
       body = await req.json();
     } catch {

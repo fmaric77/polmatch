@@ -99,6 +99,11 @@ interface GroupMessageSSE {
   total_members?: number;
   read_count?: number;
   read_by_others?: boolean;
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 interface Conversation {
@@ -389,7 +394,8 @@ const UnifiedMessages: React.FC = () => {
             timestamp: data.timestamp,
             read: false,
             attachments: (data as { attachments?: string[] }).attachments || [],
-            profile_type: activeProfileType
+            profile_type: activeProfileType,
+            ...(data.reply_to && { reply_to: data.reply_to })
           };
           
           profileMessages.setMessages(prevMessages => {
@@ -427,7 +433,8 @@ const UnifiedMessages: React.FC = () => {
             content: data.content,
             timestamp: data.timestamp,
             read: false,
-            attachments: (data as { attachments?: string[] }).attachments || []
+            attachments: (data as { attachments?: string[] }).attachments || [],
+            ...(data.reply_to && { reply_to: data.reply_to })
           };
           
           messages.setMessages(prevMessages => {
@@ -483,7 +490,8 @@ const UnifiedMessages: React.FC = () => {
             current_user_read: groupData.sender_id === currentUser?.user_id,
             total_members: groupData.total_members || 0,
             read_count: groupData.read_count || 0,
-            read_by_others: groupData.read_by_others || false
+            read_by_others: groupData.read_by_others || false,
+            ...(groupData.reply_to && { reply_to: groupData.reply_to })
           };
           messages.setMessages(prevMessages => {
             console.log('Adding SSE group message. Current count:', prevMessages.length);
@@ -1167,7 +1175,7 @@ const UnifiedMessages: React.FC = () => {
   // Pin message function
   const pinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+      const response = await protectedFetch(`/api/groups/${selectedConversation}/pin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1191,12 +1199,12 @@ const UnifiedMessages: React.FC = () => {
       console.error('Error pinning message:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, messages]);
+  }, [selectedConversation, selectedConversationType, messages, protectedFetch]);
 
   // Unpin message function
   const unpinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/groups/${selectedConversation}/pin`, {
+      const response = await protectedFetch(`/api/groups/${selectedConversation}/pin`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -1220,7 +1228,7 @@ const UnifiedMessages: React.FC = () => {
       console.error('Error unpinning message:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, messages]);
+  }, [selectedConversation, selectedConversationType, messages, protectedFetch]);
 
   // Callback when a user accepts a group invitation: refresh conversations & members
   const handleGroupAccepted = useCallback((groupId: string) => {
@@ -1383,7 +1391,10 @@ const UnifiedMessages: React.FC = () => {
         setIsSidebarVisible={setIsSidebarVisible}
         onMembersClick={() => modals.openModal('showMembersModal')}
         onInviteClick={() => modals.openModal('showInviteModal')}
-        onBannedUsersClick={() => modals.openModal('showBannedUsersModal')}
+        onBannedUsersClick={() => {
+          groupManagement.fetchBannedUsers(selectedConversation);
+          modals.openModal('showBannedUsersModal');
+        }}
         onCreateChannelClick={() => modals.openModal('showCreateChannelModal')}
         onPinnedMessagesClick={handlePinnedMessagesClick}
         onChannelContextMenu={handleChannelContextMenu}
@@ -1540,7 +1551,7 @@ const UnifiedMessages: React.FC = () => {
                 ? `/api/groups/${selectedConversation}/channels/${selectedChannel}/polls/${pollId}/vote`
                 : `/api/groups/${selectedConversation}/polls/${pollId}/vote`;
 
-              const response = await fetch(endpoint, {
+              const response = await protectedFetch(endpoint, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

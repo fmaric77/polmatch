@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import ProfileModal from '../../components/ProfileModal';
+import { useCSRFToken } from '../../components/hooks/useCSRFToken';
 
 interface User {
   user_id: string;
@@ -41,6 +42,7 @@ interface SelectedFilter {
 }
 
 export default function SearchUsersPage() {
+  const { protectedFetch } = useCSRFToken();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
@@ -217,7 +219,7 @@ export default function SearchUsersPage() {
   async function sendFriendRequest(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/profile', {
+      const res = await protectedFetch('/api/friends/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ friend_id, profile_type: activeProfileType })
@@ -235,7 +237,7 @@ export default function SearchUsersPage() {
   async function removeFriend(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/profile/remove', {
+      const res = await protectedFetch('/api/friends/profile/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ friend_id, profile_type: activeProfileType })
@@ -254,7 +256,7 @@ export default function SearchUsersPage() {
     setActionMessage('Starting conversation...');
     try {
       // Create profile-specific conversation
-      const res = await fetch('/api/messages/profile', {
+      const res = await protectedFetch('/api/messages/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -307,7 +309,7 @@ export default function SearchUsersPage() {
     setActionMessage('');
 
     try {
-      const res = await fetch(`/api/groups/${selectedGroupId}/invite`, {
+      const res = await protectedFetch(`/api/groups/${selectedGroupId}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invited_user_id: selectedUser.user_id })
@@ -346,7 +348,7 @@ export default function SearchUsersPage() {
     setActionMessage('');
 
     try {
-      const res = await fetch('/api/catalogue', {
+      const res = await protectedFetch('/api/catalogue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useCSRFToken } from './useCSRFToken';
 
 export interface ProfileMessage {
   _id?: string;
@@ -13,6 +14,11 @@ export interface ProfileMessage {
   sender_profile_data?: {
     display_name: string;
     profile_picture_url: string;
+  };
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
   };
 }
 
@@ -38,6 +44,7 @@ interface ProfileConversation {
 }
 
 export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') => {
+  const { protectedFetch } = useCSRFToken();
   const [messages, setMessages] = useState<ProfileMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -117,7 +124,7 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
         };
       }
 
-      const response = await fetch('/api/messages', {
+      const response = await protectedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -147,11 +154,11 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
       setError('Failed to send message');
       return false;
     }
-  }, [profileType]);
+  }, [profileType, protectedFetch, deduplicateMessages]);
 
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/messages', {
+      const response = await protectedFetch('/api/messages', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -178,7 +185,7 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
       setError('Failed to delete message');
       return false;
     }
-  }, [profileType]);
+  }, [profileType, protectedFetch]);
 
   // Safe setMessages that always deduplicates
   const setMessagesSafe = useCallback((updater: (prev: ProfileMessage[]) => ProfileMessage[]) => {
@@ -200,6 +207,7 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
 };
 
 export const useProfileConversations = (profileType: 'basic' | 'love' | 'business') => {
+  const { protectedFetch } = useCSRFToken();
   const [conversations, setConversations] = useState<ProfileConversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -238,7 +246,7 @@ export const useProfileConversations = (profileType: 'basic' | 'love' | 'busines
 
   const deleteConversation = useCallback(async (otherUserId: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/private-conversations', {
+      const response = await protectedFetch('/api/private-conversations', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,7 +271,7 @@ export const useProfileConversations = (profileType: 'basic' | 'love' | 'busines
       setError('Failed to delete conversation');
       return false;
     }
-  }, [profileType]);
+  }, [profileType, protectedFetch]);
 
   return {
     conversations,

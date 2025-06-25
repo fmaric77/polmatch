@@ -2,6 +2,7 @@
 import Navigation from '../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCSRFToken } from '../../components/hooks/useCSRFToken';
 
 interface User {
   _id?: string;
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [questionnairesError, setQuestionnairesError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const router = useRouter();
+  const { protectedFetch } = useCSRFToken();
 
   useEffect(() => {
     // Check if user is admin by fetching session info
@@ -60,7 +62,7 @@ export default function AdminDashboard() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage('');
-    const res = await fetch('/api/admin/create-user', {
+    const res = await protectedFetch('/api/admin/create-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
@@ -123,7 +125,7 @@ export default function AdminDashboard() {
   const handleBanUser = async (user_id: string) => {
     const admin_id = users.find((u) => u.is_admin)?.user_id || '';
     if (!window.confirm('Are you sure you want to ban and delete this user?')) return;
-    const res = await fetch('/api/admin/ban-user', {
+    const res = await protectedFetch('/api/admin/ban-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id, admin_id }),
@@ -145,7 +147,7 @@ export default function AdminDashboard() {
   // Delete questionnaire group handler
   const handleDeleteQuestionnaireGroup = async (groupId: string) => {
     if (!window.confirm('Are you sure you want to delete this questionnaire group? This will delete all questionnaires and questions within it.')) return;
-    const res = await fetch(`/api/admin/questionnaires/${groupId}`, {
+    const res = await protectedFetch(`/api/admin/questionnaires/${groupId}`, {
       method: 'DELETE',
     });
     const data = await res.json();

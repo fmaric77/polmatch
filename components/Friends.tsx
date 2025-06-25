@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileModal from './ProfileModal';
 import { profilePictureCache } from '../lib/profilePictureCache';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -13,6 +14,7 @@ interface FriendRequest {
 }
 
 export default function Friends() {
+  const { protectedFetch } = useCSRFToken();
   // Profile separation state
   const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
   
@@ -110,10 +112,9 @@ export default function Friends() {
 
   async function fetchUserDisplayNames(userIds: string[]) {
     try {
-      const res = await fetch('/api/users/display-names', {
+      const res = await protectedFetch('/api/users/display-names', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ userIds })
       });
       const data = await res.json();
@@ -128,9 +129,8 @@ export default function Friends() {
   async function respondRequest(requester_id: string, action: 'accept' | 'reject') {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/profile/respond', {
+      const res = await protectedFetch('/api/friends/profile/respond', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requester_id, action, profile_type: activeProfileType })
       });
@@ -145,9 +145,8 @@ export default function Friends() {
   async function removeFriend(friend_id: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/friends/profile/remove', {
+      const res = await protectedFetch('/api/friends/profile/remove', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ friend_id, profile_type: activeProfileType })
       });

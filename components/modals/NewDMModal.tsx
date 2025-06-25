@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
 import { getAnonymousDisplayName } from '../../lib/anonymization';
+import { useCSRFToken } from '../hooks/useCSRFToken';
 
 interface User {
   user_id: string;
@@ -39,6 +40,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   senderProfileType,
   receiverProfileType
 }) => {
+  const { protectedFetch } = useCSRFToken();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
     setError('');
 
     try {
-      const res = await fetch('/api/private-conversations', {
+      const res = await protectedFetch('/api/private-conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

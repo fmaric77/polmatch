@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCSRFToken } from './useCSRFToken';
 
 export interface TypingData {
   user_id: string;
@@ -24,6 +25,7 @@ export const useTypingIndicator = ({
   selectedChannel,
   sessionToken
 }: UseTypingIndicatorOptions) => {
+  const { protectedFetch } = useCSRFToken();
   const [typingUsers, setTypingUsers] = useState<TypingData[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingEmitRef = useRef<number>(0);
@@ -60,7 +62,7 @@ export const useTypingIndicator = ({
     isTypingRef.current = true;
 
     try {
-      await fetch('/api/typing', {
+      await protectedFetch('/api/typing', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +88,7 @@ export const useTypingIndicator = ({
       isTypingRef.current = false;
       emitStoppedTyping();
     }, 3000);
-  }, [currentUser, selectedConversation, selectedConversationType, selectedChannel, sessionToken]);
+  }, [currentUser, selectedConversation, selectedConversationType, selectedChannel, sessionToken, protectedFetch]);
 
   const emitStoppedTyping = useCallback(async () => {
     if (!currentUser || !selectedConversation || !sessionToken || !isTypingRef.current) return;
@@ -94,7 +96,7 @@ export const useTypingIndicator = ({
     isTypingRef.current = false;
 
     try {
-      await fetch('/api/typing', {
+      await protectedFetch('/api/typing', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export const useTypingIndicator = ({
     } catch (error) {
       console.error('Failed to emit stopped typing indicator:', error);
     }
-  }, [currentUser, selectedConversation, selectedConversationType, selectedChannel, sessionToken]);
+  }, [currentUser, selectedConversation, selectedConversationType, selectedChannel, sessionToken, protectedFetch]);
 
   const handleTypingReceived = useCallback((data: TypingData) => {
     // Don't show typing indicator for current user

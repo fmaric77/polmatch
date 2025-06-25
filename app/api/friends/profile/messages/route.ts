@@ -256,7 +256,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         receiver_id,
         content,
         timestamp: now.toISOString(),
-        conversation_participants: [userId, receiver_id]
+        conversation_participants: [userId, receiver_id],
+        ...(reply_to && { reply_to })
       });
 
       // If it's a new conversation, notify about that too

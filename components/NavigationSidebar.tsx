@@ -12,6 +12,7 @@ import {
   faKey,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 interface NavigationSidebarProps {
   isMobile: boolean;
@@ -40,8 +41,10 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onShowInvitationsModal,
   onToggleConversationsSidebar
 }) => {
+  const { protectedFetch } = useCSRFToken();
+  
   const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
+    await protectedFetch('/api/logout', { method: 'POST' });
     window.location.href = '/';
   };
 

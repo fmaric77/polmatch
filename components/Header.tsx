@@ -6,8 +6,10 @@ import { faEnvelope, faHome, faUser, faSearch, faSignOutAlt, faBars, faTimes, fa
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 const Header = () => {
+  const { protectedFetch } = useCSRFToken();
   const [open, setOpen] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
@@ -100,7 +102,7 @@ const Header = () => {
           className="flex items-center p-2 mt-8 rounded-lg hover:bg-gray-800/80 transition-colors group w-full justify-center"
           onClick={async (e) => {
             e.preventDefault();
-            await fetch('/api/logout', { method: 'POST' });
+            await protectedFetch('/api/logout', { method: 'POST' });
             if (typeof window !== 'undefined') {
               window.location.href = '/';
             }

@@ -4,6 +4,7 @@ import { useSSE } from './providers/SSEProvider';
 import { useTypingIndicator } from './hooks/useTypingIndicator';
 import TypingIndicator from './TypingIndicator';
 import { getAnonymousDisplayName } from '../lib/anonymization';
+import { useCSRFToken } from './hooks/useCSRFToken';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 //d
 interface Message {
@@ -15,6 +16,11 @@ interface Message {
   timestamp: string;
   read: boolean;
   attachments: string[];
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 interface User {
@@ -35,6 +41,7 @@ interface Conversation {
 }
 
 const Messages = () => {
+  const { protectedFetch } = useCSRFToken();
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [newMessage, setNewMessage] = useState('');
@@ -93,7 +100,8 @@ const Messages = () => {
           content: data.content,
           timestamp: data.timestamp,
           read: false,
-          attachments: []
+          attachments: [],
+          ...(data.reply_to && { reply_to: data.reply_to })
         };
         
         setMessages(prevMessages => {
@@ -235,14 +243,12 @@ const Messages = () => {
   };
 
   const handleSelectNewUser = async (userId: string) => {
-    console.log('Selecting user:', userId);
-    console.log('Available users:', users);
     setSelectedUser(userId);
     setShowNewUserModal(false);
     
     try {
       // Create the conversation in the private conversations system
-      const res = await fetch('/api/private-conversations', {
+      const res = await protectedFetch('/api/private-conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -272,14 +278,14 @@ const Messages = () => {
       msg => msg.sender_id === selectedUser && msg.receiver_id === currentUser.user_id && !msg.read
     );
     if (hasUnread) {
-      fetch('/api/messages', {
+      protectedFetch('/api/messages', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sender_id: selectedUser }),
       }).then(() => setRefresh(r => r + 1));
     }
     // Only run when selectedUser, currentUser, or messages change
-  }, [selectedUser, currentUser, messages]);
+  }, [selectedUser, currentUser, messages, protectedFetch]);
 
   // Clear messages immediately when switching users
   useEffect(() => {
@@ -309,7 +315,7 @@ const Messages = () => {
   const deleteMessage = async (messageId: string): Promise<boolean> => {
     try {
       // For private messages, use the general messages endpoint
-      const response = await fetch('/api/messages', {
+      const response = await protectedFetch('/api/messages', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -435,7 +441,7 @@ const Messages = () => {
                   if (window.confirm('Are you sure you want to delete all messages in this chat? This cannot be undone.')) {
                     console.log('Sending DELETE request with selectedUser:', selectedUser);
                     console.log('Current user:', currentUser);
-                    const res = await fetch('/api/private-conversations', {
+                    const res = await protectedFetch('/api/private-conversations', {
                       method: 'DELETE',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ 

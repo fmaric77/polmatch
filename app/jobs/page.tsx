@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navigation from '../../components/Navigation';
+import { useCSRFToken } from '../../components/hooks/useCSRFToken';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faBriefcase, 
@@ -47,6 +48,7 @@ interface User {
 }
 
 export default function JobsPage(): JSX.Element {
+  const { protectedFetch } = useCSRFToken();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ export default function JobsPage(): JSX.Element {
     const requirementsArray = newJob.requirements.split('\n').filter(req => req.trim());
     
     try {
-      const response = await fetch('/api/jobs/create', {
+      const response = await protectedFetch('/api/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +148,12 @@ export default function JobsPage(): JSX.Element {
         });
         fetchJobs();
       } else {
-        alert('Failed to create job posting: ' + data.message);
+        // Check if it's a business profile requirement error
+        if (response.status === 403 && (data.message?.includes('Business profile') || data.message?.includes('business profile'))) {
+          alert('You need to create a business profile first before posting jobs. Please go to your profile settings and set up your business profile.');
+        } else {
+          alert('Failed to create job posting: ' + data.message);
+        }
       }
     } catch (error) {
       console.error('Failed to create job:', error);
@@ -159,7 +166,7 @@ export default function JobsPage(): JSX.Element {
 
     try {
       // Create a conversation with the job poster using business profile
-      const response = await fetch('/api/conversations/create', {
+      const response = await protectedFetch('/api/conversations/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +200,7 @@ export default function JobsPage(): JSX.Element {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch('/api/jobs', {
+      const response = await protectedFetch('/api/jobs', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_id: job.job_id })

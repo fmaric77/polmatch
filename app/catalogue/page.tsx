@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import ProfileModal from '../../components/ProfileModal';
+import { useCSRFToken } from '../../components/hooks/useCSRFToken';
 
 interface User {
   user_id: string;
@@ -36,6 +37,7 @@ interface AIAnalysis {
 type CatalogueCategory = 'love' | 'basic' | 'business';
 
 export default function CataloguePage() {
+  const { protectedFetch } = useCSRFToken();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<CatalogueCategory>('basic');
   const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
@@ -98,7 +100,7 @@ export default function CataloguePage() {
   async function removeFromCatalogue(userId: string, category: string) {
     setActionMessage('');
     try {
-      const res = await fetch('/api/catalogue/remove', {
+      const res = await protectedFetch('/api/catalogue/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, category: category })
@@ -136,7 +138,7 @@ export default function CataloguePage() {
     setAiAnalysis(null);
     
     try {
-      const res = await fetch('/api/ai/profile-comparison', {
+      const res = await protectedFetch('/api/ai/profile-comparison', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

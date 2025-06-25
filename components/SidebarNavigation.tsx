@@ -16,6 +16,7 @@ import {
   faCompass,
   faPlus
 } from '@fortawesome/free-solid-svg-icons';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 interface SidebarNavigationProps {
   selectedCategory: 'direct' | 'groups';
@@ -44,6 +45,8 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   onInvitationsClick,
   setIsConversationsSidebarHidden
 }) => {
+  const { protectedFetch } = useCSRFToken();
+  
   return (
     <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} w-20 bg-black border border-white rounded-lg flex flex-col h-full transition-transform duration-300 ${
       isMobile ? (isSidebarVisible ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
@@ -216,7 +219,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <div 
           className="w-12 h-12 bg-red-900 border border-red-500 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
           onClick={async () => {
-            await fetch('/api/logout', { method: 'POST' });
+            await protectedFetch('/api/logout', { method: 'POST' });
             if (typeof window !== 'undefined') {
               window.location.href = '/';
             }

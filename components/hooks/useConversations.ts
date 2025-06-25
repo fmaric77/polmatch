@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useCSRFToken } from './useCSRFToken';
 
 interface User {
   user_id: string;
@@ -51,6 +52,7 @@ export const useConversations = (
   profileType?: string,
   conversationType: 'all' | 'direct' | 'groups' = 'all'
 ) => {
+  const { protectedFetch } = useCSRFToken();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -144,7 +146,7 @@ export const useConversations = (
         deletePayload.receiver_profile_type = 'basic'; // Assume basic for receiver unless we have more context
       }
       
-      const response = await fetch('/api/private-conversations', {
+      const response = await protectedFetch('/api/private-conversations', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(deletePayload)
@@ -161,14 +163,14 @@ export const useConversations = (
         `/api/groups/${conv.id}?profile_type=${profileType}` : 
         `/api/groups/${conv.id}`;
       
-      const response = await fetch(deleteUrl, { method: 'DELETE' });
+      const response = await protectedFetch(deleteUrl, { method: 'DELETE' });
       if (response.ok) {
         setConversations(prev => prev.filter(c => !(c.id === conv.id && c.type === 'group')));
       } else {
         console.error('Failed to delete group:', await response.text());
       }
     }
-  }, [profileType]);
+  }, [profileType, protectedFetch]);
 
   return {
     conversations,

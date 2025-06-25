@@ -247,6 +247,11 @@ export interface GroupMessageData {
   sender_username?: string;
   sender_display_name?: string;
   profile_type?: string;
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 // Notify about a new group message
@@ -303,7 +308,8 @@ export async function notifyNewGroupMessage(data: GroupMessageData): Promise<voi
       sender_display_name: senderDisplayName,
       total_members: members.length,
       read_count: 1, // Only sender has read it initially
-      read_by_others: false
+      read_by_others: false,
+      ...(data.reply_to && { reply_to: data.reply_to })
     };
     
     const sseData = formatSSEData('NEW_MESSAGE', groupMessageSSE);

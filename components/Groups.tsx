@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import { getAnonymousDisplayName } from '../lib/anonymization';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -68,6 +69,7 @@ interface PollVote { _id: string; count: number; }
 interface PollResult { votes: PollVote[]; userVote: string | null; }
 
 const Groups = () => {
+  const { protectedFetch } = useCSRFToken();
   // Profile separation state
   const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
   
@@ -391,7 +393,7 @@ const Groups = () => {
     e.preventDefault();
     const opts = newPollOptions.filter(o => o.trim());
     if (!newPollQuestion.trim() || opts.length < 2) return;
-    const res = await fetch(`/api/groups/${selectedGroup}/polls`, {
+    const res = await protectedFetch(`/api/groups/${selectedGroup}/polls`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ question: newPollQuestion, options: opts })
     });
@@ -403,7 +405,7 @@ const Groups = () => {
   };
 
   const handleVote = async (pollId: string, optionId: string) => {
-    const res = await fetch(`/api/groups/${selectedGroup}/polls/${pollId}/votes`, {
+    const res = await protectedFetch(`/api/groups/${selectedGroup}/polls/${pollId}/votes`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ optionId })
     });

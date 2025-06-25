@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Navigation from '@/components/Navigation';
+import { useCSRFToken } from '@/components/hooks/useCSRFToken';
 
 interface PublicGroup {
   group_id: string;
@@ -24,6 +25,7 @@ interface PaginationInfo {
 }
 
 export default function DiscoverGroups() {
+  const { protectedFetch } = useCSRFToken();
   const [groups, setGroups] = useState<PublicGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -90,7 +92,7 @@ export default function DiscoverGroups() {
     setJoiningGroupId(groupId);
     
     try {
-      const response = await fetch('/api/groups/join', {
+      const response = await protectedFetch('/api/groups/join', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -113,7 +115,7 @@ export default function DiscoverGroups() {
     } finally {
       setJoiningGroupId('');
     }
-  }, [joiningGroupId]);
+  }, [joiningGroupId, protectedFetch]);
 
   // Format date for display
   const formatDate = (dateString: string): string => {

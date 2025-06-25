@@ -34,11 +34,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const resolvedParams = await params;
     const invitation_id = resolvedParams.id;
 
-    // Use profile-specific collections
-    const invitationsCollection = `group_invitations_${profile_type}`;
-    const groupsCollection = `groups_${profile_type}`;
-    const membersCollection = `group_members_${profile_type}`;
-    const bansCollection = `group_bans_${profile_type}`;
+    // Use profile-specific collections ("basic" uses unsuffixed collections for backward compatibility)
+    const invitationsCollection = profile_type === 'basic' ? 'group_invitations' : `group_invitations_${profile_type}`;
+    const groupsCollection = profile_type === 'basic' ? 'groups' : `groups_${profile_type}`;
+    const membersCollection = profile_type === 'basic' ? 'group_members' : `group_members_${profile_type}`;
+    const bansCollection = profile_type === 'basic' ? 'group_bans' : `group_bans_${profile_type}`;
 
     // Find the invitation
     const invitation = await db.collection(invitationsCollection).findOne({ 

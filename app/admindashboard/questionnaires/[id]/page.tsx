@@ -2,6 +2,7 @@
 import Navigation from '../../../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCSRFToken } from '../../../../components/hooks/useCSRFToken';
 
 interface Question {
   question_id: string;
@@ -55,6 +56,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
   const [editSubmitMessage, setEditSubmitMessage] = useState('');
   const [editingQuestionnaireId, setEditingQuestionnaireId] = useState<string | null>(null);
   const router = useRouter();
+  const { protectedFetch } = useCSRFToken();
 
   useEffect(() => {
     // Check if user is admin
@@ -73,7 +75,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     async function fetchGroup() {
       try {
         const resolvedParams = await params;
-        const res = await fetch(`/api/admin/questionnaires/${resolvedParams.id}`);
+        const res = await protectedFetch(`/api/admin/questionnaires/${resolvedParams.id}`);
         const data = await res.json();
         
         if (data.success) {
@@ -97,7 +99,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
 
     try {
       const resolvedParams = await params;
-      const res = await fetch(`/api/admin/questionnaires/${resolvedParams.id}`, {
+      const res = await protectedFetch(`/api/admin/questionnaires/${resolvedParams.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(questionnaireForm),
@@ -151,7 +153,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     
     try {
       const resolvedParams = await params;
-      const res = await fetch(`/api/admin/questionnaires/${resolvedParams.id}/questionnaires/${questionnaireId}`, {
+      const res = await protectedFetch(`/api/admin/questionnaires/${resolvedParams.id}/questionnaires/${questionnaireId}`, {
         method: 'DELETE',
       });
       
@@ -216,7 +218,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
     setEditSubmitMessage('');
     try {
       const resolvedParams = await params;
-      const res = await fetch(`/api/admin/questionnaires/${resolvedParams.id}/questionnaires/${editingQuestionnaireId}`, {
+      const res = await protectedFetch(`/api/admin/questionnaires/${resolvedParams.id}/questionnaires/${editingQuestionnaireId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editQuestionnaireForm),

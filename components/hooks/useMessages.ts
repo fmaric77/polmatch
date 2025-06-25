@@ -9,6 +9,11 @@ interface PrivateMessage {
   timestamp: string;
   read: boolean;
   attachments: string[];
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 interface GroupMessage {
@@ -430,7 +435,7 @@ export const useMessages = (
         if (unreadMessages.length > 0) {
           hasMarkedReadRef.current = true;
           
-          fetch(`/api/groups/${selectedConversation}/messages/read`, {
+          protectedFetch(`/api/groups/${selectedConversation}/messages/read`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -476,7 +481,7 @@ export const useMessages = (
     try {
       if (selectedConversationType === 'direct') {
         // Private message - use _id field
-        const response = await fetch('/api/messages', {
+        const response = await protectedFetch('/api/messages', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message_id: messageId })
@@ -580,7 +585,7 @@ export const useMessages = (
       console.error('Error deleting message:', error);
       return false;
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType, messages]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, fetchMessages, fetchChannelMessages, profileType, messages, protectedFetch]);
 
   // Pin a message
   const pinMessage = useCallback(async (messageId: string, channelId?: string): Promise<boolean> => {

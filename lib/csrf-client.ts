@@ -82,7 +82,9 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
       
       // If CSRF failed due to server restart, retry once with fresh token
       if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({}));
+        // Clone the response before reading so that callers can still consume the body later
+        const clonedResponse = response.clone();
+        const errorData = await clonedResponse.json().catch(() => ({}));
         if (errorData.error?.includes('CSRF token cache empty') || 
             errorData.error?.includes('server may have restarted') ||
             errorData.error?.includes('development hot-reload detected')) {

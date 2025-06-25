@@ -25,7 +25,7 @@ export async function GET(): Promise<NextResponse> {
 
     // Check each profile type for pending invitations
     for (const profileType of profileTypes) {
-      const collectionName = `group_invitations_${profileType}`;
+      const collectionName = profileType === 'basic' ? 'group_invitations' : `group_invitations_${profileType}`;
       
       const count = await db.collection(collectionName)
         .countDocuments({ 

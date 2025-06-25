@@ -31,8 +31,8 @@ import { cookies } from 'next/headers';
        return NextResponse.json({ success: false, message: 'Invalid profile type' }, { status: 400 });
      }
 
-     // Use profile-specific collection
-     const collectionName = `group_invitations_${profileType}`;
+     // Use profile-specific collection (note: "basic" uses the unsuffixed collection for backward compatibility)
+     const collectionName = profileType === 'basic' ? 'group_invitations' : `group_invitations_${profileType}`;
 
      console.log('🔔 INVITATIONS API - Searching collection:', collectionName);
 

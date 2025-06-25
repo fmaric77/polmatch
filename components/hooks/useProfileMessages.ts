@@ -17,6 +17,11 @@ interface ProfileMessage {
     display_name: string;
     profile_picture_url: string;
   };
+  reply_to?: {
+    message_id: string;
+    content: string;
+    sender_name: string;
+  };
 }
 
 export const useProfileMessages = (
