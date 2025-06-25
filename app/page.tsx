@@ -92,9 +92,15 @@ export default function Login() {
     setUserType(null);
     setLoading(true);
     
-    // Client-side validation
-    if (password !== confirmPassword) {
-      setLoginError('Passwords do not match');
+    // Enhanced client-side validation with specific error messages
+    if (!email.trim()) {
+      setLoginError('Email address is required');
+      setLoading(false);
+      return;
+    }
+    
+    if (!email.includes('@') || !email.includes('.')) {
+      setLoginError('Please enter a valid email address');
       setLoading(false);
       return;
     }
@@ -105,27 +111,103 @@ export default function Login() {
       return;
     }
     
+    if (username.trim().length < 3) {
+      setLoginError('Username must be at least 3 characters long');
+      setLoading(false);
+      return;
+    }
+    
+    if (username.trim().length > 20) {
+      setLoginError('Username must be 20 characters or less');
+      setLoading(false);
+      return;
+    }
+    
+    if (!password) {
+      setLoginError('Password is required');
+      setLoading(false);
+      return;
+    }
+    
+    if (password.length < 6) {
+      setLoginError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+    
+    if (!/\d/.test(password)) {
+      setLoginError('Password must contain at least one number');
+      setLoading(false);
+      return;
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      setLoginError('Password must contain at least one special character');
+      setLoading(false);
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setLoginError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+    
     try {
       const res = await protectedFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email, 
+          email: email.trim(), 
           username: username.trim(), 
           password, 
           confirmPassword
         }),
       });
+      
       const data = await res.json();
+      
       if (!data.success) {
-        setLoginError(data.message || 'Registration failed');
+        // Handle specific server error messages
+        let errorMessage = 'Registration failed';
+        
+        if (data.message) {
+          // Common server error messages to make more user-friendly
+          const message = data.message.toLowerCase();
+          
+          if (message.includes('email') && message.includes('already')) {
+            errorMessage = 'This email address is already registered';
+          } else if (message.includes('username') && message.includes('already')) {
+            errorMessage = 'This username is already taken';
+          } else if (message.includes('email') && message.includes('invalid')) {
+            errorMessage = 'Please enter a valid email address';
+          } else if (message.includes('username') && message.includes('invalid')) {
+            errorMessage = 'Username contains invalid characters';
+          } else if (message.includes('password') && message.includes('weak')) {
+            errorMessage = 'Password does not meet security requirements';
+          } else if (message.includes('password') && message.includes('match')) {
+            errorMessage = 'Passwords do not match';
+          } else if (message.includes('rate limit')) {
+            errorMessage = 'Too many registration attempts. Please try again later';
+          } else if (message.includes('server') || message.includes('database')) {
+            errorMessage = 'Server error. Please try again in a few moments';
+          } else if (message.includes('validation')) {
+            errorMessage = 'Please check your information and try again';
+          } else {
+            // Use the server message if it's descriptive enough
+            errorMessage = data.message;
+          }
+        }
+        
+        setLoginError(errorMessage);
       } else {
         setUserType('User');
         // Redirect to frontpage after successful registration
         router.push('/frontpage');
       }
-    } catch {
-      setLoginError('Server error');
+    } catch (error) {
+      console.error('Registration error:', error);
+      setLoginError('Network error. Please check your connection and try again');
     } finally {
       setLoading(false);
     }
@@ -158,15 +240,16 @@ export default function Login() {
       {/* Help Button - Top Left */}
       <button
         onClick={() => setShowInfoModal(true)}
-        className="fixed top-4 left-4 z-20 p-3 bg-black text-blue-400 border-2 border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
+        className="fixed top-2 left-2 sm:top-4 sm:left-4 z-20 p-2 sm:p-3 bg-black text-blue-400 border-2 border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono text-sm sm:text-base"
         title="Platform Information"
       >
-        <FontAwesomeIcon icon={faQuestion} size="lg" />
+        <FontAwesomeIcon icon={faQuestion} size="sm" className="sm:text-lg" />
       </button>
+      
       {/* Animated Background Grid */}
       <div className="absolute inset-0 opacity-10">
-        <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-12 gap-px h-full">
-          {Array.from({ length: 144 }).map((_, i) => (
+        <div className="grid grid-cols-4 xs:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-px h-full">
+          {Array.from({ length: 120 }).map((_, i) => (
             <div 
               key={i} 
               className="border border-green-500/20 animate-pulse"
@@ -182,43 +265,60 @@ export default function Login() {
              style={{ animation: 'scanline 4s linear infinite' }} />
       </div>
 
-      {/* Main Login Container */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 xs:p-6 sm:p-8">
-        {/* FBI Header */}
-        <div className="mb-6 sm:mb-12 text-center animate-pulse">
+      {/* Main Login Container - Now with scroll support */}
+      <div className="relative z-10 flex flex-col items-center justify-start sm:justify-center min-h-screen p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto">
+        {/* FBI Header - Smaller on mobile */}
+        <div className="mb-2 xs:mb-3 sm:mb-4 md:mb-6 lg:mb-8 text-center animate-pulse mt-2 sm:mt-0">
         </div>
 
-        {/* Login Form Container */}
-        <div className="bg-black border-2 border-white rounded-none shadow-2xl p-6 sm:p-8 w-full max-w-md relative">
-          {/* Form Header */}
-          <div className="border-b-2 border-white bg-white text-black p-2 sm:p-3 text-center mb-6 -mx-6 sm:-mx-8 -mt-6 sm:-mt-8">
-            <div className="text-base sm:text-lg font-bold tracking-widest uppercase">
+        {/* Login Form Container - Dynamic sizing based on content */}
+        <div className={`bg-black border-2 border-white rounded-none shadow-2xl w-full relative transition-all duration-300 ${
+          isRegistering 
+            ? 'p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl' 
+            : 'p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg'
+        }`}>
+          {/* Form Header - Responsive text and padding */}
+          <div className={`border-b-2 border-white bg-white text-black text-center mb-3 xs:mb-4 sm:mb-5 md:mb-6 transition-all duration-300 ${
+            isRegistering 
+              ? 'p-1.5 xs:p-2 sm:p-3 md:p-4 -mx-2 xs:-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 -mt-2 xs:-mt-3 sm:-mt-4 md:-mt-6 lg:-mt-8'
+              : 'p-2 xs:p-2.5 sm:p-3 md:p-4 -mx-3 xs:-mx-4 sm:-mx-5 md:-mx-6 lg:-mx-8 -mt-3 xs:-mt-4 sm:-mt-5 md:-mt-6 lg:-mt-8'
+          }`}>
+            <div className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-bold tracking-widest uppercase">
               {isRegistering ? 'User Registration' : 'polmatch messenger'}
             </div>
           </div>
 
-          {/* Pulsing Status Indicator */}
-          <div className="flex items-center justify-center mb-4 sm:mb-6">
-            <div className="w-2 sm:w-3 h-2 sm:h-3 bg-green-400 rounded-full animate-pulse mr-2 sm:mr-3"></div>
-            <div className="text-green-400 font-mono text-xs uppercase tracking-widest">SYSTEM ONLINE</div>
-            <div className="w-2 sm:w-3 h-2 sm:h-3 bg-green-400 rounded-full animate-pulse ml-2 sm:ml-3"></div>
+          {/* Pulsing Status Indicator - Smaller in registration mode */}
+          <div className={`flex items-center justify-center transition-all duration-300 ${
+            isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-3 xs:mb-4 sm:mb-5 md:mb-6'
+          }`}>
+            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse mr-1.5 xs:mr-2 sm:mr-2.5 md:mr-3"></div>
+            <div className="text-green-400 font-mono text-xs xs:text-sm sm:text-sm md:text-base uppercase tracking-widest">SYSTEM ONLINE</div>
+            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse ml-1.5 xs:ml-2 sm:ml-2.5 md:ml-3"></div>
           </div>
 
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4 sm:space-y-6">
-            {/* Logo */}
-            <div className="flex justify-center mb-6 sm:mb-8">
-              <div className="border-2 border-white rounded-none p-3 sm:p-4 bg-gray-900">
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className={`transition-all duration-300 ${
+            isRegistering ? 'space-y-2 xs:space-y-3 sm:space-y-4' : 'space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6'
+          }`}>
+            {/* Logo - Smaller in registration mode */}
+            <div className={`flex justify-center transition-all duration-300 ${
+              isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-4 xs:mb-5 sm:mb-6 md:mb-8'
+            }`}>
+              <div className={`border-2 border-white rounded-none bg-gray-900 transition-all duration-300 ${
+                isRegistering ? 'p-1.5 xs:p-2 sm:p-3' : 'p-2 xs:p-2.5 sm:p-3 md:p-4'
+              }`}>
                 <Image 
                   src="/images/polstrat-dark.png" 
                   alt="POLMATCH MESSENGER" 
-                  className="max-w-full h-auto" 
-                  width={160} 
-                  height={60} 
+                  className="max-w-full h-auto transition-all duration-300" 
+                  width={isRegistering ? 100 : 120} 
+                  height={isRegistering ? 38 : 45} 
                   style={{
                     width: '100%',
-                    maxWidth: '200px',
+                    maxWidth: isRegistering ? '100px' : '120px',
                     height: 'auto',
                   }}
+                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 160px"
                 />
               </div>
             </div>
@@ -227,7 +327,7 @@ export default function Login() {
             {isRegistering && (
               <>
                 <div>
-                  <label className="block text-xs sm:text-sm font-mono font-medium mb-1 sm:mb-2 uppercase tracking-wider text-gray-300">
+                  <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
                     Username
                   </label>
                   <input
@@ -235,7 +335,7 @@ export default function Login() {
                     placeholder="[ENTER USERNAME]"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full p-3 sm:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors"
+                    className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
                     disabled={loading}
                     required
                   />
@@ -245,7 +345,7 @@ export default function Login() {
 
             {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 sm:mb-2 uppercase tracking-wider text-gray-300">
+              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
                 Email Address
               </label>
               <input
@@ -253,7 +353,7 @@ export default function Login() {
                 placeholder="[ENTER EMAIL]"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 sm:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors"
+                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
                 disabled={loading}
                 required
               />
@@ -261,7 +361,7 @@ export default function Login() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 sm:mb-2 uppercase tracking-wider text-gray-300">
+              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
                 Password
               </label>
               <input
@@ -269,7 +369,7 @@ export default function Login() {
                 placeholder="[ENTER PASSWORD]"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 sm:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors"
+                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
                 disabled={loading}
                 required
               />
@@ -283,7 +383,7 @@ export default function Login() {
             {/* Confirm Password Field (Registration Only) */}
             {isRegistering && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 sm:mb-2 uppercase tracking-wider text-gray-300">
+                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
                   Confirm Password
                 </label>
                 <input
@@ -291,7 +391,7 @@ export default function Login() {
                   placeholder="[CONFIRM PASSWORD]"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-3 sm:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors"
+                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
                   disabled={loading}
                   required
                 />
@@ -301,7 +401,7 @@ export default function Login() {
             {/* 2FA Code Field (Login Only, when required) */}
             {!isRegistering && requires2FA && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 sm:mb-2 uppercase tracking-wider text-gray-300">
+                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
                   Two-Factor Code
                 </label>
                 <input
@@ -309,7 +409,7 @@ export default function Login() {
                   placeholder="[ENTER 6-DIGIT CODE]"
                   value={twoFactorCode}
                   onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full p-3 sm:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-center tracking-widest"
+                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-center tracking-widest text-xs xs:text-sm sm:text-base"
                   disabled={loading}
                   maxLength={6}
                   required
@@ -323,7 +423,11 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full p-3 sm:p-4 font-mono uppercase tracking-wider font-bold border-2 rounded-none shadow-lg transition-all text-xs sm:text-base ${
+              className={`w-full font-mono uppercase tracking-wider font-bold border-2 rounded-none shadow-lg transition-all ${
+                isRegistering 
+                  ? 'p-2 xs:p-2.5 sm:p-3 text-xs xs:text-sm sm:text-base' 
+                  : 'p-2 xs:p-3 sm:p-4 text-xs xs:text-sm sm:text-base'
+              } ${
                 loading 
                   ? 'bg-yellow-600 border-yellow-400 text-black animate-pulse cursor-not-allowed' 
                   : 'bg-white text-black border-white hover:bg-green-400 hover:border-green-400 hover:text-black'
@@ -344,7 +448,7 @@ export default function Login() {
                   setIsRegistering(!isRegistering);
                   resetForm();
                 }}
-                className="text-green-400 font-mono text-xs sm:text-sm uppercase tracking-wider hover:text-white transition-colors underline"
+                className="text-green-400 font-mono text-xs xs:text-sm uppercase tracking-wider hover:text-white transition-colors"
                 disabled={loading}
               >
                 {isRegistering ? '← Back to Login' : 'Create New Account →'}
@@ -353,32 +457,28 @@ export default function Login() {
 
             {/* Error Display */}
             {loginError && (
-              <div className="bg-red-900 border-2 border-red-400 text-red-100 p-2 sm:p-3 text-center font-mono animate-pulse">
+              <div className="bg-red-900 border-2 border-red-400 text-red-100 p-2 xs:p-3 text-center font-mono animate-pulse">
                 <div className="text-xs uppercase tracking-wider mb-1">⚠ ERROR ⚠</div>
-                <div className="text-xs sm:text-sm">{loginError.toUpperCase()}</div>
+                <div className="text-xs xs:text-sm">{loginError.toUpperCase()}</div>
               </div>
             )}
 
             {/* Success Display */}
             {userType && (
-              <div className="bg-green-900 border-2 border-green-400 text-green-100 p-2 sm:p-3 text-center font-mono animate-pulse">
+              <div className="bg-green-900 border-2 border-green-400 text-green-100 p-2 xs:p-3 text-center font-mono animate-pulse">
                 <div className="text-xs uppercase tracking-wider mb-1">✓ {isRegistering ? 'ACCOUNT CREATED' : 'LOGIN SUCCESSFUL'} ✓</div>
-                <div className="text-xs sm:text-sm">{isRegistering ? 'WELCOME TO POLMATCH' : `AUTHENTICATED AS: ${userType.toUpperCase()}`}</div>
+                <div className="text-xs xs:text-sm">{isRegistering ? 'WELCOME TO POLMATCH' : `AUTHENTICATED AS: ${userType.toUpperCase()}`}</div>
               </div>
             )}
           </form>
 
-          {/* Security Footer */}
-          <div className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-600">
+          {/* Security Footer - Minimal in registration mode */}
+          <div className={`pt-2 sm:pt-3 md:pt-4 transition-all duration-300 ${
+            isRegistering ? 'mt-2 xs:mt-3 sm:mt-4' : 'mt-4 xs:mt-5 sm:mt-6 md:mt-8'
+          }`}>
             <div className="text-center">
-              <div className="text-xs text-gray-500 font-mono uppercase tracking-widest mb-2">
-                ENCRYPTION: AES-256 | STATUS: SECURE
-              </div>
-              <div className="flex flex-wrap items-center justify-center space-x-1 sm:space-x-2 text-xs text-gray-400 font-mono">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>FEDERAL MONITORING ACTIVE</span>
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              </div>
+              {/* Removed: ENCRYPTION: AES-256 | STATUS: SECURE */}
+              {/* Removed: FEDERAL MONITORING ACTIVE */}
             </div>
           </div>
         </div>
@@ -386,22 +486,15 @@ export default function Login() {
         {/* Logout Button (if logged in) */}
         {isLoggedIn && (
           <button
-            className="mt-6 sm:mt-8 p-3 sm:p-4 bg-red-900 text-red-100 border-2 border-red-500 rounded-none hover:bg-red-800 transition-colors font-mono uppercase tracking-wider text-xs sm:text-base shadow-lg"
+            className="mt-3 xs:mt-4 sm:mt-6 md:mt-8 p-2 xs:p-3 sm:p-4 bg-red-900 text-red-100 border-2 border-red-500 rounded-none hover:bg-red-800 transition-colors font-mono uppercase tracking-wider text-xs xs:text-sm sm:text-base shadow-lg"
             onClick={handleLogout}
           >
             TERMINATE SESSION
           </button>
         )}
 
-        {/* Bottom Warning */}
-        <div className="mt-8 sm:mt-12 text-center max-w-md px-2">
-          <div className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-            ⚠ UNAUTHORIZED ACCESS IS PROHIBITED ⚠
-          </div>
-          <div className="text-xs text-gray-600 font-mono mt-2">
-            ALL ACTIVITIES ARE MONITORED AND LOGGED
-          </div>
-        </div>
+        {/* Bottom spacing for mobile */}
+        <div className="h-4 sm:h-0"></div>
       </div>
 
       {/* Info Modal */}
@@ -410,11 +503,69 @@ export default function Login() {
         onClose={() => setShowInfoModal(false)} 
       />
 
-      {/* Custom CSS for animations */}
+      {/* Custom CSS for animations and responsive utilities */}
       <style jsx>{`
         @keyframes scanline {
           0% { transform: translateY(-100vh); }
           100% { transform: translateY(100vh); }
+        }
+        
+        /* Ensure proper viewport handling */
+        @media screen and (max-height: 700px) {
+          .min-h-screen {
+            min-height: 100vh;
+          }
+        }
+        
+        /* Custom breakpoint for extra small devices */
+        @media (min-width: 375px) {
+          .xs\\:p-4 { padding: 1rem; }
+          .xs\\:p-3 { padding: 0.75rem; }
+          .xs\\:p-2\\.5 { padding: 0.625rem; }
+          .xs\\:text-base { font-size: 1rem; line-height: 1.5rem; }
+          .xs\\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+          .xs\\:mb-4 { margin-bottom: 1rem; }
+          .xs\\:mb-5 { margin-bottom: 1.25rem; }
+          .xs\\:mb-6 { margin-bottom: 1.5rem; }
+          .xs\\:mt-4 { margin-top: 1rem; }
+          .xs\\:mt-5 { margin-top: 1.25rem; }
+          .xs\\:mt-6 { margin-top: 1.5rem; }
+          .xs\\:space-y-3 > :not([hidden]) ~ :not([hidden]) {
+            --tw-space-y-reverse: 0;
+            margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
+            margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
+          }
+          .xs\\:space-y-4 > :not([hidden]) ~ :not([hidden]) {
+            --tw-space-y-reverse: 0;
+            margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+            margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+          }
+          .xs\\:max-w-sm { max-width: 24rem; }
+          .xs\\:w-2 { width: 0.5rem; }
+          .xs\\:h-2 { height: 0.5rem; }
+          .xs\\:mr-2 { margin-right: 0.5rem; }
+          .xs\\:ml-2 { margin-left: 0.5rem; }
+          .xs\\:-mx-3 { margin-left: -0.75rem; margin-right: -0.75rem; }
+          .xs\\:-mx-4 { margin-left: -1rem; margin-right: -1rem; }
+          .xs\\:-mt-3 { margin-top: -0.75rem; }
+          .xs\\:-mt-4 { margin-top: -1rem; }
+        }
+        
+        /* Ensure no content is cut off on very small screens */
+        @media screen and (max-width: 320px) {
+          .fixed.inset-0 {
+            position: absolute;
+          }
+        }
+        
+        /* Handle landscape orientation on mobile */
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+          .justify-start {
+            justify-content: flex-start !important;
+          }
+          .min-h-screen {
+            min-height: auto;
+          }
         }
       `}</style>
     </div>
