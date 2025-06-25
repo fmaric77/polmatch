@@ -1,7 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 import InfoModal from "../components/modals/InfoModal";
@@ -271,89 +270,48 @@ export default function Login() {
         <div className="mb-2 xs:mb-3 sm:mb-4 md:mb-6 lg:mb-8 text-center animate-pulse mt-2 sm:mt-0">
         </div>
 
-        {/* Login Form Container - Dynamic sizing based on content */}
-        <div className={`bg-black border-2 border-white rounded-none shadow-2xl w-full relative transition-all duration-300 ${
-          isRegistering 
-            ? 'p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl' 
-            : 'p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg'
-        }`}>
-          {/* Form Header - Responsive text and padding */}
-          <div className={`border-b-2 border-white bg-white text-black text-center mb-3 xs:mb-4 sm:mb-5 md:mb-6 transition-all duration-300 ${
-            isRegistering 
-              ? 'p-1.5 xs:p-2 sm:p-3 md:p-4 -mx-2 xs:-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 -mt-2 xs:-mt-3 sm:-mt-4 md:-mt-6 lg:-mt-8'
-              : 'p-2 xs:p-2.5 sm:p-3 md:p-4 -mx-3 xs:-mx-4 sm:-mx-5 md:-mx-6 lg:-mx-8 -mt-3 xs:-mt-4 sm:-mt-5 md:-mt-6 lg:-mt-8'
-          }`}>
-            <div className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-bold tracking-widest uppercase">
-              {isRegistering ? 'User Registration' : 'polmatch messenger'}
-            </div>
+        {/* Login/Registration Form Container */}
+        <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-md mx-auto p-4">
+          {/* Form Header - Simple for both login and registration */}
+          <div className="mb-6">
+            {isRegistering ? (
+              <>
+                <h1 className="text-xl font-bold text-white mb-1">Create Account</h1>
+                <p className="text-gray-400 text-sm">Join the Polmatch community</p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xl font-bold text-white mb-1">Welcome Back</h1>
+                <p className="text-gray-400 text-sm">Sign in to your account</p>
+              </>
+            )}
           </div>
 
-          {/* Pulsing Status Indicator - Smaller in registration mode */}
-          <div className={`flex items-center justify-center transition-all duration-300 ${
-            isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-3 xs:mb-4 sm:mb-5 md:mb-6'
-          }`}>
-            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse mr-1.5 xs:mr-2 sm:mr-2.5 md:mr-3"></div>
-            <div className="text-green-400 font-mono text-xs xs:text-sm sm:text-sm md:text-base uppercase tracking-widest">SYSTEM ONLINE</div>
-            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse ml-1.5 xs:ml-2 sm:ml-2.5 md:ml-3"></div>
-          </div>
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
 
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className={`transition-all duration-300 ${
-            isRegistering ? 'space-y-2 xs:space-y-3 sm:space-y-4' : 'space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6'
-          }`}>
-            {/* Logo - Smaller in registration mode */}
-            <div className={`flex justify-center transition-all duration-300 ${
-              isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-4 xs:mb-5 sm:mb-6 md:mb-8'
-            }`}>
-              <div className={`border-2 border-white rounded-none bg-gray-900 transition-all duration-300 ${
-                isRegistering ? 'p-1.5 xs:p-2 sm:p-3' : 'p-2 xs:p-2.5 sm:p-3 md:p-4'
-              }`}>
-                <Image 
-                  src="/images/polstrat-dark.png" 
-                  alt="POLMATCH MESSENGER" 
-                  className="max-w-full h-auto transition-all duration-300" 
-                  width={isRegistering ? 100 : 120} 
-                  height={isRegistering ? 38 : 45} 
-                  style={{
-                    width: '100%',
-                    maxWidth: isRegistering ? '100px' : '120px',
-                    height: 'auto',
-                  }}
-                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 160px"
+            {/* Username Field (Registration Only) */}
+            {isRegistering && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-3 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-white transition-colors"
+                  disabled={loading}
+                  required
                 />
               </div>
-            </div>
-
-            {/* Registration Fields */}
-            {isRegistering && (
-              <>
-                <div>
-                  <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="[ENTER USERNAME]"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
-                    disabled={loading}
-                    required
-                  />
-                </div>
-              </>
             )}
 
             {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                Email Address
-              </label>
               <input
                 type="text"
-                placeholder="[ENTER EMAIL]"
+                placeholder="Enter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                className="w-full p-3 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-white transition-colors"
                 disabled={loading}
                 required
               />
@@ -361,20 +319,17 @@ export default function Login() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                Password
-              </label>
               <input
                 type="password"
-                placeholder="[ENTER PASSWORD]"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                className="w-full p-3 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-white transition-colors"
                 disabled={loading}
                 required
               />
               {isRegistering && (
-                <p className="text-xs text-gray-400 font-mono mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Must contain at least 6 characters, 1 number, and 1 special character
                 </p>
               )}
@@ -383,15 +338,12 @@ export default function Login() {
             {/* Confirm Password Field (Registration Only) */}
             {isRegistering && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                  Confirm Password
-                </label>
                 <input
                   type="password"
-                  placeholder="[CONFIRM PASSWORD]"
+                  placeholder="Confirm password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                  className="w-full p-3 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-white transition-colors"
                   disabled={loading}
                   required
                 />
@@ -401,20 +353,17 @@ export default function Login() {
             {/* 2FA Code Field (Login Only, when required) */}
             {!isRegistering && requires2FA && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                  Two-Factor Code
-                </label>
                 <input
                   type="text"
-                  placeholder="[ENTER 6-DIGIT CODE]"
+                  placeholder="Enter 6-digit code"
                   value={twoFactorCode}
                   onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-center tracking-widest text-xs xs:text-sm sm:text-base"
+                  className="w-full p-3 bg-black text-white border border-gray-600 rounded focus:outline-none focus:border-white transition-colors text-center tracking-widest"
                   disabled={loading}
                   maxLength={6}
                   required
                 />
-                <p className="text-xs text-gray-400 font-mono mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Enter the 6-digit code from your authenticator app
                 </p>
               </div>
@@ -423,20 +372,16 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full font-mono uppercase tracking-wider font-bold border-2 rounded-none shadow-lg transition-all ${
-                isRegistering 
-                  ? 'p-2 xs:p-2.5 sm:p-3 text-xs xs:text-sm sm:text-base' 
-                  : 'p-2 xs:p-3 sm:p-4 text-xs xs:text-sm sm:text-base'
-              } ${
+              className={`w-full p-3 text-base font-bold rounded transition-all ${
                 loading 
-                  ? 'bg-yellow-600 border-yellow-400 text-black animate-pulse cursor-not-allowed' 
-                  : 'bg-white text-black border-white hover:bg-green-400 hover:border-green-400 hover:text-black'
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                  : 'bg-white text-black hover:bg-gray-200'
               }`}
               disabled={loading}
             >
               {loading 
-                ? (isRegistering ? 'CREATING ACCOUNT...' : 'LOGGING IN...') 
-                : (isRegistering ? 'CREATE ACCOUNT' : 'LOGIN')
+                ? (isRegistering ? 'Creating Account...' : 'Signing In...') 
+                : (isRegistering ? 'Create Account' : 'Sign In')
               }
             </button>
 
@@ -448,10 +393,10 @@ export default function Login() {
                   setIsRegistering(!isRegistering);
                   resetForm();
                 }}
-                className="text-green-400 font-mono text-xs xs:text-sm uppercase tracking-wider hover:text-white transition-colors"
+                className="text-gray-400 text-sm hover:text-white transition-colors"
                 disabled={loading}
               >
-                {isRegistering ? '← Back to Login' : 'Create New Account →'}
+                {isRegistering ? '← Back to Sign In' : 'Create New Account →'}
               </button>
             </div>
 
