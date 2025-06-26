@@ -336,66 +336,13 @@ export default function ProfilePage() {
 
   const renderQuestion = (question: Question) => {
     const value = answers[question.question_id] || '';
-
+    
     switch (question.question_type) {
-      case 'text':
-      case 'email':
-      case 'url':
-        return (
-          <input
-            type={question.question_type}
-            value={value}
-            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
-            required={question.is_required}
-            placeholder="Enter your answer"
-          />
-        );
-      
-      case 'number':
-        return (
-          <input
-            type="number"
-            value={value}
-            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
-            required={question.is_required}
-            placeholder="Enter a number"
-          />
-        );
-      
-      case 'textarea':
-        return (
-          <textarea
-            value={value}
-            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            rows={4}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
-            required={question.is_required}
-            placeholder="Enter your detailed answer"
-          />
-        );
-      
-      case 'select':
-        return (
-          <select
-            value={value}
-            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
-            required={question.is_required}
-          >
-            <option value="">Select an option</option>
-            {question.options.map((option, idx) => (
-              <option key={idx} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-      
-      case 'radio':
+      case 'multiple_choice':
         return (
           <div className="space-y-2">
             {question.options.map((option, idx) => (
-              <label key={idx} className="flex items-center font-mono">
+              <label key={idx} className="flex items-center">
                 <input
                   type="radio"
                   name={question.question_id}
@@ -415,7 +362,7 @@ export default function ProfilePage() {
         return (
           <div className="space-y-2">
             {question.options.map((option, idx) => (
-              <label key={idx} className="flex items-center font-mono">
+              <label key={idx} className="flex items-center">
                 <input
                   type="checkbox"
                   value={option}
@@ -444,7 +391,7 @@ export default function ProfilePage() {
             type="text"
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+            className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
             required={question.is_required}
             placeholder="Enter your answer"
           />
@@ -459,15 +406,15 @@ export default function ProfilePage() {
         <Navigation currentPage="profile" />
         <main className="flex-1 flex flex-col overflow-y-auto">
           <div className="w-full max-w-4xl mx-auto mt-4 sm:mt-8 md:mt-12 p-4 sm:p-6 pb-8 sm:pb-16">
-            <div className="bg-black/80 border border-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
+            <div className="bg-black border-2 border-white rounded-none p-4 sm:p-6 md:p-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
                 <div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-mono uppercase tracking-wider">Questionnaire: {activeQuestionnaire.title}</h1>
-                  <p className="text-gray-300 font-mono text-xs sm:text-sm mt-2">Complete this questionnaire: {activeQuestionnaire.description}</p>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Questionnaire: {activeQuestionnaire.title}</h1>
+                  <p className="text-gray-300 text-xs sm:text-sm mt-2">Complete this questionnaire: {activeQuestionnaire.description}</p>
                 </div>
                 <button
                   onClick={() => setActiveQuestionnaire(null)}
-                  className="px-3 sm:px-4 py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider text-xs sm:text-sm w-full sm:w-auto"
+                  className="px-3 sm:px-4 py-2 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm w-full sm:w-auto"
                 >
                   ← Back to List
                 </button>
@@ -475,16 +422,16 @@ export default function ProfilePage() {
 
               <form onSubmit={(e) => { e.preventDefault(); submitQuestionnaire(); }} className="space-y-6">
                 {activeQuestionnaire.questions?.map((question, index) => (
-                  <div key={question.question_id} className="border border-white/30 rounded-lg p-4 bg-black/40">
-                    <label className="block text-sm font-mono font-medium mb-3 uppercase tracking-wider">
+                  <div key={question.question_id} className="border-2 border-white rounded-none p-4 bg-gray-900">
+                    <label className="block text-sm font-medium mb-3">
                       Question {String(index + 1)}: {question.question_text}
                       {question.is_required && <span className="text-red-400 ml-1">(Required)</span>}
                     </label>
                     {renderQuestion(question)}
                     
                     {/* Privacy Controls */}
-                    <div className="mt-4 pt-4 border-t border-white/20">
-                      <label className="block text-xs font-mono font-medium mb-2 text-gray-300 uppercase tracking-wider">
+                    <div className="mt-4 pt-4 border-t-2 border-white">
+                      <label className="block text-xs font-medium mb-2 text-gray-300">
                         Answer Visibility
                       </label>
                       <select
@@ -493,13 +440,13 @@ export default function ProfilePage() {
                           ...prev,
                           [question.question_id]: e.target.value
                         }))}
-                        className="w-full p-2 bg-black text-white border border-white/30 rounded focus:outline-none focus:border-white/60 font-mono text-xs"
+                        className="w-full p-2 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 text-xs"
                       >
                         <option value="public">🌍 Public - Everyone can see this answer</option>
                         <option value="friends">👥 Friends Only - Only friends can see this answer</option>
                         <option value="private">🔒 Private - Hide this answer from others</option>
                       </select>
-                      <p className="text-xs text-gray-400 font-mono mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         {answerVisibility[question.question_id] === 'friends' 
                           ? 'Only users who are your friends will see this answer' 
                           : answerVisibility[question.question_id] === 'private'
@@ -510,25 +457,25 @@ export default function ProfilePage() {
                   </div>
                 ))}
 
-                <div className="flex flex-col xs:flex-row gap-3 sm:gap-4 pt-6 border-t border-white/30">
+                <div className="flex flex-col xs:flex-row gap-3 sm:gap-4 pt-6 border-t-2 border-white">
                   <button
                     type="button"
                     onClick={() => setActiveQuestionnaire(null)}
-                    className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white border border-white font-mono rounded hover:bg-white/10 transition-colors uppercase tracking-wider text-xs sm:text-sm"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white border-2 border-white rounded-none hover:bg-gray-800 transition-colors text-xs sm:text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors disabled:opacity-50 uppercase tracking-wider text-xs sm:text-sm"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
                   >
                     {submitting ? 'Submitting...' : 'Submit Questionnaire'}
                   </button>
                 </div>
 
                 {submitMessage && (
-                  <div className={`text-center mt-4 font-mono uppercase tracking-wider ${submitMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`text-center mt-4 ${submitMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
                     {submitMessage.includes('success') ? 'Questionnaire submitted successfully!' : 'Failed to submit questionnaire'}
                   </div>
                 )}
@@ -538,55 +485,57 @@ export default function ProfilePage() {
         </main>
       </div>
     );
-  }  return (
+  }
+
+  return (
     <div className="flex h-screen bg-black text-white">
       <Navigation currentPage="profile" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 md:p-6 pb-8">
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl">
+          <div className="bg-black border-2 border-white rounded-none">
             {/* Header */}
-            <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-widest uppercase">Profile Settings</h1>
+            <div className="border-b-2 border-white p-3 text-center">
+              <h1 className="text-xl sm:text-2xl font-bold">Profile Settings</h1>
             </div>
 
             {/* Tab Navigation */}
             <div className="flex flex-col sm:flex-row border-b-2 border-white">
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'settings'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 border-white/30'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
                 }`}
               >
                 Profiles
               </button>
               <button
                 onClick={() => setActiveTab('general')}
-                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'general'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 border-white/30'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
                 }`}
               >
                 Settings
               </button>
               <button
                 onClick={() => setActiveTab('questionnaires')}
-                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'questionnaires'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 border-white/30'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
                 }`}
               >
                 Questionnaires
               </button>
               <button
                 onClick={() => setActiveTab('friends')}
-                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
+                className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'friends'
                     ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
                 }`}
               >
                 Friends
@@ -601,19 +550,19 @@ export default function ProfilePage() {
                   {/* Profile Type Tabs */}
                   <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
                       onClick={() => setActiveProfileTab('basic')}
                     >
                       General
                     </button>
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
                       onClick={() => setActiveProfileTab('love')}
                     >
                       Dating
                     </button>
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded font-mono text-xs sm:text-sm uppercase tracking-wider ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border border-white text-white hover:bg-white/10'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
                       onClick={() => setActiveProfileTab('business')}
                     >
                       Business
@@ -621,35 +570,35 @@ export default function ProfilePage() {
                   </div>
 
                   {profileLoading ? (
-                    <div className="text-center py-8 font-mono uppercase tracking-wider">Loading...</div>
+                    <div className="text-center py-8">Loading...</div>
                   ) : (
                     <>
                       {activeProfileTab === 'basic' && (basicProfile || userId) && (
-                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             if (!basicProfile && userId) setBasicProfile(getDefaultProfile('basic', userId)); 
                             handleProfileSave('basic'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Name</label>
+                              <label className="block text-sm font-medium mb-2">Name</label>
                               <input 
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Your display name" 
                                 value={basicProfile?.display_name || ''} 
                                 onChange={e => handleProfileChange('basic', 'display_name', e.target.value)}
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Bio</label>
+                              <label className="block text-sm font-medium mb-2">Bio</label>
                               <textarea 
                                 name="bio" 
                                 placeholder="About you" 
                                 value={basicProfile?.bio || ''} 
                                 onChange={e => handleProfileChange('basic', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -662,18 +611,18 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             {userId && (
-                              <div className="flex items-center space-x-3 p-3 bg-black/60 border border-white/20 rounded">
-                                <span className="text-white text-sm font-mono uppercase tracking-wider">Preview:</span>
+                              <div className="flex items-center space-x-3 p-3 bg-gray-800 border-2 border-white rounded-none">
+                                <span className="text-white text-sm">Preview:</span>
                                 <ProfileAvatar userId={userId} size={48} />
                               </div>
                             )}
                             <div>
-                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">Visibility</label>
+                              <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={basicProfile?.visibility || 'public'} 
                                 onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -686,14 +635,14 @@ export default function ProfilePage() {
                                   type="checkbox"
                                   checked={basicProfile?.ai_excluded || false}
                                   onChange={e => handleProfileChange('basic', 'ai_excluded', e.target.checked)}
-                                  className="w-4 h-4 text-red-600 bg-black border-white rounded focus:ring-red-500 focus:ring-2"
+                                  className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-mono font-medium uppercase tracking-wider">Exclude from AI</span>
+                                <span className="text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
                             >
                               {basicProfile ? 'Update' : 'Create'}
                             </button>
@@ -702,31 +651,31 @@ export default function ProfilePage() {
                       )}
 
                       {activeProfileTab === 'love' && (loveProfile || userId) && (
-                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             if (!loveProfile && userId) setLoveProfile(getDefaultProfile('love', userId)); 
                             handleProfileSave('love'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Name</label>
+                              <label className="block text-sm font-medium mb-2">Name</label>
                               <input 
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Dating profile name" 
                                 value={loveProfile?.display_name || ''} 
                                 onChange={e => handleProfileChange('love', 'display_name', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Bio</label>
+                              <label className="block text-sm font-medium mb-2">Bio</label>
                               <textarea 
                                 name="bio" 
                                 placeholder="Dating bio" 
                                 value={loveProfile?.bio || ''} 
                                 onChange={e => handleProfileChange('love', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -739,12 +688,12 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             <div>
-                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">Visibility</label>
+                              <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={loveProfile?.visibility || 'public'} 
                                 onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -757,14 +706,14 @@ export default function ProfilePage() {
                                   type="checkbox"
                                   checked={loveProfile?.ai_excluded || false}
                                   onChange={e => handleProfileChange('love', 'ai_excluded', e.target.checked)}
-                                  className="w-4 h-4 text-red-600 bg-black border-white rounded focus:ring-red-500 focus:ring-2"
+                                  className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-mono font-medium uppercase tracking-wider">Exclude from AI</span>
+                                <span className="text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
                             >
                               {loveProfile ? 'Update' : 'Create'}
                             </button>
@@ -773,31 +722,31 @@ export default function ProfilePage() {
                       )}
 
                       {activeProfileTab === 'business' && (businessProfile || userId) && (
-                        <div className="bg-black/40 border border-white/30 rounded-lg p-6">
+                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             if (!businessProfile && userId) setBusinessProfile(getDefaultProfile('business', userId)); 
                             handleProfileSave('business'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Name</label>
+                              <label className="block text-sm font-medium mb-2">Name</label>
                               <input 
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Professional name" 
                                 value={businessProfile?.display_name || ''} 
                                 onChange={e => handleProfileChange('business', 'display_name', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Bio</label>
+                              <label className="block text-sm font-medium mb-2">Bio</label>
                               <textarea 
                                 name="bio" 
                                 placeholder="Professional bio" 
                                 value={businessProfile?.bio || ''} 
                                 onChange={e => handleProfileChange('business', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -810,12 +759,12 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             <div>
-                              <label className="text-white text-sm font-mono font-medium uppercase tracking-wider">Visibility</label>
+                              <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={businessProfile?.visibility || 'public'} 
                                 onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono"
+                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -828,14 +777,14 @@ export default function ProfilePage() {
                                   type="checkbox"
                                   checked={businessProfile?.ai_excluded || false}
                                   onChange={e => handleProfileChange('business', 'ai_excluded', e.target.checked)}
-                                  className="w-4 h-4 text-red-600 bg-black border-white rounded focus:ring-red-500 focus:ring-2"
+                                  className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-mono font-medium uppercase tracking-wider">Exclude from AI</span>
+                                <span className="text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
                             >
                               {businessProfile ? 'Update' : 'Create'}
                             </button>
@@ -844,7 +793,7 @@ export default function ProfilePage() {
                       )}
 
                       {profileMessage && (
-                        <div className="text-green-400 text-center mt-4 font-mono uppercase tracking-wider">{profileMessage}</div>
+                        <div className="text-green-400 text-center mt-4">{profileMessage}</div>
                       )}
 
                       {/* Message Expiry Settings */}
@@ -858,15 +807,15 @@ export default function ProfilePage() {
                 <div>
                   {/* Profile Type Selector */}
                   <div className="flex justify-center mb-6 sm:mb-8">
-                    <div className="flex flex-col sm:flex-row bg-black border border-white rounded-lg p-1">
+                    <div className="flex flex-col sm:flex-row bg-black border-2 border-white rounded-none p-1">
                       {(['basic', 'business', 'love'] as const).map((type) => (
                         <button
                           key={type}
                           onClick={() => setSelectedProfileType(type)}
-                          className={`px-3 sm:px-4 py-2 rounded-md transition-colors font-mono text-xs sm:text-sm uppercase tracking-wider ${
+                          className={`px-3 sm:px-4 py-2 rounded-none transition-colors text-xs sm:text-sm ${
                             selectedProfileType === type
                               ? 'bg-white text-black'
-                              : 'text-gray-300 hover:text-white hover:bg-white/10 border-b sm:border-b-0 sm:border-r border-gray-700 last:border-none'
+                              : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 sm:border-r-2 border-white last:border-none'
                           }`}
                         >
                           {type === 'basic' ? 'General' : type === 'business' ? 'Business' : 'Dating'}
@@ -876,32 +825,32 @@ export default function ProfilePage() {
                   </div>
 
                   {questionnaireLoading ? (
-                    <div className="text-center py-8 font-mono uppercase tracking-wider">Loading...</div>
+                    <div className="text-center py-8">Loading...</div>
                   ) : questionnaireError ? (
-                    <div className="text-center py-8 text-red-400 font-mono uppercase tracking-wider">{questionnaireError}</div>
+                    <div className="text-center py-8 text-red-400">{questionnaireError}</div>
                   ) : questionnaireGroups.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 font-mono uppercase tracking-wider">
+                    <div className="text-center py-8 text-gray-400">
                       No questionnaires available
                     </div>
                   ) : (
                     <div className="space-y-6">
                       {questionnaireGroups.map((group) => (
-                        <div key={group.group_id} className="border border-white rounded-lg p-6 bg-black/40">
-                          <h2 className="text-xl font-bold font-mono mb-2 uppercase tracking-wider">{group.title}</h2>
+                        <div key={group.group_id} className="border-2 border-white rounded-none p-6 bg-gray-900">
+                          <h2 className="text-xl font-bold mb-2">{group.title}</h2>
                           
                           <div className="space-y-3">
                             {group.questionnaires.map((questionnaire) => (
-                              <div key={questionnaire.questionnaire_id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-black/60 border border-white/30 p-3 sm:p-4 rounded-lg">
+                              <div key={questionnaire.questionnaire_id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-800 border-2 border-white p-3 sm:p-4 rounded-none">
                                 <div className="mb-3 sm:mb-0">
-                                  <h3 className="font-semibold font-mono uppercase tracking-wider text-sm sm:text-base">{questionnaire.title}</h3>
+                                  <h3 className="font-semibold text-sm sm:text-base">{questionnaire.title}</h3>
                                 </div>
                                 <div className="flex items-center gap-3 self-end sm:self-auto w-full sm:w-auto justify-end">
                                   {questionnaire.completed ? (
                                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-                                      <span className="text-green-400 text-xs sm:text-sm font-mono uppercase tracking-wider order-2 sm:order-1">Completed</span>
+                                      <span className="text-green-400 text-xs sm:text-sm order-2 sm:order-1">Completed</span>
                                       <button
                                         onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                        className="px-3 py-1 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors text-xs sm:text-sm uppercase tracking-wider order-1 sm:order-2"
+                                        className="px-3 py-1 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm order-1 sm:order-2"
                                       >
                                         Edit
                                       </button>
@@ -909,7 +858,7 @@ export default function ProfilePage() {
                                   ) : (
                                     <button
                                       onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                      className="px-3 sm:px-4 py-1 sm:py-2 bg-white text-black font-mono rounded hover:bg-gray-200 transition-colors uppercase tracking-wider text-xs sm:text-sm"
+                                      className="px-3 sm:px-4 py-1 sm:py-2 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm"
                                     >
                                       Start
                                     </button>
@@ -932,42 +881,42 @@ export default function ProfilePage() {
               {activeTab === 'general' && (
                 <div className="space-y-8">
                   {/* Password Change Section */}
-                  <div className="bg-black/40 border border-white/30 rounded-lg p-6">
-                    <h2 className="text-xl font-mono font-bold mb-4 uppercase tracking-wider">Change Password</h2>
+                  <div className="bg-gray-900 border-2 border-white rounded-none p-6">
+                    <h2 className="text-xl font-bold mb-4">Change Password</h2>
                     <form onSubmit={handlePasswordChange} className="flex flex-col gap-4 max-w-md">
                       <div>
-                        <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Current Password</label>
+                        <label className="block text-sm font-medium mb-2">Current Password</label>
                         <input 
                           type="password" 
                           placeholder="Current password" 
                           value={passwordForm.oldPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">New Password</label>
+                        <label className="block text-sm font-medium mb-2">New Password</label>
                         <input 
                           type="password" 
                           placeholder="New password" 
                           value={passwordForm.newPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                           minLength={6}
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-mono font-medium mb-2 uppercase tracking-wider">Confirm Password</label>
+                        <label className="block text-sm font-medium mb-2">Confirm Password</label>
                         <input 
                           type="password" 
                           placeholder="Confirm password" 
                           value={passwordForm.confirmPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border border-white rounded focus:outline-none focus:border-white/60 font-mono" 
+                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                         />
                       </div>
@@ -975,7 +924,7 @@ export default function ProfilePage() {
                       <button 
                         type="submit" 
                         disabled={passwordLoading}
-                        className="p-3 bg-white text-black font-mono rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-wider"
+                        className="p-3 bg-white text-black rounded-none hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {passwordLoading ? 'Updating...' : 'Update Password'}
                       </button>
@@ -983,10 +932,10 @@ export default function ProfilePage() {
                     
                     {/* Password change messages */}
                     {passwordError && (
-                      <div className="text-red-400 text-center mt-4 font-mono uppercase tracking-wider">{passwordError}</div>
+                      <div className="text-red-400 text-center mt-4">{passwordError}</div>
                     )}
                     {passwordMessage && (
-                      <div className="text-green-400 text-center mt-4 font-mono uppercase tracking-wider">{passwordMessage}</div>
+                      <div className="text-green-400 text-center mt-4">{passwordMessage}</div>
                     )}
                   </div>
 

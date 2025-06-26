@@ -7,6 +7,7 @@ import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 import InfoModal from "../components/modals/InfoModal";
 import { useCSRFToken } from "../components/hooks/useCSRFToken";
 
+
 export default function Login() {
   const router = useRouter();
   const { protectedFetch } = useCSRFToken();
@@ -22,6 +23,8 @@ export default function Login() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+
+
 
   // Check session on mount
   useEffect(() => {
@@ -41,13 +44,12 @@ export default function Login() {
   // Only show login form after session check
   if (isLoggedIn === null) {
     return (
-      <div className="fixed inset-0 min-h-screen min-w-full bg-black text-white flex items-center justify-center z-50 p-4 text-center font-mono">
-        <div className="animate-pulse">CHECKING SESSION STATUS...</div>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div>Checking session...</div>
       </div>
     );
   }
   if (isLoggedIn) {
-    // Prevent rendering anything if already logged in (router.push will handle redirect)
     return null;
   }
 
@@ -202,7 +204,6 @@ export default function Login() {
         setLoginError(errorMessage);
       } else {
         setUserType('User');
-        // Redirect to frontpage after successful registration
         router.push('/frontpage');
       }
     } catch (error) {
@@ -219,7 +220,6 @@ export default function Login() {
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, redirect to login page
       router.push('/');
     }
   };
@@ -236,124 +236,121 @@ export default function Login() {
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-black text-white font-mono overflow-hidden">
-      {/* Help Button - Top Left */}
+        <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Epic Lightning Storm Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Main Lightning Bolts */}
+        <div className="lightning-bolt lightning-1">
+          <div className="lightning-branch branch-1"></div>
+          <div className="lightning-branch branch-2"></div>
+        </div>
+        <div className="lightning-bolt lightning-2">
+          <div className="lightning-branch branch-3"></div>
+        </div>
+        <div className="lightning-bolt lightning-3">
+          <div className="lightning-branch branch-4"></div>
+          <div className="lightning-branch branch-5"></div>
+          <div className="lightning-branch branch-6"></div>
+        </div>
+        <div className="lightning-bolt lightning-4">
+          <div className="lightning-branch branch-7"></div>
+        </div>
+        <div className="lightning-bolt lightning-5">
+          <div className="lightning-branch branch-8"></div>
+          <div className="lightning-branch branch-9"></div>
+        </div>
+        <div className="lightning-bolt lightning-6">
+          <div className="lightning-branch branch-10"></div>
+        </div>
+        
+        {/* Electric Sparks */}
+        <div className="electric-sparks">
+          <div className="spark spark-1"></div>
+          <div className="spark spark-2"></div>
+          <div className="spark spark-3"></div>
+          <div className="spark spark-4"></div>
+          <div className="spark spark-5"></div>
+          <div className="spark spark-6"></div>
+          <div className="spark spark-7"></div>
+          <div className="spark spark-8"></div>
+        </div>
+        
+        {/* Storm Clouds */}
+        <div className="storm-clouds">
+          <div className="cloud cloud-1"></div>
+          <div className="cloud cloud-2"></div>
+          <div className="cloud cloud-3"></div>
+        </div>
+        
+        {/* Chain Lightning */}
+        <div className="chain-lightning chain-1"></div>
+        <div className="chain-lightning chain-2"></div>
+      </div>
+      
+      {/* Rain Effect */}
+      <div className="rain-container absolute inset-0 pointer-events-none">
+        <div className="rain-drop rain-1"></div>
+        <div className="rain-drop rain-2"></div>
+        <div className="rain-drop rain-3"></div>
+        <div className="rain-drop rain-4"></div>
+        <div className="rain-drop rain-5"></div>
+        <div className="rain-drop rain-6"></div>
+        <div className="rain-drop rain-7"></div>
+        <div className="rain-drop rain-8"></div>
+        <div className="rain-drop rain-9"></div>
+        <div className="rain-drop rain-10"></div>
+      </div>
+
+      {/* Help Button */}
       <button
         onClick={() => setShowInfoModal(true)}
-        className="fixed top-2 left-2 sm:top-4 sm:left-4 z-20 p-2 sm:p-3 bg-black text-blue-400 border-2 border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono text-sm sm:text-base"
+        className="fixed top-4 left-4 z-20 w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center hover:bg-gray-800 transition-colors"
         title="Platform Information"
       >
-        <FontAwesomeIcon icon={faQuestion} size="sm" className="sm:text-lg" />
+        <FontAwesomeIcon icon={faQuestion} />
       </button>
       
-      {/* Animated Background Grid */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="grid grid-cols-4 xs:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-px h-full">
-          {Array.from({ length: 120 }).map((_, i) => (
-            <div 
-              key={i} 
-              className="border border-green-500/20 animate-pulse"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            />
-          ))}
+      {/* Logo - Top Right */}
+      <div className="fixed top-4 right-4 z-20">
+        <div className="border-2 border-white rounded-none bg-gray-900 p-3">
+          <Image 
+            src="/images/polstrat-dark.png" 
+            alt="Polmatch" 
+            width={120} 
+            height={45}
+            className="max-w-full h-auto"
+          />
         </div>
       </div>
       
-      {/* Scanline Effect */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-ping opacity-30 translate-y-64 absolute" 
-             style={{ animation: 'scanline 4s linear infinite' }} />
-      </div>
+      {/* Main Login Container */}
+      <div className="w-full max-w-md">
+        <div className="bg-black border-2 border-white rounded-none p-6">
 
-      {/* Main Login Container - Now with scroll support */}
-      <div className="relative z-10 flex flex-col items-center justify-start sm:justify-center min-h-screen p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto">
-        {/* FBI Header - Smaller on mobile */}
-        <div className="mb-2 xs:mb-3 sm:mb-4 md:mb-6 lg:mb-8 text-center animate-pulse mt-2 sm:mt-0">
-        </div>
-
-        {/* Login Form Container - Dynamic sizing based on content */}
-        <div className={`bg-black border-2 border-white rounded-none shadow-2xl w-full relative transition-all duration-300 ${
-          isRegistering 
-            ? 'p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl' 
-            : 'p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg'
-        }`}>
-          {/* Form Header - Responsive text and padding */}
-          <div className={`border-b-2 border-white bg-white text-black text-center mb-3 xs:mb-4 sm:mb-5 md:mb-6 transition-all duration-300 ${
-            isRegistering 
-              ? 'p-1.5 xs:p-2 sm:p-3 md:p-4 -mx-2 xs:-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 -mt-2 xs:-mt-3 sm:-mt-4 md:-mt-6 lg:-mt-8'
-              : 'p-2 xs:p-2.5 sm:p-3 md:p-4 -mx-3 xs:-mx-4 sm:-mx-5 md:-mx-6 lg:-mx-8 -mt-3 xs:-mt-4 sm:-mt-5 md:-mt-6 lg:-mt-8'
-          }`}>
-            <div className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-bold tracking-widest uppercase">
-              {isRegistering ? 'User Registration' : 'polmatch messenger'}
-            </div>
-          </div>
-
-          {/* Pulsing Status Indicator - Smaller in registration mode */}
-          <div className={`flex items-center justify-center transition-all duration-300 ${
-            isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-3 xs:mb-4 sm:mb-5 md:mb-6'
-          }`}>
-            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse mr-1.5 xs:mr-2 sm:mr-2.5 md:mr-3"></div>
-            <div className="text-green-400 font-mono text-xs xs:text-sm sm:text-sm md:text-base uppercase tracking-widest">SYSTEM ONLINE</div>
-            <div className="w-1.5 xs:w-2 sm:w-2.5 md:w-3 h-1.5 xs:h-2 sm:h-2.5 md:h-3 bg-green-400 rounded-full animate-pulse ml-1.5 xs:ml-2 sm:ml-2.5 md:ml-3"></div>
-          </div>
-
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className={`transition-all duration-300 ${
-            isRegistering ? 'space-y-2 xs:space-y-3 sm:space-y-4' : 'space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6'
-          }`}>
-            {/* Logo - Smaller in registration mode */}
-            <div className={`flex justify-center transition-all duration-300 ${
-              isRegistering ? 'mb-2 xs:mb-3 sm:mb-4' : 'mb-4 xs:mb-5 sm:mb-6 md:mb-8'
-            }`}>
-              <div className={`border-2 border-white rounded-none bg-gray-900 transition-all duration-300 ${
-                isRegistering ? 'p-1.5 xs:p-2 sm:p-3' : 'p-2 xs:p-2.5 sm:p-3 md:p-4'
-              }`}>
-                <Image 
-                  src="/images/polstrat-dark.png" 
-                  alt="POLMATCH MESSENGER" 
-                  className="max-w-full h-auto transition-all duration-300" 
-                  width={isRegistering ? 100 : 120} 
-                  height={isRegistering ? 38 : 45} 
-                  style={{
-                    width: '100%',
-                    maxWidth: isRegistering ? '100px' : '120px',
-                    height: 'auto',
-                  }}
-                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 160px"
-                />
-              </div>
-            </div>
-
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
             {/* Registration Fields */}
             {isRegistering && (
-              <>
-                <div>
-                  <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="[ENTER USERNAME]"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
-                    disabled={loading}
-                    required
-                  />
-                </div>
-              </>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                  disabled={loading}
+                  required
+                />
+              </div>
             )}
 
             {/* Email Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                Email Address
-              </label>
               <input
-                type="text"
-                placeholder="[ENTER EMAIL]"
+                type="email"
+                placeholder="Enter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                 disabled={loading}
                 required
               />
@@ -361,20 +358,17 @@ export default function Login() {
 
             {/* Password Field */}
             <div>
-              <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                Password
-              </label>
               <input
                 type="password"
-                placeholder="[ENTER PASSWORD]"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                 disabled={loading}
                 required
               />
               {isRegistering && (
-                <p className="text-xs text-gray-400 font-mono mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Must contain at least 6 characters, 1 number, and 1 special character
                 </p>
               )}
@@ -383,15 +377,12 @@ export default function Login() {
             {/* Confirm Password Field (Registration Only) */}
             {isRegistering && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                  Confirm Password
-                </label>
                 <input
                   type="password"
-                  placeholder="[CONFIRM PASSWORD]"
+                  placeholder="Confirm password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-xs xs:text-sm sm:text-base"
+                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                   disabled={loading}
                   required
                 />
@@ -401,20 +392,17 @@ export default function Login() {
             {/* 2FA Code Field (Login Only, when required) */}
             {!isRegistering && requires2FA && (
               <div>
-                <label className="block text-xs sm:text-sm font-mono font-medium mb-1 uppercase tracking-wider text-gray-300">
-                  Two-Factor Code
-                </label>
                 <input
                   type="text"
-                  placeholder="[ENTER 6-DIGIT CODE]"
+                  placeholder="Enter 6-digit code"
                   value={twoFactorCode}
                   onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full p-2 xs:p-2.5 sm:p-3 md:p-4 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-green-400 font-mono shadow-lg transition-colors text-center tracking-widest text-xs xs:text-sm sm:text-base"
+                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors text-center tracking-widest"
                   disabled={loading}
                   maxLength={6}
                   required
                 />
-                <p className="text-xs text-gray-400 font-mono mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Enter the 6-digit code from your authenticator app
                 </p>
               </div>
@@ -423,20 +411,16 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full font-mono uppercase tracking-wider font-bold border-2 rounded-none shadow-lg transition-all ${
-                isRegistering 
-                  ? 'p-2 xs:p-2.5 sm:p-3 text-xs xs:text-sm sm:text-base' 
-                  : 'p-2 xs:p-3 sm:p-4 text-xs xs:text-sm sm:text-base'
-              } ${
+              className={`w-full p-3 font-medium uppercase tracking-wider border-2 rounded-none transition-all ${
                 loading 
-                  ? 'bg-yellow-600 border-yellow-400 text-black animate-pulse cursor-not-allowed' 
-                  : 'bg-white text-black border-white hover:bg-green-400 hover:border-green-400 hover:text-black'
+                  ? 'bg-gray-600 border-gray-400 text-gray-300 cursor-not-allowed' 
+                  : 'bg-white text-black border-white hover:bg-gray-200 hover:border-gray-200'
               }`}
               disabled={loading}
             >
               {loading 
-                ? (isRegistering ? 'CREATING ACCOUNT...' : 'LOGGING IN...') 
-                : (isRegistering ? 'CREATE ACCOUNT' : 'LOGIN')
+                ? (isRegistering ? 'Creating Account...' : 'Logging In...') 
+                : (isRegistering ? 'Create Account' : 'Login')
               }
             </button>
 
@@ -448,7 +432,7 @@ export default function Login() {
                   setIsRegistering(!isRegistering);
                   resetForm();
                 }}
-                className="text-green-400 font-mono text-xs xs:text-sm uppercase tracking-wider hover:text-white transition-colors"
+                className="text-gray-400 hover:text-white transition-colors"
                 disabled={loading}
               >
                 {isRegistering ? '← Back to Login' : 'Create New Account →'}
@@ -457,44 +441,35 @@ export default function Login() {
 
             {/* Error Display */}
             {loginError && (
-              <div className="bg-red-900 border-2 border-red-400 text-red-100 p-2 xs:p-3 text-center font-mono animate-pulse">
-                <div className="text-xs uppercase tracking-wider mb-1">⚠ ERROR ⚠</div>
-                <div className="text-xs xs:text-sm">{loginError.toUpperCase()}</div>
+              <div className="bg-red-900 border-2 border-red-400 text-red-100 p-3 text-center">
+                <div className="text-sm uppercase tracking-wider mb-1">Error</div>
+                <div className="text-sm">{loginError}</div>
               </div>
             )}
 
             {/* Success Display */}
             {userType && (
-              <div className="bg-green-900 border-2 border-green-400 text-green-100 p-2 xs:p-3 text-center font-mono animate-pulse">
-                <div className="text-xs uppercase tracking-wider mb-1">✓ {isRegistering ? 'ACCOUNT CREATED' : 'LOGIN SUCCESSFUL'} ✓</div>
-                <div className="text-xs xs:text-sm">{isRegistering ? 'WELCOME TO POLMATCH' : `AUTHENTICATED AS: ${userType.toUpperCase()}`}</div>
+              <div className="bg-green-900 border-2 border-green-400 text-green-100 p-3 text-center">
+                <div className="text-sm uppercase tracking-wider mb-1">
+                  {isRegistering ? 'Account Created' : 'Login Successful'}
+                </div>
+                <div className="text-sm">
+                  {isRegistering ? 'Welcome to Polmatch' : `Authenticated as: ${userType}`}
+                </div>
               </div>
             )}
           </form>
-
-          {/* Security Footer - Minimal in registration mode */}
-          <div className={`pt-2 sm:pt-3 md:pt-4 transition-all duration-300 ${
-            isRegistering ? 'mt-2 xs:mt-3 sm:mt-4' : 'mt-4 xs:mt-5 sm:mt-6 md:mt-8'
-          }`}>
-            <div className="text-center">
-              {/* Removed: ENCRYPTION: AES-256 | STATUS: SECURE */}
-              {/* Removed: FEDERAL MONITORING ACTIVE */}
-            </div>
-          </div>
         </div>
 
         {/* Logout Button (if logged in) */}
         {isLoggedIn && (
           <button
-            className="mt-3 xs:mt-4 sm:mt-6 md:mt-8 p-2 xs:p-3 sm:p-4 bg-red-900 text-red-100 border-2 border-red-500 rounded-none hover:bg-red-800 transition-colors font-mono uppercase tracking-wider text-xs xs:text-sm sm:text-base shadow-lg"
+            className="mt-4 w-full p-3 bg-red-900 text-red-100 border-2 border-red-500 rounded-none hover:bg-red-800 transition-colors uppercase tracking-wider"
             onClick={handleLogout}
           >
-            TERMINATE SESSION
+            Logout
           </button>
         )}
-
-        {/* Bottom spacing for mobile */}
-        <div className="h-4 sm:h-0"></div>
       </div>
 
       {/* Info Modal */}
@@ -502,70 +477,255 @@ export default function Login() {
         isOpen={showInfoModal} 
         onClose={() => setShowInfoModal(false)} 
       />
-
-      {/* Custom CSS for animations and responsive utilities */}
+      
+      {/* Epic Lightning Storm CSS */}
       <style jsx>{`
-        @keyframes scanline {
-          0% { transform: translateY(-100vh); }
-          100% { transform: translateY(100vh); }
+        /* Main Lightning Bolts */
+        .lightning-bolt {
+          position: absolute;
+          opacity: 0;
+          background: linear-gradient(0deg, 
+            transparent 0%, 
+            rgba(135,206,250,0.3) 10%, 
+            rgba(255,255,255,1) 50%, 
+            rgba(135,206,250,0.3) 90%, 
+            transparent 100%
+          );
+          filter: drop-shadow(0 0 40px rgba(135,206,250,1)) 
+                  drop-shadow(0 0 80px rgba(255,255,255,0.9))
+                  drop-shadow(0 0 120px rgba(135,206,250,0.7));
+          z-index: 1;
         }
         
-        /* Ensure proper viewport handling */
-        @media screen and (max-height: 700px) {
-          .min-h-screen {
-            min-height: 100vh;
-          }
+        /* Lightning Branches - Realistic forking */
+        .lightning-branch {
+          position: absolute;
+          opacity: 0;
+          background: linear-gradient(45deg, 
+            transparent 0%, 
+            rgba(255,255,255,0.8) 50%, 
+            transparent 100%
+          );
+          filter: drop-shadow(0 0 20px rgba(135,206,250,0.8));
         }
         
-        /* Custom breakpoint for extra small devices */
-        @media (min-width: 375px) {
-          .xs\\:p-4 { padding: 1rem; }
-          .xs\\:p-3 { padding: 0.75rem; }
-          .xs\\:p-2\\.5 { padding: 0.625rem; }
-          .xs\\:text-base { font-size: 1rem; line-height: 1.5rem; }
-          .xs\\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-          .xs\\:mb-4 { margin-bottom: 1rem; }
-          .xs\\:mb-5 { margin-bottom: 1.25rem; }
-          .xs\\:mb-6 { margin-bottom: 1.5rem; }
-          .xs\\:mt-4 { margin-top: 1rem; }
-          .xs\\:mt-5 { margin-top: 1.25rem; }
-          .xs\\:mt-6 { margin-top: 1.5rem; }
-          .xs\\:space-y-3 > :not([hidden]) ~ :not([hidden]) {
-            --tw-space-y-reverse: 0;
-            margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
-            margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
-          }
-          .xs\\:space-y-4 > :not([hidden]) ~ :not([hidden]) {
-            --tw-space-y-reverse: 0;
-            margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
-            margin-bottom: calc(1rem * var(--tw-space-y-reverse));
-          }
-          .xs\\:max-w-sm { max-width: 24rem; }
-          .xs\\:w-2 { width: 0.5rem; }
-          .xs\\:h-2 { height: 0.5rem; }
-          .xs\\:mr-2 { margin-right: 0.5rem; }
-          .xs\\:ml-2 { margin-left: 0.5rem; }
-          .xs\\:-mx-3 { margin-left: -0.75rem; margin-right: -0.75rem; }
-          .xs\\:-mx-4 { margin-left: -1rem; margin-right: -1rem; }
-          .xs\\:-mt-3 { margin-top: -0.75rem; }
-          .xs\\:-mt-4 { margin-top: -1rem; }
+        /* Branch positioning */
+        .branch-1 { top: 20%; left: -15px; width: 30px; height: 3px; transform: rotate(45deg); }
+        .branch-2 { top: 60%; left: 10px; width: 25px; height: 2px; transform: rotate(-30deg); }
+        .branch-3 { top: 30%; left: -20px; width: 35px; height: 4px; transform: rotate(60deg); }
+        .branch-4 { top: 15%; left: 5px; width: 20px; height: 2px; transform: rotate(-45deg); }
+        .branch-5 { top: 45%; left: -10px; width: 28px; height: 3px; transform: rotate(30deg); }
+        .branch-6 { top: 70%; left: 8px; width: 22px; height: 2px; transform: rotate(-60deg); }
+        .branch-7 { top: 35%; left: -12px; width: 26px; height: 3px; transform: rotate(50deg); }
+        .branch-8 { top: 25%; left: 6px; width: 32px; height: 4px; transform: rotate(-40deg); }
+        .branch-9 { top: 55%; left: -8px; width: 24px; height: 2px; transform: rotate(35deg); }
+        .branch-10 { top: 40%; left: -15px; width: 30px; height: 3px; transform: rotate(55deg); }
+        
+        /* Electric Sparks */
+        .spark {
+          position: absolute;
+          width: 4px;
+          height: 4px;
+          background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(135,206,250,0.8) 50%, transparent 100%);
+          border-radius: 50%;
+          opacity: 0;
+          filter: drop-shadow(0 0 15px rgba(135,206,250,1));
         }
         
-        /* Ensure no content is cut off on very small screens */
-        @media screen and (max-width: 320px) {
-          .fixed.inset-0 {
-            position: absolute;
-          }
+        .spark-1 { top: 10%; left: 20%; animation: spark-dance 2s infinite 0.3s; }
+        .spark-2 { top: 80%; left: 45%; animation: spark-dance 1.8s infinite 1.1s; }
+        .spark-3 { top: 30%; left: 70%; animation: spark-dance 2.2s infinite 0.7s; }
+        .spark-4 { top: 60%; left: 15%; animation: spark-dance 1.5s infinite 1.8s; }
+        .spark-5 { top: 25%; left: 85%; animation: spark-dance 2.5s infinite 0.9s; }
+        .spark-6 { top: 75%; left: 30%; animation: spark-dance 1.9s infinite 1.4s; }
+        .spark-7 { top: 45%; left: 60%; animation: spark-dance 2.1s infinite 0.5s; }
+        .spark-8 { top: 90%; left: 80%; animation: spark-dance 1.7s infinite 1.6s; }
+        
+        /* Storm Clouds */
+        .cloud {
+          position: absolute;
+          background: radial-gradient(ellipse, rgba(50,50,80,0.3) 0%, transparent 70%);
+          border-radius: 50%;
+          opacity: 0.6;
+          animation: cloud-drift 20s linear infinite;
         }
         
-        /* Handle landscape orientation on mobile */
-        @media screen and (max-height: 500px) and (orientation: landscape) {
-          .justify-start {
-            justify-content: flex-start !important;
-          }
-          .min-h-screen {
-            min-height: auto;
-          }
+        .cloud-1 { top: 5%; left: -100px; width: 200px; height: 80px; animation-delay: 0s; }
+        .cloud-2 { top: 8%; left: -150px; width: 250px; height: 100px; animation-delay: -7s; }
+        .cloud-3 { top: 12%; left: -120px; width: 180px; height: 70px; animation-delay: -14s; }
+        
+        /* Chain Lightning */
+        .chain-lightning {
+          position: absolute;
+          opacity: 0;
+          background: linear-gradient(45deg, 
+            transparent 0%, 
+            rgba(255,255,255,0.9) 20%, 
+            transparent 40%,
+            rgba(135,206,250,0.8) 60%,
+            transparent 80%,
+            rgba(255,255,255,0.9) 100%
+          );
+          filter: drop-shadow(0 0 25px rgba(135,206,250,0.9));
+        }
+        
+        .chain-1 {
+          top: 20%;
+          left: 25%;
+          width: 300px;
+          height: 3px;
+          transform: rotate(15deg);
+          animation: chain-flash 4s infinite 1.5s;
+        }
+        
+        .chain-2 {
+          top: 60%;
+          left: 50%;
+          width: 250px;
+          height: 2px;
+          transform: rotate(-25deg);
+          animation: chain-flash 3.5s infinite 2.8s;
+        }
+        
+        /* Rain */
+        .rain-drop {
+          position: absolute;
+          width: 2px;
+          height: 20px;
+          background: linear-gradient(to bottom, transparent, rgba(135,206,250,0.3), transparent);
+          animation: rain-fall 1s linear infinite;
+        }
+        
+        .rain-1 { left: 10%; animation-delay: 0s; }
+        .rain-2 { left: 20%; animation-delay: 0.1s; }
+        .rain-3 { left: 30%; animation-delay: 0.2s; }
+        .rain-4 { left: 40%; animation-delay: 0.3s; }
+        .rain-5 { left: 50%; animation-delay: 0.4s; }
+        .rain-6 { left: 60%; animation-delay: 0.5s; }
+        .rain-7 { left: 70%; animation-delay: 0.6s; }
+        .rain-8 { left: 80%; animation-delay: 0.7s; }
+        .rain-9 { left: 90%; animation-delay: 0.8s; }
+        .rain-10 { left: 95%; animation-delay: 0.9s; }
+        
+        /* Lightning positioning and timing */
+        .lightning-1 {
+          left: 15%; top: 0; width: 10px; height: 100vh; transform: rotate(2deg);
+          animation: epic-lightning-strike 3s infinite;
+        }
+        .lightning-2 {
+          left: 35%; top: 0; width: 14px; height: 100vh; transform: rotate(-3deg);
+          animation: epic-lightning-strike 2.5s infinite 1.2s;
+        }
+        .lightning-3 {
+          left: 55%; top: 0; width: 8px; height: 100vh; transform: rotate(1deg);
+          animation: epic-lightning-strike 4s infinite 2.8s;
+        }
+        .lightning-4 {
+          left: 75%; top: 0; width: 12px; height: 100vh; transform: rotate(-2deg);
+          animation: epic-lightning-strike 2.2s infinite 0.8s;
+        }
+        .lightning-5 {
+          left: 25%; top: 0; width: 16px; height: 100vh; transform: rotate(4deg);
+          animation: epic-lightning-strike 5s infinite 4.1s;
+        }
+        .lightning-6 {
+          left: 85%; top: 0; width: 10px; height: 100vh; transform: rotate(-1deg);
+          animation: epic-lightning-strike 3.5s infinite 1.9s;
+        }
+        
+        /* EPIC ANIMATIONS */
+        @keyframes epic-lightning-strike {
+          0%, 88% { opacity: 0; }
+          90% { opacity: 0.6; }
+          91% { opacity: 1; }
+          92% { opacity: 0.3; }
+          93% { opacity: 0.9; }
+          94% { opacity: 0.1; }
+          95% { opacity: 1; }
+          96% { opacity: 0.2; }
+          97% { opacity: 0.8; }
+          98% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        
+        @keyframes spark-dance {
+          0%, 85% { opacity: 0; transform: scale(0) rotate(0deg); }
+          90% { opacity: 1; transform: scale(1.5) rotate(180deg); }
+          95% { opacity: 0.3; transform: scale(0.8) rotate(360deg); }
+          100% { opacity: 0; transform: scale(0) rotate(540deg); }
+        }
+        
+        @keyframes cloud-drift {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(100vw); }
+        }
+        
+        @keyframes chain-flash {
+          0%, 90% { opacity: 0; transform: scaleX(0); }
+          92% { opacity: 1; transform: scaleX(1); }
+          94% { opacity: 0.4; transform: scaleX(0.8); }
+          96% { opacity: 1; transform: scaleX(1); }
+          98% { opacity: 0; transform: scaleX(0); }
+        }
+        
+        @keyframes rain-fall {
+          0% { top: -20px; opacity: 0; }
+          10% { opacity: 0.5; }
+          90% { opacity: 0.3; }
+          100% { top: 100vh; opacity: 0; }
+        }
+        
+        /* UI Electromagnetic Interference Effects */
+        .lightning-1:before {
+          content: '';
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw; height: 100vh;
+          background: radial-gradient(circle at 20% 40%, rgba(135,206,250,0.1) 0%, transparent 50%);
+          opacity: 0;
+          pointer-events: none;
+          animation: electromagnetic-pulse 3s infinite;
+          z-index: 0;
+        }
+        
+        .lightning-3:before {
+          content: '';
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw; height: 100vh;
+          background: radial-gradient(circle at 60% 30%, rgba(255,255,255,0.08) 0%, transparent 60%);
+          opacity: 0;
+          pointer-events: none;
+          animation: electromagnetic-pulse 4s infinite 2.8s;
+          z-index: 0;
+        }
+        
+        @keyframes electromagnetic-pulse {
+          0%, 90% { opacity: 0; }
+          91% { opacity: 1; }
+          92% { opacity: 0.3; }
+          93% { opacity: 0.8; }
+          94% { opacity: 0.1; }
+          95% { opacity: 0.6; }
+          96% { opacity: 0; }
+        }
+        
+        /* Lightning branches inherit parent timing */
+        .lightning-bolt .lightning-branch {
+          animation: branch-flash 3s infinite;
+        }
+        .lightning-2 .lightning-branch { animation-delay: 1.2s; }
+        .lightning-3 .lightning-branch { animation-delay: 2.8s; }
+        .lightning-4 .lightning-branch { animation-delay: 0.8s; }
+        .lightning-5 .lightning-branch { animation-delay: 4.1s; }
+        .lightning-6 .lightning-branch { animation-delay: 1.9s; }
+        
+        @keyframes branch-flash {
+          0%, 90% { opacity: 0; }
+          91% { opacity: 0.8; }
+          92% { opacity: 0.2; }
+          93% { opacity: 0.9; }
+          94% { opacity: 0; }
         }
       `}</style>
     </div>
