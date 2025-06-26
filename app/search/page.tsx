@@ -399,38 +399,22 @@ export default function SearchUsersPage() {
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
           {/* Header */}
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl mb-4 md:mb-6">
-            <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-              <h1 className="text-lg md:text-2xl font-bold tracking-widest uppercase">Search Users</h1>
-            </div>
+          <div className="bg-black border-2 border-white rounded-none mb-4 md:mb-6">
             <div className="p-3 md:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center text-xs font-mono mb-4">
-                <div>
-                  <div className="text-gray-400">SEARCH STATUS</div>
-                  <div className="text-lg md:text-xl font-bold">{search ? 'RUNNING' : 'READY'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">RESULTS FOUND</div>
-                  <div className="text-lg md:text-xl font-bold">{availableUsers.length.toString().padStart(3, '0')}</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">ACCESS LEVEL</div>
-                  <div className="text-lg md:text-xl font-bold text-red-400">PUBLIC</div>
-                </div>
-              </div>
+              <h1 className="text-lg md:text-2xl font-bold text-center mb-6">Search Users</h1>
               
               {/* Profile Type Selection */}
               <div className="flex flex-col sm:flex-row justify-center gap-2 mb-4">
-                <div className="text-sm font-mono text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">SEARCH PROFILE:</div>
+                <div className="text-sm text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">Search Profile:</div>
                 <div className="flex flex-wrap justify-center gap-2">
                   {(Object.keys(categoryLabels) as Array<'basic' | 'love' | 'business'>).map(profileType => (
                     <button
                       key={profileType}
                       onClick={() => setActiveProfileType(profileType)}
-                      className={`px-3 md:px-4 py-2 border-2 font-mono text-xs md:text-sm tracking-wider transition-all ${
+                      className={`px-3 md:px-4 py-2 border-2 text-xs md:text-sm transition-colors ${
                         activeProfileType === profileType 
                           ? `${categoryColors[profileType]} text-white`
-                          : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
+                          : 'border-white bg-black text-white hover:bg-gray-800'
                       }`}
                     >
                       {categoryLabels[profileType]}
@@ -441,94 +425,94 @@ export default function SearchUsersPage() {
 
               {/* Search Input */}
               <div className="mb-4">
-                <div className="text-xs font-mono text-gray-400 mb-2 text-center">SEARCH USERS:</div>
+                <div className="text-sm text-gray-400 mb-2 text-center">Search Users:</div>
                 <input
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="USERNAME OR DISPLAY NAME..."
-                  className="w-full p-3 bg-black text-white border-2 border-white font-mono text-sm tracking-wider focus:outline-none focus:border-red-400"
+                  placeholder="Username or display name..."
+                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                 />
               </div>
 
               {/* Questionnaire Filters */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <div className="text-xs font-mono text-gray-400">QUESTIONNAIRE FILTERS:</div>
+                  <div className="text-sm text-gray-400">Questionnaire Filters:</div>
                   <div className="flex gap-2">
                     {(selectedFilters.length > 0 || sortBy !== 'none') && (
                       <button
                         onClick={clearAllFilters}
-                        className="px-2 py-1 bg-red-600 text-white font-mono text-xs border border-red-400 hover:bg-red-700 transition-colors"
+                        className="px-2 py-1 bg-red-600 text-white text-xs border-2 border-red-400 hover:bg-red-700 transition-colors"
                       >
-                        CLEAR ALL ({selectedFilters.length + (sortBy !== 'none' ? 1 : 0)})
+                        Clear All ({selectedFilters.length + (sortBy !== 'none' ? 1 : 0)})
                       </button>
                     )}
                     <button
                       onClick={() => setShowFilters(!showFilters)}
-                      className={`px-2 py-1 font-mono text-xs border transition-colors ${
+                      className={`px-2 py-1 text-xs border-2 transition-colors ${
                         showFilters 
                           ? 'bg-white text-black border-white'
-                          : 'bg-black text-white border-white hover:bg-white hover:text-black'
+                          : 'bg-black text-white border-white hover:bg-gray-800'
                       }`}
                     >
-                      {showFilters ? 'HIDE FILTERS' : 'SHOW FILTERS'} ({availableFilters.length})
+                      {showFilters ? 'Hide Filters' : 'Show Filters'} ({availableFilters.length})
                     </button>
                   </div>
                 </div>
 
                 {/* Sorting Options */}
                 <div className="mb-3">
-                  <div className="text-xs font-mono text-gray-400 mb-2">SORT BY:</div>
+                  <div className="text-sm text-gray-400 mb-2">Sort By:</div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSortBy('none')}
-                      className={`px-3 py-2 font-mono text-xs border transition-colors ${
+                      className={`px-3 py-2 text-xs border-2 transition-colors ${
                         sortBy === 'none'
                           ? 'bg-white text-black border-white'
-                          : 'bg-black text-white border-gray-400 hover:border-white'
+                          : 'bg-black text-white border-white hover:bg-gray-800'
                       }`}
                     >
-                      DEFAULT
+                      Default
                     </button>
                     <button
                       onClick={() => setSortBy('similarity')}
-                      className={`px-3 py-2 font-mono text-xs border transition-colors ${
+                      className={`px-3 py-2 text-xs border-2 transition-colors ${
                         sortBy === 'similarity'
                           ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-black text-white border-gray-400 hover:border-blue-400'
+                          : 'bg-black text-white border-white hover:bg-gray-800'
                       }`}
                     >
-                      SIMILARITY TO ME
+                      Similarity to Me
                     </button>
                   </div>
                   {sortBy === 'similarity' && (
-                    <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400">
-                      <div className="text-xs font-mono text-blue-400">
-                        ℹ Users are sorted by how similar their questionnaire answers are to yours
+                    <div className="mt-2 p-2 bg-gray-800 border-2 border-blue-400">
+                      <div className="text-xs text-blue-400">
+                        Users are sorted by how similar their questionnaire answers are to yours
                       </div>
                     </div>
                   )}
                 </div>
 
                 {showFilters && (
-                  <div className="border border-white bg-gray-900/50 p-3">
+                  <div className="border-2 border-white bg-gray-900 p-3">
                     {filtersLoading ? (
-                      <div className="text-center py-4 text-gray-400 font-mono text-xs">
-                        LOADING FILTERS...
+                      <div className="text-center py-4 text-gray-400 text-xs">
+                        Loading filters...
                       </div>
                     ) : availableFilters.length === 0 ? (
-                      <div className="text-center py-4 text-gray-400 font-mono text-xs">
-                        NO QUESTIONNAIRE FILTERS AVAILABLE FOR {categoryLabels[activeProfileType]} PROFILE
+                      <div className="text-center py-4 text-gray-400 text-xs">
+                        No questionnaire filters available for {categoryLabels[activeProfileType]} profile
                       </div>
                     ) : (
                       <div className="space-y-4 max-h-60 overflow-y-auto">
                         {availableFilters.map((filter, filterIndex) => (
                           <div key={`filter-container-${filter.question_id}-${filterIndex}`} className="border-l-2 border-white pl-3">
-                            <div className="text-xs font-mono text-gray-300 mb-2">
+                            <div className="text-xs text-gray-300 mb-2">
                               {filter.group_title} → {filter.questionnaire_title}
                             </div>
-                            <div className="text-sm font-mono text-white mb-2 font-bold">
+                            <div className="text-sm text-white mb-2 font-bold">
                               {filter.profile_display_text || filter.question_text}
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -540,10 +524,10 @@ export default function SearchUsersPage() {
                                     onChange={(e) => handleFilterChange(filter.question_id, option, e.target.checked)}
                                     className="mr-2"
                                   />
-                                  <span className={`px-2 py-1 border font-mono text-xs transition-colors ${
+                                  <span className={`px-2 py-1 border-2 text-xs transition-colors ${
                                     isFilterSelected(filter.question_id, option)
                                       ? 'bg-white text-black border-white'
-                                      : 'bg-black text-white border-gray-400 hover:border-white'
+                                      : 'bg-black text-white border-white hover:bg-gray-800'
                                   }`}>
                                     {option.toUpperCase()}
                                   </span>
@@ -558,15 +542,15 @@ export default function SearchUsersPage() {
                 )}
 
                 {selectedFilters.length > 0 && (
-                  <div className="mt-2 p-2 bg-blue-900/30 border border-blue-400">
-                    <div className="text-xs font-mono text-blue-400 mb-1">ACTIVE FILTERS:</div>
+                  <div className="mt-2 p-2 bg-gray-800 border-2 border-blue-400">
+                    <div className="text-xs text-blue-400 mb-1">Active Filters:</div>
                     <div className="flex flex-wrap gap-1">
                       {selectedFilters.flatMap((selectedFilter, filterIndex) => {
                         const filterInfo = availableFilters.find(f => f.question_id === selectedFilter.question_id);
                         return selectedFilter.selected_answers.map((answer, answerIndex) => (
                           <span
                             key={`filter-${filterIndex}-${selectedFilter.question_id}-${answer}-${answerIndex}`}
-                            className="px-2 py-1 bg-blue-600 text-white font-mono text-xs border border-blue-400"
+                            className="px-2 py-1 bg-blue-600 text-white text-xs border-2 border-blue-400"
                           >
                             {filterInfo?.profile_display_text || filterInfo?.question_text}: {answer}
                           </span>
@@ -577,33 +561,38 @@ export default function SearchUsersPage() {
                 )}
               </div>
 
+              {/* Results Summary */}
+              <div className="text-center text-sm text-gray-400 mb-4">
+                Found {availableUsers.length} users
+              </div>
+
               {actionMessage && (
-                <div className="mb-4 text-center text-red-400 text-sm font-mono border border-red-400 bg-red-900/20 p-2">
-                  ⚠ {actionMessage.toUpperCase()}
+                <div className="mb-4 text-center text-red-400 text-sm border-2 border-red-400 bg-red-900 p-2">
+                  {actionMessage}
                 </div>
               )}
             </div>
           </div>
 
           {/* Search Results Container */}
-          <div className="bg-black border-2 border-white rounded-none shadow-2xl">
+          <div className="bg-black border-2 border-white rounded-none">
             {availableUsers.length === 0 && search && (
               <div className="text-center py-8 md:py-12 px-4">
-                <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  NO USERS FOUND MATCHING &quot;{search.toUpperCase()}&quot;
+                <div className="text-gray-400 mb-4 text-sm md:text-base">
+                  No users found matching &quot;{search}&quot;
                 </div>
-                <div className="text-xs md:text-sm text-gray-500 font-mono">
+                <div className="text-xs md:text-sm text-gray-500">
                   Try a different search term
                 </div>
               </div>
             )}
             {availableUsers.length === 0 && !search && (
               <div className="text-center py-8 md:py-12 px-4">
-                <div className="font-mono text-gray-400 mb-4 text-sm md:text-base">
-                  SEARCH READY
+                <div className="text-gray-400 mb-4 text-sm md:text-base">
+                  Search Ready
                 </div>
-                <div className="text-xs md:text-sm text-gray-500 font-mono">
-                  ENTER SEARCH TERMS TO BEGIN
+                <div className="text-xs md:text-sm text-gray-500">
+                  Enter search terms to begin
                 </div>
               </div>
             )}
@@ -611,13 +600,13 @@ export default function SearchUsersPage() {
               <div className="p-3 md:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                   {availableUsers.map((user, index) => (
-                    <div key={user.user_id} className="border border-gray-600 bg-gray-900/50 relative">
+                    <div key={user.user_id} className="border-2 border-white bg-black">
                       {/* User Header */}
-                      <div className="bg-white text-black p-2 font-mono text-xs">
+                      <div className="bg-white text-black p-2 text-xs">
                         <div className="flex justify-between items-center">
-                          <span className="font-bold">USER #{(index + 1).toString().padStart(3, '0')}</span>
+                          <span className="font-bold">User #{(index + 1).toString().padStart(3, '0')}</span>
                           <span className="text-xs">
-                            {isFriend(user.user_id) ? 'CONNECTED' : hasPendingRequest(user.user_id) ? 'PENDING' : 'UNCONNECTED'}
+                            {isFriend(user.user_id) ? 'Connected' : hasPendingRequest(user.user_id) ? 'Pending' : 'Unconnected'}
                           </span>
                         </div>
                       </div>
@@ -627,38 +616,38 @@ export default function SearchUsersPage() {
                         <div className="flex flex-col items-center text-center space-y-3">
                           {/* Photo Section */}
                           <div className="border-2 border-white bg-gray-800 p-2">
-                            <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
-                            <ProfileAvatar userId={user.user_id} size={64} className="border border-gray-600" />
+                            <div className="text-xs text-gray-400 mb-1 text-center">Photo</div>
+                            <ProfileAvatar userId={user.user_id} size={64} className="border-2 border-gray-600" />
                           </div>
                           
                           {/* User Details */}
-                          <div className="w-full font-mono">
+                          <div className="w-full">
                             <div className="space-y-2 text-sm">
                               <div>
-                                <span className="text-gray-400">USER NAME:</span>
-                                <div className="text-white font-bold tracking-wider">
-                                  {user.display_name ? user.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}
+                                <span className="text-gray-400">User Name:</span>
+                                <div className="text-white font-bold">
+                                  {user.display_name ? user.display_name : `Profile-${activeProfileType}-User`}
                                 </div>
                               </div>
                               <div>
-                                <span className="text-gray-400">RELATIONSHIP:</span>
+                                <span className="text-gray-400">Relationship:</span>
                                 <div className={`font-bold ${
                                   isFriend(user.user_id) ? 'text-green-400' : 
                                   hasPendingRequest(user.user_id) ? 'text-yellow-400' : 'text-red-400'
                                 }`}>
-                                  {isFriend(user.user_id) ? 'FRIEND' : 
-                                   hasPendingRequest(user.user_id) ? 'PENDING' : 'NONE'}
+                                  {isFriend(user.user_id) ? 'Friend' : 
+                                   hasPendingRequest(user.user_id) ? 'Pending' : 'None'}
                                 </div>
                               </div>
                               {sortBy === 'similarity' && user.similarity_score !== undefined && (
                                 <div>
-                                  <span className="text-gray-400">SIMILARITY:</span>
+                                  <span className="text-gray-400">Similarity:</span>
                                   <div className={`font-bold ${
                                     user.similarity_score >= 0.8 ? 'text-green-400' :
                                     user.similarity_score >= 0.6 ? 'text-yellow-400' :
                                     user.similarity_score >= 0.4 ? 'text-orange-400' : 'text-red-400'
                                   }`}>
-                                    {Math.round(user.similarity_score * 100)}% MATCH
+                                    {Math.round(user.similarity_score * 100)}% Match
                                   </div>
                                 </div>
                               )}
@@ -669,56 +658,56 @@ export default function SearchUsersPage() {
                           <div className="flex flex-col gap-2 w-full">
                             <button 
                               onClick={() => handleViewProfile(user)} 
-                              className="w-full px-3 py-2 bg-white text-black font-mono text-xs border-2 border-black hover:bg-gray-200 transition-colors tracking-wider"
+                              className="w-full px-3 py-2 bg-white text-black text-xs border-2 border-white hover:bg-gray-200 transition-colors"
                             >
-                              VIEW PROFILE
+                              View Profile
                             </button>
                             
                             {isFriend(user.user_id) ? (
                               <button 
                                 onClick={() => removeFriend(user.user_id)} 
-                                className="w-full px-3 py-2 bg-red-900 text-white font-mono text-xs border-2 border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+                                className="w-full px-3 py-2 bg-red-600 text-white text-xs border-2 border-red-400 hover:bg-red-700 transition-colors"
                               >
-                                REMOVE FRIEND
+                                Remove Friend
                               </button>
                             ) : hasPendingRequest(user.user_id) ? (
                               <button 
                                 disabled 
-                                className="w-full px-3 py-2 bg-yellow-800 text-yellow-200 font-mono text-xs border-2 border-yellow-600 cursor-not-allowed tracking-wider"
+                                className="w-full px-3 py-2 bg-yellow-600 text-yellow-200 text-xs border-2 border-yellow-400 cursor-not-allowed"
                               >
-                                REQUEST PENDING
+                                Request Pending
                               </button>
                             ) : (
                               <button 
                                 onClick={() => sendFriendRequest(user.user_id)} 
-                                className="w-full px-3 py-2 bg-green-900 text-white font-mono text-xs border-2 border-green-700 hover:bg-green-800 transition-colors tracking-wider"
+                                className="w-full px-3 py-2 bg-green-600 text-white text-xs border-2 border-green-400 hover:bg-green-700 transition-colors"
                               >
-                                ADD FRIEND
+                                Add Friend
                               </button>
                             )}
                             
                             <div className="grid grid-cols-2 gap-2">
                               <button 
                                 onClick={() => handleDirectMessage(user)} 
-                                className="px-2 py-2 bg-blue-900 text-white font-mono text-xs border-2 border-blue-700 hover:bg-blue-800 transition-colors tracking-wider"
+                                className="px-2 py-2 bg-blue-600 text-white text-xs border-2 border-blue-400 hover:bg-blue-700 transition-colors"
                               >
-                                MESSAGE
+                                Message
                               </button>
                               
                               <button 
                                 onClick={() => handleInviteToGroup(user)} 
-                                className="px-2 py-2 bg-purple-900 text-white font-mono text-xs border-2 border-purple-700 hover:bg-purple-800 transition-colors tracking-wider"
+                                className="px-2 py-2 bg-purple-600 text-white text-xs border-2 border-purple-400 hover:bg-purple-700 transition-colors"
                               >
-                                INVITE
+                                Invite
                               </button>
                             </div>
                             
                             <button
                               onClick={() => addToCatalogue(user.user_id)}
                               disabled={catalogueLoading}
-                              className="w-full px-3 py-2 bg-orange-900 text-white font-mono text-xs border-2 border-orange-700 hover:bg-orange-800 transition-colors tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-3 py-2 bg-orange-600 text-white text-xs border-2 border-orange-400 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {catalogueLoading ? 'ADDING...' : 'ADD TO COLLECTION'}
+                              {catalogueLoading ? 'Adding...' : 'Add to Collection'}
                             </button>
                           </div>
                         </div>
@@ -735,7 +724,7 @@ export default function SearchUsersPage() {
         {selectedUser && (
           <ProfileModal
             userId={selectedUser.user_id}
-            username={selectedUser.display_name ? selectedUser.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}
+            username={selectedUser.display_name ? selectedUser.display_name : `Profile-${activeProfileType}-User`}
             isOpen={isProfileModalOpen}
             onClose={closeProfileModal}
             defaultActiveTab={activeProfileType}
@@ -749,35 +738,35 @@ export default function SearchUsersPage() {
             <div className="bg-black border-2 border-white rounded-none shadow-lg w-full max-w-md">
               {/* Modal Header */}
               <div className="border-b-2 border-white bg-white text-black p-3 text-center">
-                <h2 className="text-lg font-bold tracking-wider">Invite to Group</h2>
-                <div className="font-mono text-xs mt-1">User: {selectedUser.display_name ? selectedUser.display_name.toUpperCase() : `PROFILE-${activeProfileType.toUpperCase()}-USER`}</div>
+                <h2 className="text-lg font-bold">Invite to Group</h2>
+                <div className="text-xs mt-1">User: {selectedUser.display_name ? selectedUser.display_name : `Profile-${activeProfileType}-User`}</div>
               </div>
               
               <div className="p-6">
                 {userGroups.length === 0 ? (
                   <div className="text-center py-6">
-                    <div className="font-mono text-gray-400 mb-4">
-                      NO GROUPS AVAILABLE
+                    <div className="text-gray-400 mb-4">
+                      No groups available
                     </div>
-                    <div className="text-xs text-gray-500 font-mono">
-                      ADMIN OR OWNER PERMISSIONS REQUIRED
+                    <div className="text-xs text-gray-500">
+                      Admin or owner permissions required
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-mono text-gray-400 mb-2 tracking-wider">
-                        SELECT GROUP:
+                      <label className="block text-xs text-gray-400 mb-2">
+                        Select Group:
                       </label>
                       <select
                         value={selectedGroupId}
                         onChange={(e) => setSelectedGroupId(e.target.value)}
-                        className="w-full bg-black text-white border-2 border-white font-mono text-sm px-3 py-2 focus:outline-none focus:border-red-400"
+                        className="w-full bg-black text-white border-2 border-white text-sm px-3 py-2 focus:outline-none focus:border-gray-400"
                       >
-                        <option value="">CHOOSE GROUP...</option>
+                        <option value="">Choose group...</option>
                         {userGroups.map(group => (
                           <option key={group.group_id} value={group.group_id}>
-                            {group.name.toUpperCase()} {group.is_private ? '[PRIVATE]' : '[PUBLIC]'}
+                            {group.name} {group.is_private ? '[Private]' : '[Public]'}
                           </option>
                         ))}
                       </select>
@@ -790,14 +779,14 @@ export default function SearchUsersPage() {
                     <button
                       onClick={sendGroupInvitation}
                       disabled={!selectedGroupId || inviteLoading}
-                      className="flex-1 bg-white text-black py-2 font-mono text-xs tracking-wider hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 bg-white text-black py-2 text-xs hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {inviteLoading ? 'SENDING...' : 'SEND INVITATION'}
+                      {inviteLoading ? 'Sending...' : 'Send Invitation'}
                     </button>
                   )}
                   <button
                     onClick={closeInviteModal}
-                    className="flex-1 bg-red-900 text-white py-2 font-mono text-xs tracking-wider border border-red-700 hover:bg-red-800 transition-colors"
+                    className="flex-1 bg-red-600 text-white py-2 text-xs border-2 border-red-400 hover:bg-red-700 transition-colors"
                   >
                     Cancel
                   </button>

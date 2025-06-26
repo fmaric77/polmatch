@@ -74,6 +74,7 @@ export const useMessages = (
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [channelLoading, setChannelLoading] = useState(false);
   const [contextSwitchLoading, setContextSwitchLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   // Refs for managing auto-refresh and session protection
   const sessionIdRef = useRef<number>(0);
@@ -220,8 +221,9 @@ export const useMessages = (
   }, [selectedConversation, selectedChannel, selectedConversationType, profileType]); // Remove groupChannels dependency
 
   const sendMessage = useCallback(async (content: string, replyTo?: { id: string; content: string; sender_name: string }) => {
-    if (!content.trim() || !selectedConversation || !currentUser) return false;
+    if (!content.trim() || !selectedConversation || !currentUser || sending) return false;
 
+    setSending(true);
     try {
       let url: string;
       let body: Record<string, unknown>;
@@ -350,8 +352,10 @@ export const useMessages = (
     } catch (err) {
       console.error('Failed to send message:', err);
       return false;
+    } finally {
+      setSending(false);
     }
-  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, profileType]);
+  }, [selectedConversation, selectedConversationType, selectedChannel, currentUser, profileType, sending]);
 
   // Auto-refresh effect - DISABLED to prevent excessive API calls
   useEffect(() => {
@@ -702,6 +706,7 @@ export const useMessages = (
     channelLoading,
     contextSwitchLoading,
     setContextSwitchLoading,
+    sending,
     fetchMessages,
     fetchChannelMessages,
     sendMessage,

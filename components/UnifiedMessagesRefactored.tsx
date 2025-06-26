@@ -1385,6 +1385,11 @@ const UnifiedMessages: React.FC = () => {
         currentUser={currentUser}
         channelLoading={messages.channelLoading}
         contextSwitchLoading={messages.contextSwitchLoading}
+        sending={
+          selectedConversationType === 'direct' && selectedCategory === 'direct'
+            ? profileMessages.sending
+            : messages.sending
+        }
         isMobile={isMobile}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}

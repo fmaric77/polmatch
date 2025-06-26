@@ -13,7 +13,8 @@ import {
   faChevronDown,
   faPhone,
   faChartBar,
-  faThumbtack
+  faThumbtack,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import MessageContent from './MessageContent';
@@ -122,6 +123,7 @@ interface ChatAreaProps {
   currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
   channelLoading: boolean;
   contextSwitchLoading: boolean;
+  sending: boolean;
   isMobile: boolean;
   isConversationsSidebarHidden: boolean;
   setIsConversationsSidebarHidden: (hidden: boolean) => void;
@@ -162,6 +164,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   currentUser,
   channelLoading,
   contextSwitchLoading,
+  sending,
   isMobile,
   isConversationsSidebarHidden,
   setIsConversationsSidebarHidden,
@@ -878,11 +881,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           />
           <button
             onClick={onSendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sending}
             className="bg-black text-green-400 border-2 border-green-400 px-6 py-3 rounded-none hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wider"
           >
-            <FontAwesomeIcon icon={faPaperPlane} className="mr-2" />
-            SEND
+            <FontAwesomeIcon icon={sending ? faSpinner : faPaperPlane} className={`mr-2 ${sending ? 'animate-spin' : ''}`} />
+            {sending ? 'SENDING...' : 'SEND'}
           </button>
         </div>
       </div>

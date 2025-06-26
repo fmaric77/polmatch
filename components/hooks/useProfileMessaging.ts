@@ -47,6 +47,7 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
   const { protectedFetch } = useCSRFToken();
   const [messages, setMessages] = useState<ProfileMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   // Comprehensive deduplication function for profile messages
@@ -106,6 +107,9 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
   }, [profileType]);
 
   const sendMessage = useCallback(async (receiverId: string, content: string, replyTo?: { id: string; content: string; sender_name: string }): Promise<boolean> => {
+    if (sending) return false;
+    
+    setSending(true);
     try {
       const requestBody: Record<string, unknown> = {
         receiver_id: receiverId,
@@ -153,8 +157,10 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
       console.error('Error sending profile message:', err);
       setError('Failed to send message');
       return false;
+    } finally {
+      setSending(false);
     }
-  }, [profileType, protectedFetch, deduplicateMessages]);
+  }, [profileType, protectedFetch, deduplicateMessages, sending]);
 
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     try {
@@ -199,6 +205,7 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
     messages,
     setMessages: setMessagesSafe,
     loading,
+    sending,
     error,
     fetchMessages,
     sendMessage,
