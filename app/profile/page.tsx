@@ -72,6 +72,29 @@ export default function ProfilePage() {
     two_factor_enabled?: boolean;
   } | null>(null);
 
+  // Temporary form states for when profiles don't exist yet
+  const [tempBasicForm, setTempBasicForm] = useState({
+    display_name: '',
+    bio: '',
+    profile_picture_url: '',
+    visibility: 'public',
+    ai_excluded: false
+  });
+  const [tempLoveForm, setTempLoveForm] = useState({
+    display_name: '',
+    bio: '',
+    profile_picture_url: '',
+    visibility: 'public',
+    ai_excluded: false
+  });
+  const [tempBusinessForm, setTempBusinessForm] = useState({
+    display_name: '',
+    bio: '',
+    profile_picture_url: '',
+    visibility: 'public',
+    ai_excluded: false
+  });
+
   // Password change state
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -148,17 +171,79 @@ export default function ProfilePage() {
   }, [activeTab, userId]);
 
   const handleProfileChange = (type: 'basic' | 'love' | 'business', field: string, value: string | boolean) => {
-    if (type === 'basic') setBasicProfile((prev) => prev ? { ...prev, [field]: value } : prev);
-    if (type === 'love') setLoveProfile((prev) => prev ? { ...prev, [field]: value } : prev);
-    if (type === 'business') setBusinessProfile((prev) => prev ? { ...prev, [field]: value } : prev);
+    if (type === 'basic') {
+      if (basicProfile) {
+        setBasicProfile(prev => prev ? { ...prev, [field]: value } : prev);
+      } else {
+        setTempBasicForm(prev => ({ ...prev, [field]: value }));
+      }
+    }
+    if (type === 'love') {
+      if (loveProfile) {
+        setLoveProfile(prev => prev ? { ...prev, [field]: value } : prev);
+      } else {
+        setTempLoveForm(prev => ({ ...prev, [field]: value }));
+      }
+    }
+    if (type === 'business') {
+      if (businessProfile) {
+        setBusinessProfile(prev => prev ? { ...prev, [field]: value } : prev);
+      } else {
+        setTempBusinessForm(prev => ({ ...prev, [field]: value }));
+      }
+    }
   };
 
   const handleProfileSave = async (type: 'basic' | 'love' | 'business') => {
     setProfileMessage("");
     let profile: Profile | null = null;
-    if (type === 'basic') profile = basicProfile;
-    if (type === 'love') profile = loveProfile;
-    if (type === 'business') profile = businessProfile;
+    
+    if (type === 'basic') {
+      if (basicProfile) {
+        profile = basicProfile;
+      } else if (userId) {
+        // Create profile from temp form data
+        profile = {
+          ...getDefaultProfile('basic', userId),
+          display_name: tempBasicForm.display_name,
+          bio: tempBasicForm.bio,
+          profile_picture_url: tempBasicForm.profile_picture_url,
+          visibility: tempBasicForm.visibility,
+          ai_excluded: tempBasicForm.ai_excluded
+        };
+      }
+    }
+    if (type === 'love') {
+      if (loveProfile) {
+        profile = loveProfile;
+      } else if (userId) {
+        // Create profile from temp form data
+        profile = {
+          ...getDefaultProfile('love', userId),
+          display_name: tempLoveForm.display_name,
+          bio: tempLoveForm.bio,
+          profile_picture_url: tempLoveForm.profile_picture_url,
+          visibility: tempLoveForm.visibility,
+          ai_excluded: tempLoveForm.ai_excluded
+        };
+      }
+    }
+    if (type === 'business') {
+      if (businessProfile) {
+        profile = businessProfile;
+      } else if (userId) {
+        // Create profile from temp form data
+        profile = {
+          ...getDefaultProfile('business', userId),
+          display_name: tempBusinessForm.display_name,
+          bio: tempBusinessForm.bio,
+          profile_picture_url: tempBusinessForm.profile_picture_url,
+          visibility: tempBusinessForm.visibility,
+          ai_excluded: tempBusinessForm.ai_excluded
+        };
+      }
+    }
+    
     if (!profile) return;
     
     let url;
@@ -176,6 +261,37 @@ export default function ProfilePage() {
       
       if (data.success) {
         setProfileMessage("Profile saved!");
+        // Update the actual profile state and clear temp form
+        if (type === 'basic') {
+          setBasicProfile(profile);
+          setTempBasicForm({
+            display_name: '',
+            bio: '',
+            profile_picture_url: '',
+            visibility: 'public',
+            ai_excluded: false
+          });
+        }
+        if (type === 'love') {
+          setLoveProfile(profile);
+          setTempLoveForm({
+            display_name: '',
+            bio: '',
+            profile_picture_url: '',
+            visibility: 'public',
+            ai_excluded: false
+          });
+        }
+        if (type === 'business') {
+          setBusinessProfile(profile);
+          setTempBusinessForm({
+            display_name: '',
+            bio: '',
+            profile_picture_url: '',
+            visibility: 'public',
+            ai_excluded: false
+          });
+        }
       } else {
         setProfileMessage(data.message || "Failed to save profile");
       }
@@ -495,7 +611,7 @@ export default function ProfilePage() {
           <div className="bg-black border-2 border-white rounded-none">
             {/* Header */}
             <div className="border-b-2 border-white p-3 text-center">
-              <h1 className="text-xl sm:text-2xl font-bold">Profile Settings</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">Profile</h1>
             </div>
 
             {/* Tab Navigation */}
@@ -577,7 +693,6 @@ export default function ProfilePage() {
                         <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
-                            if (!basicProfile && userId) setBasicProfile(getDefaultProfile('basic', userId)); 
                             handleProfileSave('basic'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
@@ -586,7 +701,7 @@ export default function ProfilePage() {
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Your display name" 
-                                value={basicProfile?.display_name || ''} 
+                                value={basicProfile?.display_name || tempBasicForm.display_name} 
                                 onChange={e => handleProfileChange('basic', 'display_name', e.target.value)}
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
@@ -596,7 +711,7 @@ export default function ProfilePage() {
                               <textarea 
                                 name="bio" 
                                 placeholder="About you" 
-                                value={basicProfile?.bio || ''} 
+                                value={basicProfile?.bio || tempBasicForm.bio} 
                                 onChange={e => handleProfileChange('basic', 'bio', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
@@ -604,7 +719,7 @@ export default function ProfilePage() {
                             </div>
                             <ImageUrlInput
                               label="Profile Picture URL"
-                              value={basicProfile?.profile_picture_url || ''}
+                              value={basicProfile?.profile_picture_url || tempBasicForm.profile_picture_url}
                               onChange={value => handleProfileChange('basic', 'profile_picture_url', value)}
                               placeholder="Enter profile picture URL"
                               showPreview={true}
@@ -620,7 +735,7 @@ export default function ProfilePage() {
                               <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
-                                value={basicProfile?.visibility || 'public'} 
+                                value={basicProfile?.visibility || tempBasicForm.visibility} 
                                 onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
@@ -633,7 +748,7 @@ export default function ProfilePage() {
                               <label className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={basicProfile?.ai_excluded || false}
+                                  checked={basicProfile?.ai_excluded || tempBasicForm.ai_excluded}
                                   onChange={e => handleProfileChange('basic', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
@@ -654,7 +769,6 @@ export default function ProfilePage() {
                         <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
-                            if (!loveProfile && userId) setLoveProfile(getDefaultProfile('love', userId)); 
                             handleProfileSave('love'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
@@ -663,7 +777,7 @@ export default function ProfilePage() {
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Dating profile name" 
-                                value={loveProfile?.display_name || ''} 
+                                value={loveProfile?.display_name || tempLoveForm.display_name} 
                                 onChange={e => handleProfileChange('love', 'display_name', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
@@ -673,7 +787,7 @@ export default function ProfilePage() {
                               <textarea 
                                 name="bio" 
                                 placeholder="Dating bio" 
-                                value={loveProfile?.bio || ''} 
+                                value={loveProfile?.bio || tempLoveForm.bio} 
                                 onChange={e => handleProfileChange('love', 'bio', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
@@ -681,7 +795,7 @@ export default function ProfilePage() {
                             </div>
                             <ImageUrlInput
                               label="Profile Picture URL"
-                              value={loveProfile?.profile_picture_url || ''}
+                              value={loveProfile?.profile_picture_url || tempLoveForm.profile_picture_url}
                               onChange={value => handleProfileChange('love', 'profile_picture_url', value)}
                               placeholder="Enter profile picture URL"
                               showPreview={true}
@@ -691,7 +805,7 @@ export default function ProfilePage() {
                               <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
-                                value={loveProfile?.visibility || 'public'} 
+                                value={loveProfile?.visibility || tempLoveForm.visibility} 
                                 onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
@@ -704,7 +818,7 @@ export default function ProfilePage() {
                               <label className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={loveProfile?.ai_excluded || false}
+                                  checked={loveProfile?.ai_excluded || tempLoveForm.ai_excluded}
                                   onChange={e => handleProfileChange('love', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
@@ -725,7 +839,6 @@ export default function ProfilePage() {
                         <div className="bg-gray-900 border-2 border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
-                            if (!businessProfile && userId) setBusinessProfile(getDefaultProfile('business', userId)); 
                             handleProfileSave('business'); 
                           }} className="flex flex-col gap-4 max-w-md">
                             <div>
@@ -734,7 +847,7 @@ export default function ProfilePage() {
                                 type="text" 
                                 name="display_name" 
                                 placeholder="Professional name" 
-                                value={businessProfile?.display_name || ''} 
+                                value={businessProfile?.display_name || tempBusinessForm.display_name} 
                                 onChange={e => handleProfileChange('business', 'display_name', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
@@ -744,7 +857,7 @@ export default function ProfilePage() {
                               <textarea 
                                 name="bio" 
                                 placeholder="Professional bio" 
-                                value={businessProfile?.bio || ''} 
+                                value={businessProfile?.bio || tempBusinessForm.bio} 
                                 onChange={e => handleProfileChange('business', 'bio', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
@@ -752,7 +865,7 @@ export default function ProfilePage() {
                             </div>
                             <ImageUrlInput
                               label="Profile Picture URL"
-                              value={businessProfile?.profile_picture_url || ''}
+                              value={businessProfile?.profile_picture_url || tempBusinessForm.profile_picture_url}
                               onChange={value => handleProfileChange('business', 'profile_picture_url', value)}
                               placeholder="Enter profile picture URL"
                               showPreview={true}
@@ -762,7 +875,7 @@ export default function ProfilePage() {
                               <label className="text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
-                                value={businessProfile?.visibility || 'public'} 
+                                value={businessProfile?.visibility || tempBusinessForm.visibility} 
                                 onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
                                 className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
@@ -775,7 +888,7 @@ export default function ProfilePage() {
                               <label className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={businessProfile?.ai_excluded || false}
+                                  checked={businessProfile?.ai_excluded || tempBusinessForm.ai_excluded}
                                   onChange={e => handleProfileChange('business', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
