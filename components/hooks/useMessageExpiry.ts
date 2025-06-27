@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useCSRFToken } from './useCSRFToken';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -20,6 +21,7 @@ interface UseMessageExpiryReturn {
 }
 
 export const useMessageExpiry = (): UseMessageExpiryReturn => {
+  const { protectedFetch } = useCSRFToken();
   const [settings, setSettings] = useState<Record<ProfileType, MessageExpirySettings>>({} as Record<ProfileType, MessageExpirySettings>);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +31,7 @@ export const useMessageExpiry = (): UseMessageExpiryReturn => {
       setLoading(true);
       setError('');
 
-      const response = await fetch('/api/profile/message-expiry');
+      const response = await protectedFetch('/api/profile/message-expiry');
       const data = await response.json();
 
       if (data.success) {
@@ -43,7 +45,7 @@ export const useMessageExpiry = (): UseMessageExpiryReturn => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [protectedFetch]);
 
   const updateSetting = useCallback(async (
     profileType: ProfileType, 
@@ -53,7 +55,7 @@ export const useMessageExpiry = (): UseMessageExpiryReturn => {
     try {
       setError('');
 
-      const response = await fetch('/api/profile/message-expiry', {
+      const response = await protectedFetch('/api/profile/message-expiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +88,7 @@ export const useMessageExpiry = (): UseMessageExpiryReturn => {
       setError('Failed to update expiry setting');
       return false;
     }
-  }, []);
+  }, [protectedFetch]);
 
   // Fetch settings on mount
   useEffect(() => {
