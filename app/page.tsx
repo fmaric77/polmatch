@@ -171,7 +171,7 @@ export default function Login() {
       
       if (!data.success) {
         // Handle specific server error messages
-        let errorMessage = 'Registration failed';
+        let errorMessage = data.message || 'Registration failed';
         
         if (data.message) {
           // Common server error messages to make more user-friendly
@@ -195,10 +195,7 @@ export default function Login() {
             errorMessage = 'Server error. Please try again in a few moments';
           } else if (message.includes('validation')) {
             errorMessage = 'Please check your information and try again';
-          } else {
-            // Use the server message if it's descriptive enough
-            errorMessage = data.message;
-          }
+          } // else: keep errorMessage as data.message
         }
         
         setLoginError(errorMessage);
