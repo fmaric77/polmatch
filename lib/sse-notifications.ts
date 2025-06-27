@@ -361,3 +361,110 @@ export async function notifyCallStatusUpdate(data: VoiceCallData): Promise<void>
   
   console.log(`Sent call status update (${data.status}) to caller ${data.caller_id} and recipient ${data.recipient_id}`);
 }
+
+// Status change notification interface and function
+export interface StatusChangeData {
+  user_id: string;
+  username: string;
+  status: 'online' | 'away' | 'dnd' | 'offline';
+  custom_message?: string;
+  timestamp: string;
+}
+
+export async function notifyStatusChange(data: StatusChangeData): Promise<void> {
+  console.log('🟢 SSE notifyStatusChange called for user:', data.user_id, 'status:', data.status);
+  
+  const { db } = await connectToDatabase();
+  const sseData = formatSSEData('STATUS_CHANGE', data);
+  
+  try {
+    // Get all users who should receive this status update
+    const recipientIds = new Set<string>();
+    
+    // 1. Get all friends across all profile types
+    const friendsCollections = ['friends', 'friends_basic', 'friends_love', 'friends_business'];
+    
+    for (const collectionName of friendsCollections) {
+      try {
+        const friendships = await db.collection(collectionName).find({
+          $or: [
+            { user_id: data.user_id, status: 'accepted' },
+            { friend_id: data.user_id, status: 'accepted' }
+          ]
+        }).toArray();
+        
+        friendships.forEach(friendship => {
+          const friendId = friendship.user_id === data.user_id ? friendship.friend_id : friendship.user_id;
+          recipientIds.add(friendId);
+        });
+      } catch (error) {
+        // Collection might not exist, continue
+        console.log(`Collection ${collectionName} not found or error:`, error);
+      }
+    }
+    
+    // 2. Get all conversation participants (both direct and group conversations)
+    
+    // Direct conversations (all profile types)
+    const conversationCollections = [
+      'private_conversations',
+      'private_conversations_basic',
+      'private_conversations_love',
+      'private_conversations_business'
+    ];
+    
+    for (const collectionName of conversationCollections) {
+      try {
+        const conversations = await db.collection(collectionName).find({
+          participant_ids: data.user_id
+        }).toArray();
+        
+        conversations.forEach(conv => {
+          conv.participant_ids.forEach((participantId: string) => {
+            if (participantId !== data.user_id) {
+              recipientIds.add(participantId);
+            }
+          });
+        });
+      } catch (error) {
+        console.log(`Collection ${collectionName} not found or error:`, error);
+      }
+    }
+    
+    // Group conversations
+    try {
+      const groupMemberships = await db.collection('group_members').find({
+        user_id: data.user_id,
+        status: 'active'
+      }).toArray();
+      
+      for (const membership of groupMemberships) {
+        const groupMembers = await db.collection('group_members').find({
+          group_id: membership.group_id,
+          status: 'active'
+        }).toArray();
+        
+        groupMembers.forEach(member => {
+          if (member.user_id !== data.user_id) {
+            recipientIds.add(member.user_id);
+          }
+        });
+      }
+    } catch (error) {
+      console.log('Error fetching group memberships:', error);
+    }
+    
+    console.log(`🟢 Sending status update to ${recipientIds.size} recipients:`, Array.from(recipientIds));
+    
+    // Send status update to all recipients
+    const sendPromises = Array.from(recipientIds).map(recipientId => 
+      sendToUser(recipientId, sseData)
+    );
+    
+    await Promise.all(sendPromises);
+    console.log('🟢 Status change notifications sent successfully');
+    
+  } catch (error) {
+    console.error('Error sending status change notifications:', error);
+  }
+}

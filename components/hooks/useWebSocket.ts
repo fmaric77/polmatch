@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { TypingData } from './useTypingIndicator';
 
 interface SSEMessage {
-  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP' | 'INCOMING_CALL' | 'CALL_STATUS_UPDATE';
+  type: 'NEW_MESSAGE' | 'NEW_CONVERSATION' | 'MESSAGE_READ' | 'CONNECTION_ESTABLISHED' | 'TYPING_START' | 'TYPING_STOP' | 'INCOMING_CALL' | 'CALL_STATUS_UPDATE' | 'STATUS_CHANGE';
   data: unknown;
 }
 
@@ -56,6 +56,7 @@ interface UseWebSocketOptions {
   onTypingStop?: (data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => void;
   onIncomingCall?: (data: VoiceCallEventData) => void;
   onCallStatusUpdate?: (data: VoiceCallEventData) => void;
+  onStatusChange?: (data: unknown) => void;
 }
 
 export function useWebSocket(sessionToken: string | null, options: UseWebSocketOptions = {}) {
@@ -196,6 +197,11 @@ export function useWebSocket(sessionToken: string | null, options: UseWebSocketO
             case 'CALL_STATUS_UPDATE':
               console.log('📞 Call status update event received:', message.data);
               optionsRef.current.onCallStatusUpdate?.(message.data as VoiceCallEventData);
+              break;
+            
+            case 'STATUS_CHANGE':
+              console.log('🟢 User status change event received:', message.data);
+              optionsRef.current.onStatusChange?.(message.data);
               break;
             
             default:

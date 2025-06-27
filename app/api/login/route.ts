@@ -411,6 +411,35 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('Login error:', err);
-    return NextResponse.json({ success: false, message: 'Server error', error: String(err) });
+    
+    // Handle MongoDB connection errors specifically
+    if (err && typeof err === 'object') {
+      const error = err as Error & { code?: string; name?: string };
+      
+      // Check for MongoDB connection errors
+      if (error.code === 'EREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEOUT') {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Database connection failed (${error.code}). Please try again later.`,
+          error_code: error.code
+        }, { status: 503 });
+      }
+      
+      // Check for other MongoDB-related errors
+      if (error.name === 'MongoServerError' || error.name === 'MongoNetworkError' || error.message?.includes('mongodb')) {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Database error (${error.code || error.name}). Please try again later.`,
+          error_code: error.code || error.name
+        }, { status: 503 });
+      }
+    }
+    
+    // Generic server error for other types of errors
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Server error occurred. Please try again later.',
+      error: String(err) 
+    }, { status: 500 });
   }
 }
