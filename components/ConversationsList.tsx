@@ -11,7 +11,10 @@ import {
   faLock
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
+import StatusIndicator from './StatusIndicator';
+import StatusSelector from './StatusSelector';
 import { profilePictureCache } from '../lib/profilePictureCache';
+import { UserStatus } from './hooks/useUserStatus';
 
 interface Conversation {
   id: string;
@@ -25,6 +28,8 @@ interface Conversation {
   user_id?: string;
   creator_id?: string;
   user_role?: string;
+  status?: UserStatus;
+  custom_message?: string;
 }
 
 interface ConversationsListProps {
@@ -50,6 +55,9 @@ interface ConversationsListProps {
   setActiveProfileType: (type: 'basic' | 'love' | 'business') => void;
   // Invitation summary prop
   invitationSummary?: Record<string, number>;
+  // Status props
+  getUserStatus?: (userId: string) => { status: UserStatus; custom_message?: string } | null;
+  onStatusChange?: (status: UserStatus, customMessage?: string) => Promise<boolean>;
 }
 
 const ConversationsList: React.FC<ConversationsListProps> = ({
@@ -69,11 +77,15 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   connectionError,
   sessionToken,
   onReconnect,
+  currentUser,
   // Profile switcher props
   activeProfileType,
   setActiveProfileType,
   // Invitation summary prop
-  invitationSummary
+  invitationSummary,
+  // Status props
+  getUserStatus,
+  onStatusChange
 }) => {
   // Prefetch profile pictures for all direct conversations to reduce spam
   useEffect(() => {
@@ -183,6 +195,19 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             </div>
           </div>
 
+          {/* User Status Selector */}
+          {getUserStatus && currentUser && (
+            <div className="mb-4">
+              <div className="text-xs font-mono text-gray-400 mb-2 uppercase tracking-wider">Status:</div>
+              <StatusSelector
+                currentStatus={getUserStatus(currentUser.user_id)?.status || 'offline'}
+                customMessage={getUserStatus(currentUser.user_id)?.custom_message}
+                                 onStatusChange={onStatusChange || (async () => false)}
+                className="w-full"
+              />
+            </div>
+          )}
+
           {/* Connection Status Indicator */}
           {sessionToken && (
             <div className="mb-4">
@@ -274,9 +299,25 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                 <div className="p-3">
                   <div className="flex items-start space-x-3">
                     {/* Avatar/Icon Section */}
-                    <div className="border border-white/30 bg-black/60 p-2 flex-shrink-0 rounded">
+                    <div className="border border-white/30 bg-black/60 p-2 flex-shrink-0 rounded relative">
                       {conversation.type === 'direct' && conversation.user_id ? (
-                        <ProfileAvatar userId={conversation.user_id} size={32} />
+                        <>
+                          <ProfileAvatar userId={conversation.user_id} size={32} />
+                          {/* Status Indicator for Direct Messages */}
+                          {getUserStatus && (() => {
+                            const userStatus = getUserStatus(conversation.user_id);
+                            return userStatus ? (
+                              <div className="absolute -bottom-1 -right-1">
+                                <StatusIndicator 
+                                  status={userStatus.status} 
+                                  size="small" 
+                                  inline 
+                                  className="border-2 border-black"
+                                />
+                              </div>
+                            ) : null;
+                          })()}
+                        </>
                       ) : (
                         <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center">
                           <FontAwesomeIcon 

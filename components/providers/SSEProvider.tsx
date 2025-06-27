@@ -5,6 +5,14 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import type { NewMessageData, NewConversationData, VoiceCallEventData } from '../hooks/useWebSocket';
 import { TypingData } from '../hooks/useTypingIndicator';
 
+interface StatusChangeData {
+  user_id: string;
+  username: string;
+  status: 'online' | 'away' | 'dnd' | 'offline';
+  custom_message?: string;
+  timestamp: string;
+}
+
 interface SSEContextType {
   isConnected: boolean;
   connectionError: string | null;
@@ -19,6 +27,7 @@ interface SSEContextType {
   setTypingStopHandler: (handler: ((data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => void) | null) => void;
   setIncomingCallHandler: (handler: ((data: VoiceCallEventData) => void) | null) => void;
   setCallStatusUpdateHandler: (handler: ((data: VoiceCallEventData) => void) | null) => void;
+  setStatusChangeHandler: (handler: ((data: StatusChangeData) => void) | null) => void;
 }
 
 const SSEContext = createContext<SSEContextType | undefined>(undefined);
@@ -56,6 +65,7 @@ export function SSEProvider({
   const typingStopHandlerRef = useRef<((data: Pick<TypingData, 'user_id' | 'conversation_id' | 'conversation_type' | 'channel_id'>) => void) | null>(null);
   const incomingCallHandlerRef = useRef<((data: VoiceCallEventData) => void) | null>(null);
   const callStatusUpdateHandlerRef = useRef<((data: VoiceCallEventData) => void) | null>(null);
+  const statusChangeHandlerRef = useRef<((data: StatusChangeData) => void) | null>(null);
 
   // Fetch session data once when provider mounts
   useEffect(() => {
@@ -112,6 +122,10 @@ export function SSEProvider({
     onCallStatusUpdate: (data) => {
       console.log('SSEProvider: Call status update');
       callStatusUpdateHandlerRef.current?.(data);
+    },
+    onStatusChange: (data) => {
+      console.log('SSEProvider: Status change');
+      statusChangeHandlerRef.current?.(data as StatusChangeData);
     }
   });
 
@@ -149,6 +163,10 @@ export function SSEProvider({
     callStatusUpdateHandlerRef.current = handler;
   }, []);
 
+  const setStatusChangeHandler = useCallback((handler: ((data: StatusChangeData) => void) | null) => {
+    statusChangeHandlerRef.current = handler;
+  }, []);
+
   const contextValue: SSEContextType = {
     isConnected,
     connectionError,
@@ -161,7 +179,8 @@ export function SSEProvider({
     setTypingStartHandler,
     setTypingStopHandler,
     setIncomingCallHandler,
-    setCallStatusUpdateHandler
+    setCallStatusUpdateHandler,
+    setStatusChangeHandler
   };
 
   return (

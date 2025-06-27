@@ -7,6 +7,7 @@ import type { ProfileMessage } from './hooks/useProfileMessaging';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
+import { useUserStatus } from './hooks/useUserStatus';
 import { VoiceCallEventData } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
@@ -183,8 +184,12 @@ const UnifiedMessages: React.FC = () => {
     setTypingStartHandler,
     setTypingStopHandler,
     setIncomingCallHandler,
-    setCallStatusUpdateHandler
+    setCallStatusUpdateHandler,
+    setStatusChangeHandler
   } = useSSE();
+
+  // User status management
+  const userStatus = useUserStatus(currentUser);
 
   // Custom hooks that depend on currentUser
   const conversations = useConversations(currentUser, activeProfileType, selectedCategory === 'groups' ? 'groups' : 'all');
@@ -659,6 +664,9 @@ const UnifiedMessages: React.FC = () => {
       });
     });
 
+    // Register status change handler
+    setStatusChangeHandler(userStatus.handleStatusChange);
+
     // Cleanup handlers when component unmounts
     return () => {
       setMessageHandler(null);
@@ -668,9 +676,10 @@ const UnifiedMessages: React.FC = () => {
       setTypingStopHandler(null);
       setIncomingCallHandler(null);
       setCallStatusUpdateHandler(null);
+      setStatusChangeHandler(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, selectedConversation, selectedConversationType, selectedCategory, activeProfileType, setMessageHandler, setConversationHandler, setConnectionHandler, setTypingStartHandler, setTypingStopHandler, setIncomingCallHandler, setCallStatusUpdateHandler]);
+  }, [currentUser, selectedConversation, selectedConversationType, selectedCategory, activeProfileType, setMessageHandler, setConversationHandler, setConnectionHandler, setTypingStartHandler, setTypingStopHandler, setIncomingCallHandler, setCallStatusUpdateHandler, setStatusChangeHandler]);
 
   // Ensure SSE reconnection after calls end or any call state changes
   useEffect(() => {
@@ -1363,6 +1372,9 @@ const UnifiedMessages: React.FC = () => {
         setActiveProfileType={setActiveProfileType}
         // Invitation summary prop
         invitationSummary={groupManagement.invitationSummary}
+        // Status props
+        getUserStatus={userStatus.getUserStatus}
+        onStatusChange={userStatus.updateStatus}
       />
 
       {/* Chat area */}
@@ -1427,6 +1439,8 @@ const UnifiedMessages: React.FC = () => {
           }
           console.log('✅ Messages refresh completed');
         }}
+        // Status props
+        getUserStatus={userStatus.getUserStatus}
       />
 
       {/* Context Menu */}

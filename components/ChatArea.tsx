@@ -17,12 +17,14 @@ import {
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
+import StatusIndicator from './StatusIndicator';
 import MessageContent from './MessageContent';
 import TypingIndicator from './TypingIndicator';
 import PollArtifact from './PollArtifact';
 import { TypingData } from './hooks/useTypingIndicator';
 import { profilePictureCache } from '../lib/profilePictureCache';
 import { useCSRFToken } from './hooks/useCSRFToken';
+import { UserStatus } from './hooks/useUserStatus';
 
 interface PrivateMessage {
   _id?: string;
@@ -104,6 +106,8 @@ interface Conversation {
   user_id?: string;
   creator_id?: string;
   user_role?: string;
+  status?: UserStatus;
+  custom_message?: string;
 }
 
 interface ChatAreaProps {
@@ -145,6 +149,8 @@ interface ChatAreaProps {
   activeProfileType: 'basic' | 'love' | 'business';
   // Messages refresh function
   onRefreshMessages?: () => Promise<void>;
+  // Status props
+  getUserStatus?: (userId: string) => { status: UserStatus; custom_message?: string } | null;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -180,7 +186,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onTyping,
   onInitiateCall,
   activeProfileType,
-  onRefreshMessages
+  onRefreshMessages,
+  getUserStatus
 }) => {
   const { protectedFetch } = useCSRFToken();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -453,8 +460,22 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
           {/* Conversation Info */}
           {selectedConversationData?.type === 'direct' && selectedConversationData.user_id ? (
-            <div className="border-2 border-white rounded-none p-1 shadow-lg">
+            <div className="border-2 border-white rounded-none p-1 shadow-lg relative">
               <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
+              {/* Status Indicator for Direct Chat Header */}
+              {getUserStatus && (() => {
+                const userStatus = getUserStatus(selectedConversationData.user_id);
+                return userStatus ? (
+                  <div className="absolute -bottom-1 -right-1">
+                    <StatusIndicator 
+                      status={userStatus.status} 
+                      size="small" 
+                      inline 
+                      className="border-2 border-black"
+                    />
+                  </div>
+                ) : null;
+              })()}
             </div>
           ) : (
             <div className="w-8 h-8 bg-black border-2 border-white rounded-none flex items-center justify-center shadow-lg">
@@ -466,17 +487,31 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           )}
           
           <div>
-            <h2 className="text-lg font-mono uppercase tracking-wider">
-              {selectedConversationData?.name || 'Unknown Contact'}
-              {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
-                <>
-                  <span className="text-gray-400 mx-2">/</span>
-                  <span className="text-blue-400">
-                    #{groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
-                  </span>
-                </>
-              )}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-mono uppercase tracking-wider">
+                {selectedConversationData?.name || 'Unknown Contact'}
+                {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
+                  <>
+                    <span className="text-gray-400 mx-2">/</span>
+                    <span className="text-blue-400">
+                      #{groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
+                    </span>
+                  </>
+                )}
+              </h2>
+              {/* Status indicator with label for direct conversations */}
+              {selectedConversationType === 'direct' && selectedConversationData?.user_id && getUserStatus && (() => {
+                const userStatus = getUserStatus(selectedConversationData.user_id);
+                return userStatus ? (
+                  <StatusIndicator 
+                    status={userStatus.status} 
+                    size="small" 
+                    showLabel 
+                    customMessage={userStatus.custom_message}
+                  />
+                ) : null;
+              })()}
+            </div>
             {selectedConversationData?.members_count && (
               <p className="text-sm text-gray-400 font-mono">
                 {selectedConversationData.members_count} members
