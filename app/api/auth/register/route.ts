@@ -56,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // Validate password
-    const passwordValidation = validatePassword(password);
+    const passwordValidation = await validatePassword(password, username, email);
     if (!passwordValidation.isValid) {
       return createValidationErrorResponse(passwordValidation.error!, 400);
     }

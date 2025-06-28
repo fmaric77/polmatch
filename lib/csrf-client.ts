@@ -16,15 +16,17 @@ async function fetchCSRFToken(): Promise<string> {
     });
 
     if (!response.ok) {
-      // Handle 401 gracefully - this is expected when no session exists (e.g., during registration)
-      if (response.status === 401) {
-        console.log('No session found for CSRF token - this is expected during registration');
-        throw new Error('NO_SESSION');
-      }
       throw new Error(`Failed to fetch CSRF token: ${response.status}`);
     }
 
     const data = await response.json();
+    
+    // Check if session exists using response body instead of status code
+    if (data.hasSession === false) {
+      console.debug('No session found for CSRF token - this is expected during registration');
+      throw new Error('NO_SESSION');
+    }
+    
     csrfToken = data.csrfToken;
     tokenExpiry = data.expires;
     
@@ -110,7 +112,7 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
       
     } catch (error) {
       if (error instanceof Error && error.message === 'NO_SESSION') {
-        console.log('No session available for CSRF token - proceeding without CSRF protection');
+        console.debug('No session available for CSRF token - proceeding without CSRF protection');
         // Don't add CSRF token, but ensure credentials are included for session creation
         options = {
           ...options,
@@ -142,7 +144,7 @@ export async function preloadCSRFToken(): Promise<void> {
     await getCSRFToken();
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_SESSION') {
-      console.log('No session available for CSRF token preload - this is normal during registration');
+      console.debug('No session available for CSRF token preload - this is normal during registration');
     } else {
       console.warn('Failed to preload CSRF token:', error);
     }

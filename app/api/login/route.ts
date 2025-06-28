@@ -7,7 +7,6 @@ import CryptoJS from 'crypto-js';
 import { connectToDatabase } from '../../../lib/mongodb-connection';
 import { 
   validateEmail, 
-  validatePassword, 
   validateRequestBody,
   createValidationErrorResponse
 } from '../../../lib/validation';
@@ -192,12 +191,8 @@ export async function POST(request: Request) {
       return createValidationErrorResponse(emailValidation.error!, 400);
     }
 
-    // Validate password
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
-      console.log('Password validation failed:', passwordValidation.error);
-      return createValidationErrorResponse(passwordValidation.error!, 400);
-    }
+    // Note: We don't validate password format here since we're just checking against hash
+    // Password format validation is only needed during registration
 
     // Get client information
     const ip_address = getClientIP(request);

@@ -1,9 +1,54 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 // Input validation utilities for API endpoints
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
+}
+
+/**
+ * Check if password has been breached using HaveIBeenPwned API
+ * Uses k-anonymity - only sends first 5 characters of SHA-1 hash
+ */
+async function checkPasswordBreach(password: string): Promise<{ isBreached: boolean; count?: number }> {
+  try {
+    // Create SHA-1 hash of password
+    const hash = crypto.createHash('sha1').update(password, 'utf8').digest('hex').toUpperCase();
+    const prefix = hash.substring(0, 5);
+    const suffix = hash.substring(5);
+    
+    // Query HaveIBeenPwned API with first 5 characters
+    const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: {
+        'User-Agent': 'Polmatch-Password-Validator/1.0'
+      }
+    });
+    
+    if (!response.ok) {
+      // If API fails, don't block password (fail open for availability)
+      console.warn('Failed to check password breach status:', response.status);
+      return { isBreached: false };
+    }
+    
+    const data = await response.text();
+    
+    // Check if our password hash suffix appears in the results
+    const lines = data.split('\n');
+    for (const line of lines) {
+      const [hashSuffix, countStr] = line.split(':');
+      if (hashSuffix === suffix) {
+        const count = parseInt(countStr, 10);
+        return { isBreached: true, count };
+      }
+    }
+    
+    return { isBreached: false };
+  } catch (error) {
+    // If API fails, don't block password (fail open for availability)
+    console.warn('Error checking password breach status:', error);
+    return { isBreached: false };
+  }
 }
 
 /**
@@ -116,34 +161,93 @@ export function validateUsername(username: unknown): ValidationResult {
 }
 
 /**
- * Validates password
+ * Validates password with comprehensive security checks including breach detection
  */
-export function validatePassword(password: unknown): ValidationResult {
+export async function validatePassword(password: unknown, username?: string, email?: string): Promise<ValidationResult> {
   if (!password || typeof password !== 'string') {
     return { isValid: false, error: 'Password is required' };
   }
+  
   const str = password as string;
+  
   if (str.length < 6) {
-    return { isValid: false, error: 'Password must be at least 6 characters' };
+    return { isValid: false, error: 'Password must be at least 6 characters long' };
   }
+  
   if (str.length > 128) {
-    return { isValid: false, error: 'Password is too long' };
+    return { isValid: false, error: 'Password is too long (maximum 128 characters)' };
   }
 
   // Require at least one number
   if (!/\d/.test(str)) {
     return { isValid: false, error: 'Password must contain at least one number' };
   }
-  // Require at least one special character
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(str)) {
-    return { isValid: false, error: 'Password must contain at least one special character' };
+  
+  // Require at least one special character (aligned with frontend)
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(str)) {
+    return { isValid: false, error: 'Password must contain at least one special character (!@#$%^&*()_+-=[]{};"\':|,.<>/?)' };
   }
-  // Block common password patterns
+
+  // Check if password contains username or email
   const lower = str.toLowerCase();
-  const common = ['password', '123456', '12345678', 'qwerty', 'abc123', 'password123', '123456789'];
-  for (const pat of common) {
-    if (lower.includes(pat)) {
-      return { isValid: false, error: 'Password is too common' };
+  if (username && username.length > 2 && lower.includes(username.toLowerCase())) {
+    return { isValid: false, error: 'Password cannot contain your username' };
+  }
+  
+  if (email) {
+    const emailPart = email.split('@')[0];
+    if (emailPart.length > 2 && lower.includes(emailPart.toLowerCase())) {
+      return { isValid: false, error: 'Password cannot contain part of your email address' };
+    }
+  }
+
+  // Block common password patterns (expanded list)
+  const commonPatterns = [
+    // Simple patterns
+    'password', 'pass', '1234', '123456', '12345678', '123456789', '1234567890',
+    // Keyboard patterns  
+    'qwerty', 'qwertyui', 'asdfgh', 'zxcvbn', 'qwer', 'asdf', 'zxcv',
+    // Common combinations
+    'abc123', 'password123', '123password', 'admin', 'login', 'welcome',
+    // Dates and years
+    '2024', '2023', '2022', '2021', '2020',
+    // Common words
+    'letmein', 'monkey', 'dragon', 'sunshine', 'master', 'shadow',
+    'football', 'baseball', 'superman', 'batman', 'trustno1',
+    // Repeated patterns
+    'aaaaaa', '111111', '000000', 'abcabc', '123123'
+  ];
+  
+  for (const pattern of commonPatterns) {
+    if (lower.includes(pattern)) {
+      return { isValid: false, error: `Password cannot contain common pattern "${pattern}"` };
+    }
+  }
+
+  // Check for simple patterns
+  if (/^(.)\1{5,}$/.test(str)) {
+    return { isValid: false, error: 'Password cannot be the same character repeated' };
+  }
+  
+  // Check for simple sequential patterns
+  if (/01234|12345|23456|34567|45678|56789|abcde|bcdef|cdefg|defgh|efghi|fghij/i.test(str)) {
+    return { isValid: false, error: 'Password cannot contain simple sequential patterns' };
+  }
+
+  // Check if password has been breached (async check)
+  const breachCheck = await checkPasswordBreach(str);
+  if (breachCheck.isBreached) {
+    const count = breachCheck.count || 0;
+    if (count > 10) {
+      return { 
+        isValid: false, 
+        error: `This password has been found in ${count.toLocaleString()} data breaches and is not secure` 
+      };
+    } else {
+      return { 
+        isValid: false, 
+        error: `This password has been found in data breaches ${count} time${count === 1 ? '' : 's'} and should not be used` 
+      };
     }
   }
 

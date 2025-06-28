@@ -50,26 +50,26 @@ export const useProfileMessages = (profileType: 'basic' | 'love' | 'business') =
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
-  // Comprehensive deduplication function for profile messages
+  // ID-based deduplication function for profile messages
   const deduplicateMessages = useCallback((messageList: ProfileMessage[]): ProfileMessage[] => {
     const seen = new Set<string>();
     const deduplicated: ProfileMessage[] = [];
     
     for (const message of messageList) {
-      let uniqueId: string;
-      
+      // Only use message ID for deduplication - allow legitimate duplicate content
       if (message._id) {
-        uniqueId = `profile-${message._id}`;
+        const uniqueId = `profile-${message._id}`;
+        
+        if (!seen.has(uniqueId)) {
+          seen.add(uniqueId);
+          deduplicated.push(message);
+        } else {
+          console.debug('ℹ️ Filtered duplicate message ID (normal SSE + UI sync):', uniqueId);
+        }
       } else {
-        // Fallback: create unique ID from content and timestamp
-        uniqueId = `fallback-${message.sender_id}-${message.receiver_id}-${message.timestamp}-${message.content.substring(0, 20)}`;
-      }
-      
-      if (!seen.has(uniqueId)) {
-        seen.add(uniqueId);
+        // If no ID, always include (shouldn't happen with proper backend, but fail-safe)
+        console.warn('Profile message without _id found, including anyway:', message);
         deduplicated.push(message);
-      } else {
-        console.log('🚫 Duplicate profile message detected and removed:', uniqueId);
       }
     }
     

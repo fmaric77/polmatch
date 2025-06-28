@@ -44,13 +44,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { oldPassword, newPassword, confirmPassword } = body;
 
     // Validate old password
-    const oldPasswordValidation = validatePassword(oldPassword);
+    const oldPasswordValidation = await validatePassword(oldPassword);
     if (!oldPasswordValidation.isValid) {
       return createValidationErrorResponse(`Old password error: ${oldPasswordValidation.error}`, 400);
     }
 
     // Validate new password
-    const newPasswordValidation = validatePassword(newPassword);
+    const newPasswordValidation = await validatePassword(newPassword);
     if (!newPasswordValidation.isValid) {
       return createValidationErrorResponse(`New password error: ${newPasswordValidation.error}`, 400);
     }
