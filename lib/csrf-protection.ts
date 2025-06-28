@@ -109,11 +109,19 @@ export async function handleCSRFTokenRequest(): Promise<NextResponse> {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
   if (!sessionToken) {
-    return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    // Return 200 with session status instead of 401 to prevent browser console errors
+    return NextResponse.json({ 
+      hasSession: false, 
+      error: 'No session found' 
+    }, { status: 200 });
   }
 
   const csrfToken = generateCSRFToken(sessionToken);
-  return NextResponse.json({ csrfToken, expires: Date.now() + TOKEN_TTL_MS });
+  return NextResponse.json({ 
+    hasSession: true,
+    csrfToken, 
+    expires: Date.now() + TOKEN_TTL_MS 
+  });
 }
 
 export function createCSRFErrorResponse(error: string): NextResponse {

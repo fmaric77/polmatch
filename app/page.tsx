@@ -1,11 +1,12 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 import InfoModal from "../components/modals/InfoModal";
 import { useCSRFToken } from "../components/hooks/useCSRFToken";
+import { checkPasswordBreach, createDebouncedBreachChecker } from "../lib/password-breach-client";
 
 
 export default function Login() {
@@ -23,18 +24,58 @@ export default function Login() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [passwordBreachStatus, setPasswordBreachStatus] = useState<{
+    checked: boolean;
+    isBreached: boolean;
+    count?: number;
+  }>({ checked: false, isBreached: false });
 
+  // Create debounced breach checker
+  const debouncedBreachChecker = useCallback(
+    createDebouncedBreachChecker(800), // 800ms delay
+    []
+  );
 
+  // Check password breach status when password changes (during registration)
+  useEffect(() => {
+    if (isRegistering && password.length >= 6) {
+      setPasswordBreachStatus({ checked: false, isBreached: false });
+      
+      debouncedBreachChecker(password, (result) => {
+        setPasswordBreachStatus({
+          checked: true,
+          isBreached: result.isBreached,
+          count: result.count
+        });
+      });
+    } else {
+      setPasswordBreachStatus({ checked: false, isBreached: false });
+    }
+  }, [password, isRegistering, debouncedBreachChecker]);
 
   // Check session on mount
   useEffect(() => {
     async function checkSession() {
-      const res = await fetch('/api/session');
-      const data = await res.json();
-      if (data.valid) {
-        setIsLoggedIn(true);
-        router.push('/frontpage');
-      } else {
+      try {
+        const res = await fetch('/api/session', {
+          credentials: 'include' // Ensure cookies are sent
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.valid) {
+            setIsLoggedIn(true);
+            router.push('/frontpage');
+            return;
+          }
+        }
+        
+        // If we get here, either the response wasn't ok or data.valid was false
+        // This is expected when not logged in, so we silently set isLoggedIn to false
+        setIsLoggedIn(false);
+      } catch (error) {
+        // Network error or other issues - assume not logged in
+        console.error('Session check failed:', error);
         setIsLoggedIn(false);
       }
     }
@@ -137,6 +178,12 @@ export default function Login() {
       return;
     }
     
+    if (password.length > 128) {
+      setLoginError('Password is too long (maximum 128 characters)');
+      setLoading(false);
+      return;
+    }
+    
     if (!/\d/.test(password)) {
       setLoginError('Password must contain at least one number');
       setLoading(false);
@@ -145,6 +192,42 @@ export default function Login() {
     
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
       setLoginError('Password must contain at least one special character');
+      setLoading(false);
+      return;
+    }
+    
+    // Check if password contains username or email parts
+    const passwordLower = password.toLowerCase();
+    if (username && username.length > 2 && passwordLower.includes(username.toLowerCase())) {
+      setLoginError('Password cannot contain your username');
+      setLoading(false);
+      return;
+    }
+    
+    const emailPart = email.split('@')[0];
+    if (emailPart.length > 2 && passwordLower.includes(emailPart.toLowerCase())) {
+      setLoginError('Password cannot contain part of your email address');
+      setLoading(false);
+      return;
+    }
+    
+    // Check for common password patterns
+    const commonPatterns = [
+      'password', 'pass', '1234', '123456', '12345678', '123456789',
+      'qwerty', 'abc123', 'password123', 'admin', 'login', 'welcome'
+    ];
+    
+    for (const pattern of commonPatterns) {
+      if (passwordLower.includes(pattern)) {
+        setLoginError(`Password cannot contain common pattern "${pattern}"`);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Check for repeated characters
+    if (/^(.)\1{5,}$/.test(password)) {
+      setLoginError('Password cannot be the same character repeated');
       setLoading(false);
       return;
     }
@@ -230,6 +313,7 @@ export default function Login() {
     setRequires2FA(false);
     setLoginError(null);
     setUserType(null);
+    setPasswordBreachStatus({ checked: false, isBreached: false });
   };
 
   return (
@@ -301,9 +385,29 @@ export default function Login() {
                 required
               />
               {isRegistering && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Must contain at least 6 characters, 1 number, and 1 special character
-                </p>
+                <div className="mt-1">
+                  <p className="text-xs text-gray-400">
+                    Must be 6-128 characters with at least 1 number and 1 special character (!@#$%^&*()_+-=[]{};"&apos;:|,.&lt;&gt;/?). Cannot contain username, email, or common patterns.
+                  </p>
+                  {/* Real-time breach checking feedback */}
+                  {password.length >= 6 && (
+                    <div className="mt-2">
+                      {!passwordBreachStatus.checked ? (
+                        <p className="text-xs text-yellow-400">🔍 Checking for security breaches...</p>
+                      ) : passwordBreachStatus.isBreached ? (
+                        <div className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 p-2 rounded">
+                          ⚠️ <strong>Security Warning:</strong> This password has been found in{' '}
+                          {passwordBreachStatus.count && passwordBreachStatus.count > 1 
+                            ? `${passwordBreachStatus.count.toLocaleString()} data breaches` 
+                            : 'a data breach'
+                          }. Please choose a different password.
+                        </div>
+                      ) : (
+                        <p className="text-xs text-green-400">✅ Password not found in known breaches</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

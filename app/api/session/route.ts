@@ -8,12 +8,14 @@ export async function GET(): Promise<NextResponse> {
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     if (!sessionToken) {
-      return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+      // Return 200 with valid: false instead of 401 to prevent browser console errors
+      return NextResponse.json({ valid: false, message: 'No session token found' }, { status: 200 });
     }
 
     const auth = await getAuthenticatedUser(sessionToken);
     if (!auth) {
-      return NextResponse.json({ valid: false, message: 'Unauthorized' }, { status: 401 });
+      // Return 200 with valid: false instead of 401 to prevent browser console errors
+      return NextResponse.json({ valid: false, message: 'Invalid session token' }, { status: 200 });
     }
 
     return NextResponse.json({ 

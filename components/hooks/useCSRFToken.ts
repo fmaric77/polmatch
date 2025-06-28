@@ -1,14 +1,21 @@
 import { useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { getCSRFToken, clearCSRFToken, preloadCSRFToken, csrfFetch } from '../../lib/csrf-client';
 
 /**
  * React hook for CSRF token management
  */
 export function useCSRFToken() {
-  // Preload CSRF token when component mounts
+  const pathname = usePathname();
+  
+  // Only preload CSRF token when we expect to have a session
+  // Skip preloading on login page and other auth-related pages
   useEffect(() => {
-    preloadCSRFToken();
-  }, []);
+    const isAuthPage = pathname === '/' || pathname === '/login' || pathname === '/register';
+    if (!isAuthPage) {
+      preloadCSRFToken();
+    }
+  }, [pathname]);
 
   // Get CSRF token
   const getToken = useCallback(async (): Promise<string> => {
