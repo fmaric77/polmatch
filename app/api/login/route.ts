@@ -7,7 +7,6 @@ import CryptoJS from 'crypto-js';
 import { connectToDatabase } from '../../../lib/mongodb-connection';
 import { 
   validateEmail, 
-  validatePassword, 
   validateRequestBody,
   createValidationErrorResponse
 } from '../../../lib/validation';

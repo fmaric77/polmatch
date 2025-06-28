@@ -404,23 +404,18 @@ const UnifiedMessages: React.FC = () => {
           };
           
           profileMessages.setMessages(prevMessages => {
-            // Comprehensive duplicate check using all possible ID fields
+            // Only check for ID-based duplicates to allow legitimate duplicate content
             const messageExists = prevMessages.some(msg => {
-              // Check all possible message ID combinations
+              // Only check message ID matches - allow same content from same user (legitimate duplicates)
               return (
                 msg._id === data.message_id ||
                 msg._id === newProfileMessage._id ||
-                (msg as { message_id?: string }).message_id === data.message_id ||
-                // Additional check: same sender, receiver, timestamp and content
-                (msg.sender_id === newProfileMessage.sender_id &&
-                 msg.receiver_id === newProfileMessage.receiver_id &&
-                 msg.timestamp === newProfileMessage.timestamp &&
-                 msg.content === newProfileMessage.content)
+                (msg as { message_id?: string }).message_id === data.message_id
               );
             });
             
             if (messageExists) {
-              console.log('Profile message already exists, skipping duplicate:', data.message_id);
+              console.debug('ℹ️ Filtered duplicate message ID (normal SSE + UI sync):', data.message_id);
               return prevMessages;
             }
             
@@ -445,24 +440,19 @@ const UnifiedMessages: React.FC = () => {
           messages.setMessages(prevMessages => {
             console.log('Adding SSE direct message. Current count:', prevMessages.length);
             
-            // Comprehensive duplicate check using all possible ID fields and content comparison
+            // Only check for ID-based duplicates to allow legitimate duplicate content
             const messageExists = prevMessages.some(msg => {
               const msgId = ('_id' in msg) ? msg._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
               
-              // Check ID matches or content/timestamp matches
+              // Only check ID matches - allow same content from same user (legitimate duplicates)
               return (
                 msgId === newMessage._id || 
-                msgId === data.message_id ||
-                // Additional content-based duplicate check
-                (msg.sender_id === newMessage.sender_id &&
-                 ('receiver_id' in msg ? msg.receiver_id : null) === newMessage.receiver_id &&
-                 msg.timestamp === newMessage.timestamp &&
-                 msg.content === newMessage.content)
+                msgId === data.message_id
               );
             });
             
             if (messageExists) {
-              console.log('Direct message already exists, skipping:', data.message_id);
+              console.debug('ℹ️ Filtered duplicate message ID (normal SSE + UI sync):', data.message_id);
               return prevMessages;
             }
             
@@ -501,24 +491,18 @@ const UnifiedMessages: React.FC = () => {
           messages.setMessages(prevMessages => {
             console.log('Adding SSE group message. Current count:', prevMessages.length);
             
-            // Comprehensive duplicate check using all possible ID fields and content comparison
+            // Only check for ID-based duplicates to allow legitimate duplicate content
             const messageExists = prevMessages.some(msg => {
               const msgId = ('_id' in msg) ? (msg as PrivateMessage)._id : ('message_id' in msg) ? (msg as GroupMessage).message_id : null;
               
-              // Check ID matches or content/timestamp matches
+              // Only check ID matches - allow same content from same user (legitimate duplicates)
               return (
                 msgId === newMessage.message_id || 
-                msgId === groupData.message_id ||
-                // Additional content-based duplicate check for group messages
-                (('message_id' in msg) && 
-                 (msg as GroupMessage).group_id === newMessage.group_id &&
-                 msg.sender_id === newMessage.sender_id &&
-                 msg.timestamp === newMessage.timestamp &&
-                 msg.content === newMessage.content)
+                msgId === groupData.message_id
               );
             });
             if (messageExists) {
-              console.log('Group message already exists, skipping duplicate:', groupData.message_id);
+              console.debug('ℹ️ Filtered duplicate message ID (normal SSE + UI sync):', groupData.message_id);
               return prevMessages;
             }
             

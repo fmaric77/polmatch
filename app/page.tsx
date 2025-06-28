@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 import InfoModal from "../components/modals/InfoModal";
 import { useCSRFToken } from "../components/hooks/useCSRFToken";
-import { checkPasswordBreach, createDebouncedBreachChecker } from "../lib/password-breach-client";
+import { createDebouncedBreachChecker } from "../lib/password-breach-client";
 
 
 export default function Login() {
@@ -387,7 +387,7 @@ export default function Login() {
               {isRegistering && (
                 <div className="mt-1">
                   <p className="text-xs text-gray-400">
-                    Must be 6-128 characters with at least 1 number and 1 special character (!@#$%^&*()_+-=[]{};"&apos;:|,.&lt;&gt;/?). Cannot contain username, email, or common patterns.
+                    Must be 6-128 characters with at least 1 number and 1 special character (!@#$%^&*()_+-=[]{};&quot;&apos;:|,.&lt;&gt;/?). Cannot contain username, email, or common patterns.
                   </p>
                   {/* Real-time breach checking feedback */}
                   {password.length >= 6 && (
