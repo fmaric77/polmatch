@@ -2,6 +2,7 @@
 import Navigation from '../../../../components/Navigation';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCSRFToken } from '../../../../components/hooks/useCSRFToken';
 
 export default function CreateQuestionnaireGroup() {
   const [form, setForm] = useState({
@@ -14,6 +15,7 @@ export default function CreateQuestionnaireGroup() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { protectedFetch } = useCSRFToken();
 
   useEffect(() => {
     // Check if user is admin
@@ -42,7 +44,7 @@ export default function CreateQuestionnaireGroup() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/admin/questionnaires', {
+      const res = await protectedFetch('/api/admin/questionnaires', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
