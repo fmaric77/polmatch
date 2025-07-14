@@ -107,7 +107,7 @@ export default function AdminDashboard() {
     setLoadingQuestionnaires(true);
     setQuestionnairesError('');
     try {
-      const res = await fetch('/api/admin/questionnaires');
+      const res = await protectedFetch('/api/admin/questionnaires');
       const data = await res.json();
       if (data.success) {
         setQuestionnaireGroups(data.questionnaireGroups);
