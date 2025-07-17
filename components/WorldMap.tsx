@@ -25,6 +25,16 @@ export default function WorldMap() {
   const [countryStats, setCountryStats] = useState<{ [country: string]: CountryStat }>({});
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
+  const [webglSupported, setWebglSupported] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Detect WebGL support
+    if (typeof window !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      setWebglSupported(Boolean(gl));
+    }
+  }, []);
 
   useEffect(() => {
     console.log("WorldMap: Attempting to fetch continents-geo.json");
@@ -107,6 +117,15 @@ export default function WorldMap() {
   // Responsive width/height fallback
   const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
   const height = typeof window !== 'undefined' ? window.innerHeight : 800;
+
+  // If WebGL is not available, show a friendly message
+  if (!webglSupported) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black text-red-400 text-base sm:text-lg p-4">
+        WebGL is not supported or is disabled in your browser. Please enable WebGL to view the world map.
+      </div>
+    );
+  }
 
   if (error) {
     return <div className="w-full h-full flex items-center justify-center bg-black text-red-500 text-xl">{error}</div>;
