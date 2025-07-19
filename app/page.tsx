@@ -65,7 +65,13 @@ export default function Login() {
           const data = await res.json();
           if (data.valid) {
             setIsLoggedIn(true);
-            router.push('/frontpage');
+            
+            // Check if user needs to set up forced 2FA
+            if (data.user?.force_2fa_enabled && !data.user?.two_factor_enabled && !data.user?.is_admin) {
+              router.push('/setup-2fa');
+            } else {
+              router.push('/frontpage');
+            }
             return;
           }
         }
@@ -120,7 +126,13 @@ export default function Login() {
         }
       } else {
         setUserType(data.user.is_admin ? 'Admin' : 'User');
-        router.push('/frontpage');
+        
+        // Check if user needs to set up forced 2FA
+        if (data.user.force_2fa_enabled && !data.user.two_factor_enabled && !data.user.is_admin) {
+          router.push('/setup-2fa');
+        } else {
+          router.push('/frontpage');
+        }
       }
     } catch {
       setLoginError('Server error');

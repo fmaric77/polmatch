@@ -9,7 +9,9 @@ interface ClientThemeProviderProps {
 
 const ClientThemeProvider: React.FC<ClientThemeProviderProps> = ({ children }) => {
   return (
-    <ThemeProvider>{children}</ThemeProvider>
+    <ThemeProvider>
+      {children}
+    </ThemeProvider>
   );
 };
 

@@ -11,6 +11,8 @@ interface User {
   email: string;
   is_admin: boolean;
   is_banned?: boolean;
+  two_factor_enabled?: boolean;
+  force_2fa_enabled?: boolean;
 }
 
 interface QuestionnaireGroup {
@@ -32,6 +34,7 @@ export default function AdminDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
   const [search, setSearch] = useState('');
+  const [twoFactorFilter, setTwoFactorFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [questionnaireGroups, setQuestionnaireGroups] = useState<QuestionnaireGroup[]>([]);
   const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(false);
   const [questionnairesError, setQuestionnairesError] = useState('');
@@ -95,12 +98,17 @@ export default function AdminDashboard() {
     }
   };
 
-  // Filtered users for search
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtered users for search and 2FA filter
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = user.username.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase());
+    
+    const matches2FA = twoFactorFilter === 'all' || 
+      (twoFactorFilter === 'enabled' && user.two_factor_enabled) ||
+      (twoFactorFilter === 'disabled' && !user.two_factor_enabled);
+    
+    return matchesSearch && matches2FA;
+  });
 
   // Fetch questionnaire groups when switching to questionnaires section
   const fetchQuestionnaireGroups = async () => {
@@ -136,6 +144,53 @@ export default function AdminDashboard() {
       alert('User banned and deleted.');
     } else {
       alert(data.message || 'Failed to ban user.');
+    }
+  };
+
+  // Force 2FA handler
+  const handleForce2FA = async () => {
+    if (!window.confirm('Are you sure you want to force all users without 2FA to enable it? They will be required to set up 2FA on their next login.')) return;
+    
+    try {
+      const res = await protectedFetch('/api/admin/force-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Successfully set force 2FA for ${data.affectedUsers} users without 2FA.`);
+        // Refresh the users list
+        fetchUsers();
+      } else {
+        alert(data.message || 'Failed to force 2FA.');
+      }
+    } catch (error) {
+      console.error('Error forcing 2FA:', error);
+      alert('Failed to force 2FA.');
+    }
+  };
+
+  // Force 2FA for individual user
+  const handleForceUser2FA = async (user_id: string, username: string) => {
+    if (!window.confirm(`Are you sure you want to force ${username} to enable 2FA? They will be required to set up 2FA on their next login.`)) return;
+    
+    try {
+      const res = await protectedFetch('/api/admin/force-user-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Successfully forced 2FA for ${username}.`);
+        // Refresh the users list
+        fetchUsers();
+      } else {
+        alert(data.message || 'Failed to force 2FA for user.');
+      }
+    } catch (error) {
+      console.error('Error forcing user 2FA:', error);
+      alert('Failed to force 2FA for user.');
     }
   };
 
@@ -249,14 +304,33 @@ export default function AdminDashboard() {
             )}
             {activeSection === 'manage' && (
               <div className="bg-black/80 text-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
-                <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Manage Users</h2>
-                <input
-                  type="text"
-                  placeholder="Search by username or email"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="mb-4 p-2 bg-black text-white border border-white rounded focus:outline-none w-full text-sm sm:text-base"
-                />
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 sm:gap-0">
+                  <h2 className="text-lg sm:text-xl font-bold">Manage Users</h2>
+                  <button
+                    onClick={handleForce2FA}
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm font-semibold"
+                  >
+                    Force 2FA for All Users
+                  </button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search by username or email"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="flex-1 p-2 bg-black text-white border border-white rounded focus:outline-none text-sm sm:text-base"
+                  />
+                  <select
+                    value={twoFactorFilter}
+                    onChange={(e) => setTwoFactorFilter(e.target.value as 'all' | 'enabled' | 'disabled')}
+                    className="p-2 bg-black text-white border border-white rounded focus:outline-none text-sm sm:text-base"
+                  >
+                    <option value="all">All Users</option>
+                    <option value="enabled">2FA Enabled</option>
+                    <option value="disabled">2FA Disabled</option>
+                  </select>
+                </div>
                 {loadingUsers ? (
                   <div className="text-center py-4 text-sm sm:text-base">Loading users...</div>
                 ) : usersError ? (
@@ -269,6 +343,7 @@ export default function AdminDashboard() {
                           <th className="border-b border-white p-2 text-xs sm:text-sm">Username</th>
                           <th className="border-b border-white p-2 text-xs sm:text-sm">Email</th>
                           <th className="border-b border-white p-2 text-xs sm:text-sm">Admin</th>
+                          <th className="border-b border-white p-2 text-xs sm:text-sm">2FA</th>
                           <th className="border-b border-white p-2 text-xs sm:text-sm">Actions</th>
                         </tr>
                       </thead>
@@ -278,13 +353,37 @@ export default function AdminDashboard() {
                             <td className="p-2 text-xs sm:text-sm">{user.username}</td>
                             <td className="p-2 text-xs sm:text-sm">{user.email}</td>
                             <td className="p-2 text-xs sm:text-sm">{user.is_admin ? 'Yes' : 'No'}</td>
+                            <td className="p-2 text-xs sm:text-sm">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                user.two_factor_enabled 
+                                  ? 'bg-green-600 text-white' 
+                                  : 'bg-red-600 text-white'
+                              }`}>
+                                {user.two_factor_enabled ? 'Enabled' : 'Disabled'}
+                              </span>
+                              {user.force_2fa_enabled && (
+                                <span className="ml-1 px-2 py-1 rounded text-xs bg-orange-600 text-white">
+                                  Forced
+                                </span>
+                              )}
+                            </td>
                             <td className="p-2">
-                              <button
-                                className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm"
-                                onClick={() => handleBanUser(user.user_id)}
-                              >
-                                Ban
-                              </button>
+                              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                                {!user.two_factor_enabled && !user.force_2fa_enabled && (
+                                  <button
+                                    className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-xs"
+                                    onClick={() => handleForceUser2FA(user.user_id, user.username)}
+                                  >
+                                    Force 2FA
+                                  </button>
+                                )}
+                                <button
+                                  className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs"
+                                  onClick={() => handleBanUser(user.user_id)}
+                                >
+                                  Ban
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
