@@ -182,11 +182,11 @@ export default function Friends() {
   return (
     <>
       {/* Header */}
-      <div className="bg-black/40 border border-white/30 rounded-lg mb-6">
+      <div className="bg-white/40 dark:bg-black/40 border border-black/30 dark:border-white/30 rounded-lg mb-6">
         <div className="p-4">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-xl font-mono font-bold uppercase tracking-wider">Friends</h1>
-            <div className="text-sm font-mono text-gray-400">
+            <div className="text-sm font-mono text-gray-600 dark:text-gray-400">
               {profileFriends.length} friends
             </div>
           </div>
@@ -199,8 +199,8 @@ export default function Friends() {
                 onClick={() => setActiveProfileType(type)}
                 className={`px-3 py-2 rounded font-mono text-xs uppercase tracking-wider transition-colors ${
                   activeProfileType === type 
-                    ? 'bg-white text-black'
-                    : 'bg-black border border-white text-white hover:bg-white/10'
+                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                    : 'bg-white dark:bg-black border border-black dark:border-white text-black dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'
                 }`}
               >
                 {getProfileTypeLabel(type)}
@@ -217,10 +217,10 @@ export default function Friends() {
       </div>
 
       {/* Friends Container */}
-      <div className="bg-black/40 border border-white/30 rounded-lg">
+      <div className="bg-white/40 dark:bg-black/40 border border-black/30 dark:border-white/30 rounded-lg">
         {loading ? (
           <div className="text-center py-8 px-4">
-            <div className="font-mono text-gray-400 mb-2 text-sm">Loading...</div>
+            <div className="font-mono text-gray-600 dark:text-gray-400 mb-2 text-sm">Loading...</div>
           </div>
         ) : error ? (
           <div className="text-center py-8 px-4">
@@ -230,12 +230,12 @@ export default function Friends() {
           <div className="p-4">
             {/* Friends List */}
             <div className="mb-6">
-              <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+              <h3 className="font-mono text-sm font-bold tracking-wider text-black dark:text-white mb-3">
                 {getProfileTypeLabel(activeProfileType)} Friends
               </h3>
               {profileFriends.length === 0 ? (
                 <div className="text-center py-6">
-                  <div className="font-mono text-gray-400 text-sm">
+                  <div className="font-mono text-gray-600 dark:text-gray-400 text-sm">
                     No friends yet
                   </div>
                 </div>
@@ -245,13 +245,13 @@ export default function Friends() {
                     const friendId = f.user_id === myId ? f.friend_id : f.user_id;
                     const displayName = userDisplayNames[friendId] || friendId;
                     return (
-                      <div key={f.user_id + f.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
+                      <div key={f.user_id + f.friend_id} className="bg-white/60 dark:bg-black/60 border border-black/20 dark:border-white/20 rounded p-3 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <ProfileAvatar userId={friendId} size={32} />
                           <div className="font-mono">
                             <button 
                               onClick={() => openProfileModal(friendId, displayName)}
-                              className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
+                              className="text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                             >
                               {displayName}
                             </button>
@@ -273,20 +273,20 @@ export default function Friends() {
             {/* Incoming Requests */}
             {profileIncoming.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                <h3 className="font-mono text-sm font-bold tracking-wider text-black dark:text-white mb-3">
                   Friend Requests
                 </h3>
                 <div className="space-y-3">
                   {profileIncoming.map((req) => {
                     const displayName = userDisplayNames[req.user_id] || req.user_id;
                     return (
-                      <div key={req.user_id + req.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
+                      <div key={req.user_id + req.friend_id} className="bg-white/60 dark:bg-black/60 border border-black/20 dark:border-white/20 rounded p-3 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <ProfileAvatar userId={req.user_id} size={32} />
                           <div className="font-mono">
                             <button 
                               onClick={() => openProfileModal(req.user_id, displayName)}
-                              className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
+                              className="text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                             >
                               {displayName}
                             </button>
@@ -316,20 +316,20 @@ export default function Friends() {
             {/* Outgoing Requests */}
             {profileOutgoing.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+                <h3 className="font-mono text-sm font-bold tracking-wider text-black dark:text-white mb-3">
                   Sent Requests
                 </h3>
                 <div className="space-y-3">
                   {profileOutgoing.map((req) => {
                     const displayName = userDisplayNames[req.friend_id] || req.friend_id;
                     return (
-                      <div key={req.user_id + req.friend_id} className="bg-black/60 border border-white/20 rounded p-3 flex items-center justify-between">
+                      <div key={req.user_id + req.friend_id} className="bg-white/60 dark:bg-black/60 border border-black/20 dark:border-white/20 rounded p-3 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <ProfileAvatar userId={req.friend_id} size={32} />
                           <div className="font-mono">
                             <button 
                               onClick={() => openProfileModal(req.friend_id, displayName)}
-                              className="text-white hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
+                              className="text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left text-sm font-bold tracking-wider"
                             >
                               {displayName}
                             </button>
@@ -347,16 +347,16 @@ export default function Friends() {
 
             {/* Add Friends */}
             <div>
-              <h3 className="font-mono text-sm font-bold tracking-wider text-white mb-3">
+              <h3 className="font-mono text-sm font-bold tracking-wider text-black dark:text-white mb-3">
                 Add Friends
               </h3>
               <div className="text-center py-6">
-                <div className="font-mono text-gray-400 text-sm mb-4">
+                <div className="font-mono text-gray-600 dark:text-gray-400 text-sm mb-4">
                   Search for users to add as friends
                 </div>
                 <a 
                   href="/search" 
-                  className="inline-block px-4 py-2 bg-white text-black font-mono text-sm rounded hover:bg-gray-200 transition-colors uppercase tracking-wider"
+                  className="inline-block px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-mono text-sm rounded hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors uppercase tracking-wider"
                 >
                   Search Users
                 </a>

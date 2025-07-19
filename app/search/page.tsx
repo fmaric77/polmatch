@@ -394,18 +394,18 @@ export default function SearchUsersPage() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-white dark:bg-black text-black dark:text-white">
       <Navigation currentPage="search" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
           {/* Header */}
-          <div className="bg-black border-2 border-white rounded-none mb-4 md:mb-6">
+          <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none mb-4 md:mb-6">
             <div className="p-3 md:p-6">
               <h1 className="text-lg md:text-2xl font-bold text-center mb-6">Search Users</h1>
               
               {/* Profile Type Selection */}
               <div className="flex flex-col sm:flex-row justify-center gap-2 mb-4">
-                <div className="text-sm text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">Search Profile:</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 self-center mb-2 sm:mb-0 sm:mr-4 text-center sm:text-left">Search Profile:</div>
                 <div className="flex flex-wrap justify-center gap-2">
                   {(Object.keys(categoryLabels) as Array<'basic' | 'love' | 'business'>).map(profileType => (
                     <button
@@ -414,7 +414,7 @@ export default function SearchUsersPage() {
                       className={`px-3 md:px-4 py-2 border-2 text-xs md:text-sm transition-colors ${
                         activeProfileType === profileType 
                           ? `${categoryColors[profileType]} text-white`
-                          : 'border-white bg-black text-white hover:bg-gray-800'
+                          : 'border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800'
                       }`}
                     >
                       {categoryLabels[profileType]}
@@ -425,20 +425,20 @@ export default function SearchUsersPage() {
 
               {/* Search Input */}
               <div className="mb-4">
-                <div className="text-sm text-gray-400 mb-2 text-center">Search Users:</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center">Search Users:</div>
                 <input
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Username or display name..."
-                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                  className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                 />
               </div>
 
               {/* Questionnaire Filters */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <div className="text-sm text-gray-400">Questionnaire Filters:</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Questionnaire Filters:</div>
                   <div className="flex gap-2">
                     {(selectedFilters.length > 0 || sortBy !== 'none') && (
                       <button
@@ -452,8 +452,8 @@ export default function SearchUsersPage() {
                       onClick={() => setShowFilters(!showFilters)}
                       className={`px-2 py-1 text-xs border-2 transition-colors ${
                         showFilters 
-                          ? 'bg-white text-black border-white'
-                          : 'bg-black text-white border-white hover:bg-gray-800'
+                          ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                          : 'bg-white dark:bg-black text-black dark:text-white border-black dark:border-white hover:bg-gray-200 dark:hover:bg-gray-800'
                       }`}
                     >
                       {showFilters ? 'Hide Filters' : 'Show Filters'} ({availableFilters.length})
@@ -463,14 +463,14 @@ export default function SearchUsersPage() {
 
                 {/* Sorting Options */}
                 <div className="mb-3">
-                  <div className="text-sm text-gray-400 mb-2">Sort By:</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Sort By:</div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSortBy('none')}
                       className={`px-3 py-2 text-xs border-2 transition-colors ${
                         sortBy === 'none'
-                          ? 'bg-white text-black border-white'
-                          : 'bg-black text-white border-white hover:bg-gray-800'
+                          ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                          : 'bg-white dark:bg-black text-black dark:text-white border-black dark:border-white hover:bg-gray-200 dark:hover:bg-gray-800'
                       }`}
                     >
                       Default
@@ -480,15 +480,15 @@ export default function SearchUsersPage() {
                       className={`px-3 py-2 text-xs border-2 transition-colors ${
                         sortBy === 'similarity'
                           ? 'bg-blue-600 text-white border-blue-400'
-                          : 'bg-black text-white border-white hover:bg-gray-800'
+                          : 'bg-white dark:bg-black text-black dark:text-white border-black dark:border-white hover:bg-gray-200 dark:hover:bg-gray-800'
                       }`}
                     >
                       Similarity to Me
                     </button>
                   </div>
                   {sortBy === 'similarity' && (
-                    <div className="mt-2 p-2 bg-gray-800 border-2 border-blue-400">
-                      <div className="text-xs text-blue-400">
+                    <div className="mt-2 p-2 bg-gray-200 dark:bg-gray-800 border-2 border-blue-400">
+                      <div className="text-xs text-blue-600 dark:text-blue-400">
                         Users are sorted by how similar their questionnaire answers are to yours
                       </div>
                     </div>
@@ -496,23 +496,23 @@ export default function SearchUsersPage() {
                 </div>
 
                 {showFilters && (
-                  <div className="border-2 border-white bg-gray-900 p-3">
+                  <div className="border-2 border-black dark:border-white bg-gray-100 dark:bg-gray-900 p-3">
                     {filtersLoading ? (
-                      <div className="text-center py-4 text-gray-400 text-xs">
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-xs">
                         Loading filters...
                       </div>
                     ) : availableFilters.length === 0 ? (
-                      <div className="text-center py-4 text-gray-400 text-xs">
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-xs">
                         No questionnaire filters available for {categoryLabels[activeProfileType]} profile
                       </div>
                     ) : (
                       <div className="space-y-4 max-h-60 overflow-y-auto">
                         {availableFilters.map((filter, filterIndex) => (
-                          <div key={`filter-container-${filter.question_id}-${filterIndex}`} className="border-l-2 border-white pl-3">
-                            <div className="text-xs text-gray-300 mb-2">
+                          <div key={`filter-container-${filter.question_id}-${filterIndex}`} className="border-l-2 border-black dark:border-white pl-3">
+                            <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                               {filter.group_title} → {filter.questionnaire_title}
                             </div>
-                            <div className="text-sm text-white mb-2 font-bold">
+                            <div className="text-sm text-black dark:text-white mb-2 font-bold">
                               {filter.profile_display_text || filter.question_text}
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -526,8 +526,8 @@ export default function SearchUsersPage() {
                                   />
                                   <span className={`px-2 py-1 border-2 text-xs transition-colors ${
                                     isFilterSelected(filter.question_id, option)
-                                      ? 'bg-white text-black border-white'
-                                      : 'bg-black text-white border-white hover:bg-gray-800'
+                                      ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                                      : 'bg-white dark:bg-black text-black dark:text-white border-black dark:border-white hover:bg-gray-200 dark:hover:bg-gray-800'
                                   }`}>
                                     {option.toUpperCase()}
                                   </span>
@@ -542,8 +542,8 @@ export default function SearchUsersPage() {
                 )}
 
                 {selectedFilters.length > 0 && (
-                  <div className="mt-2 p-2 bg-gray-800 border-2 border-blue-400">
-                    <div className="text-xs text-blue-400 mb-1">Active Filters:</div>
+                  <div className="mt-2 p-2 bg-gray-200 dark:bg-gray-800 border-2 border-blue-400">
+                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">Active Filters:</div>
                     <div className="flex flex-wrap gap-1">
                       {selectedFilters.flatMap((selectedFilter, filterIndex) => {
                         const filterInfo = availableFilters.find(f => f.question_id === selectedFilter.question_id);
@@ -562,12 +562,12 @@ export default function SearchUsersPage() {
               </div>
 
               {/* Results Summary */}
-              <div className="text-center text-sm text-gray-400 mb-4">
+              <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Found {availableUsers.length} users
               </div>
 
               {actionMessage && (
-                <div className="mb-4 text-center text-red-400 text-sm border-2 border-red-400 bg-red-900 p-2">
+                <div className="mb-4 text-center text-red-600 dark:text-red-400 text-sm border-2 border-red-400 bg-red-100 dark:bg-red-900 p-2">
                   {actionMessage}
                 </div>
               )}
@@ -575,23 +575,23 @@ export default function SearchUsersPage() {
           </div>
 
           {/* Search Results Container */}
-          <div className="bg-black border-2 border-white rounded-none">
+          <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none">
             {availableUsers.length === 0 && search && (
               <div className="text-center py-8 md:py-12 px-4">
-                <div className="text-gray-400 mb-4 text-sm md:text-base">
+                <div className="text-gray-500 dark:text-gray-400 mb-4 text-sm md:text-base">
                   No users found matching &quot;{search}&quot;
                 </div>
-                <div className="text-xs md:text-sm text-gray-500">
+                <div className="text-xs md:text-sm text-gray-600 dark:text-gray-500">
                   Try a different search term
                 </div>
               </div>
             )}
             {availableUsers.length === 0 && !search && (
               <div className="text-center py-8 md:py-12 px-4">
-                <div className="text-gray-400 mb-4 text-sm md:text-base">
+                <div className="text-gray-500 dark:text-gray-400 mb-4 text-sm md:text-base">
                   Search Ready
                 </div>
-                <div className="text-xs md:text-sm text-gray-500">
+                <div className="text-xs md:text-sm text-gray-600 dark:text-gray-500">
                   Enter search terms to begin
                 </div>
               </div>
@@ -600,9 +600,9 @@ export default function SearchUsersPage() {
               <div className="p-3 md:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                   {availableUsers.map((user, index) => (
-                    <div key={user.user_id} className="border-2 border-white bg-black">
+                    <div key={user.user_id} className="border-2 border-black dark:border-white bg-white dark:bg-black">
                       {/* User Header */}
-                      <div className="bg-white text-black p-2 text-xs">
+                      <div className="bg-black dark:bg-white text-white dark:text-black p-2 text-xs">
                         <div className="flex justify-between items-center">
                           <span className="font-bold">User #{(index + 1).toString().padStart(3, '0')}</span>
                           <span className="text-xs">
@@ -615,8 +615,8 @@ export default function SearchUsersPage() {
                       <div className="p-3">
                         <div className="flex flex-col items-center text-center space-y-3">
                           {/* Photo Section */}
-                          <div className="border-2 border-white bg-gray-800 p-2">
-                            <div className="text-xs text-gray-400 mb-1 text-center">Photo</div>
+                          <div className="border-2 border-black dark:border-white bg-gray-200 dark:bg-gray-800 p-2">
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 text-center">Photo</div>
                             <ProfileAvatar userId={user.user_id} size={64} className="border-2 border-gray-600" />
                           </div>
                           
@@ -624,13 +624,13 @@ export default function SearchUsersPage() {
                           <div className="w-full">
                             <div className="space-y-2 text-sm">
                               <div>
-                                <span className="text-gray-400">User Name:</span>
-                                <div className="text-white font-bold">
+                                <span className="text-gray-600 dark:text-gray-400">User Name:</span>
+                                <div className="text-black dark:text-white font-bold">
                                   {user.display_name ? user.display_name : `Profile-${activeProfileType}-User`}
                                 </div>
                               </div>
                               <div>
-                                <span className="text-gray-400">Relationship:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Relationship:</span>
                                 <div className={`font-bold ${
                                   isFriend(user.user_id) ? 'text-green-400' : 
                                   hasPendingRequest(user.user_id) ? 'text-yellow-400' : 'text-red-400'
@@ -641,7 +641,7 @@ export default function SearchUsersPage() {
                               </div>
                               {sortBy === 'similarity' && user.similarity_score !== undefined && (
                                 <div>
-                                  <span className="text-gray-400">Similarity:</span>
+                                  <span className="text-gray-600 dark:text-gray-400">Similarity:</span>
                                   <div className={`font-bold ${
                                     user.similarity_score >= 0.8 ? 'text-green-400' :
                                     user.similarity_score >= 0.6 ? 'text-yellow-400' :
@@ -658,7 +658,7 @@ export default function SearchUsersPage() {
                           <div className="flex flex-col gap-2 w-full">
                             <button 
                               onClick={() => handleViewProfile(user)} 
-                              className="w-full px-3 py-2 bg-white text-black text-xs border-2 border-white hover:bg-gray-200 transition-colors"
+                              className="w-full px-3 py-2 bg-black dark:bg-white text-white dark:text-black text-xs border-2 border-black dark:border-white hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
                             >
                               View Profile
                             </button>
@@ -735,9 +735,9 @@ export default function SearchUsersPage() {
         {/* Group Invite Modal */}
         {showInviteModal && selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-black border-2 border-white rounded-none shadow-lg w-full max-w-md">
+            <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none shadow-lg w-full max-w-md">
               {/* Modal Header */}
-              <div className="border-b-2 border-white bg-white text-black p-3 text-center">
+              <div className="border-b-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black p-3 text-center">
                 <h2 className="text-lg font-bold">Invite to Group</h2>
                 <div className="text-xs mt-1">User: {selectedUser.display_name ? selectedUser.display_name : `Profile-${activeProfileType}-User`}</div>
               </div>
@@ -745,23 +745,23 @@ export default function SearchUsersPage() {
               <div className="p-6">
                 {userGroups.length === 0 ? (
                   <div className="text-center py-6">
-                    <div className="text-gray-400 mb-4">
+                    <div className="text-gray-500 dark:text-gray-400 mb-4">
                       No groups available
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-600 dark:text-gray-500">
                       Admin or owner permissions required
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-400 mb-2">
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">
                         Select Group:
                       </label>
                       <select
                         value={selectedGroupId}
                         onChange={(e) => setSelectedGroupId(e.target.value)}
-                        className="w-full bg-black text-white border-2 border-white text-sm px-3 py-2 focus:outline-none focus:border-gray-400"
+                        className="w-full bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white text-sm px-3 py-2 focus:outline-none focus:border-gray-400"
                       >
                         <option value="">Choose group...</option>
                         {userGroups.map(group => (
@@ -779,7 +779,7 @@ export default function SearchUsersPage() {
                     <button
                       onClick={sendGroupInvitation}
                       disabled={!selectedGroupId || inviteLoading}
-                      className="flex-1 bg-white text-black py-2 text-xs hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 text-xs hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {inviteLoading ? 'Sending...' : 'Send Invitation'}
                     </button>

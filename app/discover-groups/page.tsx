@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navigation from '@/components/Navigation';
 import { useCSRFToken } from '@/components/hooks/useCSRFToken';
+import { useTheme } from '@/components/ThemeProvider';
 
 interface PublicGroup {
   group_id: string;
@@ -25,6 +26,7 @@ interface PaginationInfo {
 }
 
 export default function DiscoverGroups() {
+  const { theme } = useTheme();
   const { protectedFetch } = useCSRFToken();
   const [groups, setGroups] = useState<PublicGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -132,19 +134,19 @@ export default function DiscoverGroups() {
   }, [fetchGroups]);
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <Navigation currentPage="discover" />
       
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-4 lg:mt-6 p-4 lg:p-6 pb-8">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-white mb-2">Discover Groups</h1>
-            <p className="text-gray-400 text-sm">Find and join public groups that match your interests</p>
+            <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'} mb-2`}>Discover Groups</h1>
+            <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Find and join public groups that match your interests</p>
           </div>
 
           {/* Search Section */}
-          <div className="bg-black/40 border border-white/30 rounded-lg mb-6">
+          <div className={`${theme === 'dark' ? 'bg-black/40 border-white/30' : 'bg-gray-100/50 border-gray-400/30'} border rounded-lg mb-6`}>
             <div className="p-4">
               <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
@@ -153,19 +155,19 @@ export default function DiscoverGroups() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search groups..."
-                    className="w-full p-3 bg-black text-white border border-white/30 rounded text-sm focus:outline-none focus:border-white/60"
+                    className={`w-full p-3 ${theme === 'dark' ? 'bg-black text-white border-white/30 focus:border-white/60' : 'bg-white text-black border-gray-400/50 focus:border-gray-600'} border rounded text-sm focus:outline-none transition-colors`}
                   />
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors"
+                  className={`px-6 py-3 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} text-sm rounded transition-colors`}
                 >
                   Search
                 </button>
               </form>
 
               {error && (
-                <div className="mt-3 text-center text-red-400 text-sm bg-red-900/20 border border-red-400/50 rounded p-2">
+                <div className={`mt-3 text-center text-red-400 text-sm ${theme === 'dark' ? 'bg-red-900/20 border-red-400/50' : 'bg-red-100 border-red-400'} border rounded p-2`}>
                   {error}
                 </div>
               )}
@@ -173,18 +175,18 @@ export default function DiscoverGroups() {
           </div>
 
           {/* Groups Container */}
-          <div className="bg-black/40 border border-white/30 rounded-lg">
+          <div className={`${theme === 'dark' ? 'bg-black/40 border-white/30' : 'bg-gray-100/50 border-gray-400/30'} border rounded-lg`}>
             {loading ? (
               <div className="text-center py-12 px-4">
-                <div className="text-gray-400 mb-2">Loading groups...</div>
-                <div className="text-white/60 animate-pulse">● ● ●</div>
+                <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Loading groups...</div>
+                <div className={`${theme === 'dark' ? 'text-white/60' : 'text-black/60'} animate-pulse`}>● ● ●</div>
               </div>
             ) : groups.length === 0 ? (
               <div className="text-center py-12 px-4">
-                <div className="text-gray-400 mb-4">
-                  {searchQuery ? `No groups found matching &quot;${searchQuery}&quot;` : 'No groups available'}
+                <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
+                  {searchQuery ? `No groups found matching "${searchQuery}"` : 'No groups available'}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                   {searchQuery ? 'Try different search terms' : 'Be the first to create a group'}
                 </div>
               </div>
@@ -192,13 +194,13 @@ export default function DiscoverGroups() {
               <div className="p-4">
                 {/* Results Info */}
                 <div className="mb-6 text-center">
-                  <div className="text-sm text-gray-400 mb-1">
+                  <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
                     {groups.length} of {pagination.totalCount} groups
                     {searchQuery && (
                       <span className="ml-2">matching &quot;{searchQuery}&quot;</span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                     Page {pagination.currentPage} of {pagination.totalPages}
                   </div>
                 </div>
@@ -206,26 +208,26 @@ export default function DiscoverGroups() {
                 {/* Groups Grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {groups.map((group) => (
-                    <div key={group.group_id} className="border border-white/30 bg-black/60 rounded-lg overflow-hidden">
+                    <div key={group.group_id} className={`border ${theme === 'dark' ? 'border-white/30 bg-black/60' : 'border-gray-400/50 bg-gray-50'} rounded-lg overflow-hidden`}>
                       {/* Group Content */}
                       <div className="p-4">
                         {/* Group Name */}
                         <div className="mb-3">
-                          <h3 className="text-lg font-semibold text-white mb-1">
+                          <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'} mb-1`}>
                             {group.name}
                           </h3>
                           {group.topic && (
-                            <div className="text-xs text-gray-400 mb-2">
+                            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
                               {group.topic}
                             </div>
                           )}
-                          <p className="text-sm text-gray-300 leading-relaxed">
+                          <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
                             {group.description || 'No description available'}
                           </p>
                         </div>
 
                         {/* Group Stats */}
-                        <div className="flex justify-between text-xs text-gray-400 mb-4">
+                        <div className={`flex justify-between text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
                           <span>{group.members_count} members</span>
                           <span>created {formatDate(group.creation_date)}</span>
                         </div>
@@ -234,7 +236,7 @@ export default function DiscoverGroups() {
                         <button
                           onClick={() => handleJoinGroup(group.group_id)}
                           disabled={joiningGroupId === group.group_id}
-                          className="w-full py-2 px-3 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`w-full py-2 px-3 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           {joiningGroupId === group.group_id ? 'Joining...' : 'Join Group'}
                         </button>
@@ -249,19 +251,19 @@ export default function DiscoverGroups() {
                     <button
                       onClick={() => handlePageChange(pagination.currentPage - 1)}
                       disabled={!pagination.hasPrev}
-                      className="px-4 py-2 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`px-4 py-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       ← Previous
                     </button>
                     
-                    <span className="text-sm text-gray-400 px-3">
+                    <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} px-3`}>
                       Page {pagination.currentPage} of {pagination.totalPages}
                     </span>
                     
                     <button
                       onClick={() => handlePageChange(pagination.currentPage + 1)}
                       disabled={!pagination.hasNext}
-                      className="px-4 py-2 bg-white text-black text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`px-4 py-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       Next →
                     </button>

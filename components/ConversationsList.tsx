@@ -15,6 +15,7 @@ import StatusIndicator from './StatusIndicator';
 import StatusSelector from './StatusSelector';
 import { profilePictureCache } from '../lib/profilePictureCache';
 import { UserStatus } from './hooks/useUserStatus';
+import { useTheme } from './ThemeProvider';
 
 interface Conversation {
   id: string;
@@ -87,6 +88,8 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   getUserStatus,
   onStatusChange
 }) => {
+  const { theme } = useTheme();
+  
   // Prefetch profile pictures for all direct conversations to reduce spam
   useEffect(() => {
     const directConversations = conversations.filter(c => c.type === 'direct' && c.user_id);
@@ -123,25 +126,25 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
 
   if (!isConversationsSidebarHidden) {
     return (
-      <div className={`${isMobile ? 'fixed left-20 top-0 z-40 h-full' : ''} w-80 bg-black/40 border border-white/30 rounded-lg flex flex-col h-full transition-transform duration-300 ${
+      <div className={`${isMobile ? 'fixed left-20 top-0 z-40 h-full' : ''} w-80 ${theme === 'dark' ? 'bg-black/40 border-white/30' : 'bg-white/40 border-black/30'} border rounded-lg flex flex-col h-full transition-transform duration-300 ${
         isMobile ? (isConversationsSidebarHidden ? '-translate-x-full' : 'translate-x-0') : 'translate-x-0'
       }`}>
         {/* Header */}
-        <div className="border-b border-white/30 bg-white/5 text-white p-3 text-center">
+        <div className={`border-b ${theme === 'dark' ? 'border-white/30 bg-white/5 text-white' : 'border-black/30 bg-black/5 text-black'} p-3 text-center`}>
           <h1 className="text-lg font-bold tracking-wider uppercase">
             {selectedCategory === 'direct' ? 'Messages' : 'Groups'}
           </h1>
         </div>
 
         {/* Control Panel */}
-        <div className="p-4 border-b border-white/30 bg-black/40">
+        <div className={`p-4 border-b ${theme === 'dark' ? 'border-white/30 bg-black/40' : 'border-black/30 bg-white/40'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <FontAwesomeIcon 
                 icon={selectedCategory === 'direct' ? faUser : faUsers} 
-                className="text-white mr-2"
+                className={`${theme === 'dark' ? 'text-white' : 'text-black'} mr-2`}
               />
-              <span className="font-mono text-sm font-bold text-white uppercase tracking-wider">
+              <span className={`font-mono text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-black'} uppercase tracking-wider`}>
                 {selectedCategory === 'direct' ? 'Messages' : 'Groups'}
               </span>
             </div>

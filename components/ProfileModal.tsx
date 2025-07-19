@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import { getAnonymousDisplayName } from '../lib/anonymization';
+import { useTheme } from './ThemeProvider';
 
 interface Profile {
   profile_id: string;
@@ -56,6 +57,7 @@ interface ProfileModalProps {
 }
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, defaultActiveTab, restrictToProfileType = false }) => {
+  const { theme } = useTheme();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -123,29 +125,35 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
   };
 
   const categoryColors = {
-    basic: 'bg-gray-900 hover:bg-gray-800 border-gray-700',
-    love: 'bg-red-900 hover:bg-red-800 border-red-700',
-    business: 'bg-green-900 hover:bg-green-800 border-green-700'
+    basic: theme === 'dark' 
+      ? 'bg-gray-900 hover:bg-gray-800 border-gray-700'
+      : 'bg-gray-200 hover:bg-gray-300 border-gray-400 text-black',
+    love: theme === 'dark'
+      ? 'bg-red-900 hover:bg-red-800 border-red-700'
+      : 'bg-red-200 hover:bg-red-300 border-red-400 text-black',
+    business: theme === 'dark'
+      ? 'bg-green-900 hover:bg-green-800 border-green-700'
+      : 'bg-green-200 hover:bg-green-300 border-green-400 text-black'
   };
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className={`fixed inset-0 ${theme === 'dark' ? 'bg-black' : 'bg-white'} bg-opacity-50 flex items-center justify-center z-50 p-4`}
       onClick={handleOverlayClick}
     >
-      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden`}>
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
           {loading && (
             <div className="text-center py-12">
-              <div className="font-mono text-gray-400 mb-2">ACCESSING CLASSIFIED PROFILE...</div>
+              <div className={`font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>ACCESSING CLASSIFIED PROFILE...</div>
               <div className="text-red-400 animate-pulse">● ● ●</div>
             </div>
           )}
 
           {error && (
             <div className="p-6 text-center">
-              <div className="font-mono text-red-400 border border-red-400 bg-red-900/20 p-4">
+              <div className={`font-mono text-red-400 border border-red-400 ${theme === 'dark' ? 'bg-red-900/20' : 'bg-red-100'} p-4`}>
                 ⚠ ACCESS DENIED: {error.toUpperCase()}
               </div>
             </div>
@@ -154,9 +162,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
           {profileData && !loading && (
             <>
               {/* Profile Type Selection */}
-              <div className="p-6 border-b-2 border-white">
+              <div className={`p-6 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'}`}>
                 <div className="flex justify-center gap-2">
-                  <div className="text-sm font-mono text-gray-400 mr-4 self-center">PROFILE TYPE:</div>
+                  <div className={`text-sm font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mr-4 self-center`}>PROFILE TYPE:</div>
                   {(restrictToProfileType && defaultActiveTab ? [defaultActiveTab] : ['basic', 'love', 'business']).map((tab) => {
                     const tabKey = tab as 'basic' | 'love' | 'business';
                     const hasProfile = profileData.profiles[tabKey];
@@ -169,8 +177,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                         onClick={() => setActiveTab(tabKey)}
                         className={`px-4 py-2 border-2 font-mono text-sm tracking-wider transition-all ${
                           activeTab === tab
-                            ? `${categoryColors[tabKey]} text-white`
-                            : 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white'
+                            ? `${categoryColors[tabKey]} ${theme === 'dark' ? 'text-white' : 'text-black'}`
+                            : `${theme === 'dark' ? 'border-gray-600 bg-black text-gray-400 hover:border-gray-400 hover:text-white' : 'border-gray-400 bg-white text-gray-600 hover:border-gray-600 hover:text-black'}`
                         }`}
                       >
                         {categoryLabels[tabKey]}
@@ -180,7 +188,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                 </div>
                 {profileData?.is_friends && (
                   <div className="text-center mt-3">
-                    <span className="text-xs font-mono text-green-400 border border-green-400 bg-green-900/20 px-2 py-1">
+                    <span className={`text-xs font-mono text-green-400 border border-green-400 ${theme === 'dark' ? 'bg-green-900/20' : 'bg-green-100'} px-2 py-1`}>
                       ✓ ALLIED STATUS CONFIRMED
                     </span>
                   </div>
@@ -192,9 +200,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                 {profileData.profiles[activeTab] ? (
                   <div className="space-y-6">
                     {/* Subject File Card */}
-                    <div className="border border-gray-600 bg-gray-900/50">
+                    <div className={`border ${theme === 'dark' ? 'border-gray-600 bg-gray-900/50' : 'border-gray-400 bg-gray-100/50'}`}>
                       {/* File Header */}
-                      <div className="bg-white text-black p-2 font-mono text-xs flex justify-between">
+                      <div className={`${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'} p-2 font-mono text-xs flex justify-between`}>
                         <div>
                           <span className="font-bold">SUBJECT DOSSIER - {categoryLabels[activeTab]}</span>
                         </div>
@@ -207,23 +215,23 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                       <div className="p-4">
                         <div className="flex items-start space-x-4">
                           {/* Photo Section */}
-                          <div className="border-2 border-white bg-gray-800 p-2">
-                            <div className="text-xs font-mono text-gray-400 mb-1 text-center">PHOTO</div>
-                            <ProfileAvatar userId={userId} size={64} className="border border-gray-600" />
-                            <div className="text-xs font-mono text-gray-400 mt-1 text-center">ID: {userId.substring(0, 8).toUpperCase()}</div>
+                          <div className={`border-2 ${theme === 'dark' ? 'border-white bg-gray-800' : 'border-black bg-gray-200'} p-2`}>
+                            <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1 text-center`}>PHOTO</div>
+                            <ProfileAvatar userId={userId} size={64} className={`border ${theme === 'dark' ? 'border-gray-600' : 'border-gray-400'}`} />
+                            <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mt-1 text-center`}>ID: {userId.substring(0, 8).toUpperCase()}</div>
                           </div>
                           
                           {/* Subject Details */}
                           <div className="flex-1 font-mono">
                             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                               <div>
-                                <span className="text-gray-400">SUBJECT NAME:</span>
-                                <div className="text-white font-bold tracking-wider">
+                                <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>SUBJECT NAME:</span>
+                                <div className={`${theme === 'dark' ? 'text-white' : 'text-black'} font-bold tracking-wider`}>
                                   {getAnonymousDisplayName(profileData.profiles[activeTab]?.display_name, null, userId)}
                                 </div>
                               </div>
                               <div>
-                                <span className="text-gray-400">VISIBILITY STATUS:</span>
+                                <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>VISIBILITY STATUS:</span>
                                 <div className={`font-bold ${
                                   profileData.profiles[activeTab]?.visibility === 'public' ? 'text-green-400' :
                                   profileData.profiles[activeTab]?.visibility === 'friends' ? 'text-yellow-400' :
@@ -234,8 +242,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                                 </div>
                               </div>
                               <div className="col-span-2">
-                                <span className="text-gray-400">BIOGRAPHICAL DATA:</span>
-                                <div className="text-white mt-1">
+                                <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>BIOGRAPHICAL DATA:</span>
+                                <div className={`${theme === 'dark' ? 'text-white' : 'text-black'} mt-1`}>
                                   {profileData.profiles[activeTab]?.bio || 'NO DATA AVAILABLE'}
                                 </div>
                               </div>
@@ -248,9 +256,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                     {/* Questionnaire Files */}
                     {profileData.questionnaire_answers[activeTab] && 
                      profileData.questionnaire_answers[activeTab].length > 0 && (
-                      <div className="border border-gray-600 bg-gray-900/50">
+                      <div className={`border ${theme === 'dark' ? 'border-gray-600 bg-gray-900/50' : 'border-gray-400 bg-gray-100/50'}`}>
                         {/* Section Header */}
-                        <div className="bg-white text-black p-2 font-mono text-xs">
+                        <div className={`${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'} p-2 font-mono text-xs`}>
                           <span className="font-bold">QUESTIONNAIRE REPORTS - {categoryLabels[activeTab]}</span>
                           <span className="ml-4">TOTAL FILES: {profileData.questionnaire_answers[activeTab].length.toString().padStart(2, '0')}</span>
                         </div>
@@ -259,18 +267,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                           {profileData.questionnaire_answers[activeTab].map((questionnaire) => {
                             const isExpanded = expandedQuestionnaires.has(questionnaire._id);
                             return (
-                              <div key={questionnaire._id} className="border border-gray-500 bg-black">
+                              <div key={questionnaire._id} className={`border ${theme === 'dark' ? 'border-gray-500 bg-black' : 'border-gray-400 bg-white'}`}>
                                 {/* Questionnaire Header - Clickable */}
                                 <button
                                   onClick={() => toggleQuestionnaire(questionnaire._id)}
-                                  className="w-full bg-gray-800 text-white p-3 font-mono text-xs flex justify-between items-center hover:bg-gray-700 transition-colors"
+                                  className={`w-full ${theme === 'dark' ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-black hover:bg-gray-300'} p-3 font-mono text-xs flex justify-between items-center transition-colors`}
                                 >
                                   <div className="flex items-center space-x-2">
                                     <span className="font-bold">FILE:</span>
                                     <span>{questionnaire.questionnaire_title.toUpperCase()}</span>
                                   </div>
                                   <div className="flex items-center space-x-4">
-                                    <span className="text-gray-400">ITEMS: {questionnaire.answers.length.toString().padStart(2, '0')}</span>
+                                    <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>ITEMS: {questionnaire.answers.length.toString().padStart(2, '0')}</span>
                                     <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
                                       ▶
                                     </span>
@@ -279,11 +287,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                                 
                                 {/* Questionnaire Content - Collapsible */}
                                 {isExpanded && (
-                                  <div className="p-4 border-t border-gray-500">
+                                  <div className={`p-4 border-t ${theme === 'dark' ? 'border-gray-500' : 'border-gray-400'}`}>
                                     {questionnaire.questionnaire_description && (
-                                      <div className="mb-4 p-2 bg-gray-900 border border-gray-600">
-                                        <div className="text-xs font-mono text-gray-400 mb-1">DESCRIPTION:</div>
-                                        <div className="text-sm text-gray-300">{questionnaire.questionnaire_description}</div>
+                                      <div className={`mb-4 p-2 ${theme === 'dark' ? 'bg-gray-900 border-gray-600' : 'bg-gray-100 border-gray-400'} border`}>
+                                        <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>DESCRIPTION:</div>
+                                        <div className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{questionnaire.questionnaire_description}</div>
                                       </div>
                                     )}
                                     <div className="space-y-3">
@@ -300,21 +308,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                                         }
                                         
                                         return (
-                                          <div key={answer.question_id} className="border-l-4 border-white pl-4 py-2">
-                                            <div className="text-xs font-mono text-gray-400 mb-1">
+                                          <div key={answer.question_id} className={`border-l-4 ${theme === 'dark' ? 'border-white' : 'border-black'} pl-4 py-2`}>
+                                            <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
                                               Q{(index + 1).toString().padStart(2, '0')}:
                                             </div>
-                                            <div className="text-sm text-gray-300 font-medium mb-2">
+                                            <div className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} font-medium mb-2`}>
                                               {displayText}
                                             </div>
                                             {/* Show raw answer if: 1) no profile_display_text OR 2) profile_display_text doesn't contain {answer} placeholder */}
                                             {(!answer.profile_display_text || !answer.profile_display_text.trim() || !hasAnswerPlaceholder) && (
-                                              <div className="text-white font-mono">
+                                              <div className={`${theme === 'dark' ? 'text-white' : 'text-black'} font-mono`}>
                                                 {answer.answer}
                                               </div>
                                             )}
                                             {answer.completion_date && (
-                                              <div className="text-xs font-mono text-gray-500 mt-1">
+                                              <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'} mt-1`}>
                                                 RECORDED: {new Date(answer.completion_date).toLocaleDateString('en-US').replace(/\//g, '.')}
                                               </div>
                                             )}
@@ -336,22 +344,22 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
                     {/* No questionnaires message */}
                     {(!profileData.questionnaire_answers[activeTab] || 
                       profileData.questionnaire_answers[activeTab].length === 0) && (
-                      <div className="border border-gray-600 bg-gray-900/50 text-center py-8">
-                        <div className="font-mono text-gray-400 mb-2">
+                      <div className={`border ${theme === 'dark' ? 'border-gray-600 bg-gray-900/50' : 'border-gray-400 bg-gray-100/50'} text-center py-8`}>
+                        <div className={`font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
                           NO QUESTIONNAIRE FILES ON RECORD
                         </div>
-                        <div className="text-xs font-mono text-gray-500">
+                        <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                           SUBJECT HAS NOT COMPLETED ANY QUESTIONNAIRES FOR {categoryLabels[activeTab]} PROFILE
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8 border border-gray-600 bg-gray-900/50">
-                    <div className="font-mono text-gray-400 mb-2">
+                  <div className={`text-center py-8 border ${theme === 'dark' ? 'border-gray-600 bg-gray-900/50' : 'border-gray-400 bg-gray-100/50'}`}>
+                    <div className={`font-mono ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
                       PROFILE ACCESS DENIED
                     </div>
-                    <div className="text-xs font-mono text-gray-500">
+                    <div className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                       {categoryLabels[activeTab]} PROFILE NOT AVAILABLE OR RESTRICTED
                     </div>
                   </div>
@@ -365,7 +373,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ userId, isOpen, onClose, de
         <div className="absolute top-4 right-4">
           <button
             onClick={onClose}
-            className="bg-red-900 text-white p-2 font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors tracking-wider"
+            className={`${theme === 'dark' ? 'bg-red-900 text-white border-red-700 hover:bg-red-800' : 'bg-red-200 text-black border-red-400 hover:bg-red-300'} p-2 font-mono text-xs border transition-colors tracking-wider`}
           >
             ✕ CLOSE
           </button>

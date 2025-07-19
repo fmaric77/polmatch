@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faBan, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { getAnonymousDisplayName } from '../../lib/anonymization';
+import { useTheme } from '../ThemeProvider';
 
 interface BannedUser {
   user_id: string;
@@ -27,6 +28,7 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
   onUnbanMember,
   onClose
 }) => {
+  const { theme } = useTheme();
   const handleUnbanMember = async (bannedUser: BannedUser): Promise<void> => {
     if (window.confirm(`Unban ${getAnonymousDisplayName(bannedUser.username, bannedUser.username, bannedUser.user_id)}? They will be able to join the group again.`)) {
       try {
@@ -43,30 +45,28 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
-      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">BANNED USERS</div>
-            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
-              <FontAwesomeIcon icon={faBan} className="mr-3" />
-              BANNED MEMBERS ({bannedUsers.length})
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className={`w-full max-w-md ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-h-[80vh] flex flex-col`}>
+        <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between">
+            <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Banned Users
             </h2>
+            <button
+              onClick={onClose}
+              className={`${theme === 'dark' ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
-          >
-            <FontAwesomeIcon icon={faTimes} />
-          </button>
         </div>
 
         <div className="flex-1 min-h-0">
           {bannedUsers.length === 0 ? (
             <div className="text-center py-8">
-              <div className="bg-black border-2 border-gray-400 rounded-none p-6 shadow-lg">
-                <div className="text-gray-400 font-mono uppercase tracking-wide">NO BANNED USERS</div>
-                <div className="text-xs text-gray-500 mt-2 font-mono uppercase tracking-widest">ALL MEMBERS REMAIN ACTIVE</div>
+              <div className={`${theme === 'dark' ? 'bg-black border-gray-400' : 'bg-gray-50 border-gray-300'} border-2 rounded-none p-6 shadow-lg`}>
+                <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono uppercase tracking-wide`}>NO BANNED USERS</div>
+                <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'} mt-2 font-mono uppercase tracking-widest`}>ALL MEMBERS REMAIN ACTIVE</div>
               </div>
             </div>
           ) : (
@@ -74,27 +74,27 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
               {bannedUsers.map((bannedUser) => (
                 <div
                   key={bannedUser.user_id}
-                  className="p-4 bg-black border-2 border-red-400 rounded-none hover:border-red-300 transition-all shadow-lg"
+                  className={`p-4 ${theme === 'dark' ? 'bg-black border-red-400 hover:border-red-300' : 'bg-gray-50 border-red-500 hover:border-red-400'} border-2 rounded-none transition-all shadow-lg`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-red-600/20 border border-red-400 rounded-none">
-                          <FontAwesomeIcon icon={faBan} className="text-red-400" />
+                        <div className={`p-2 ${theme === 'dark' ? 'bg-red-600/20 border-red-400' : 'bg-red-100 border-red-500'} border rounded-none`}>
+                          <FontAwesomeIcon icon={faBan} className={theme === 'dark' ? 'text-red-400' : 'text-red-600'} />
                         </div>
                         <div>
-                          <div className="text-white font-mono uppercase tracking-wide">
+                          <div className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'} font-mono uppercase tracking-wide`}>
                             {getAnonymousDisplayName(bannedUser.username, bannedUser.username, bannedUser.user_id)}
                           </div>
-                          <div className="text-gray-400 text-sm font-mono uppercase tracking-widest">
+                          <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-sm font-mono uppercase tracking-widest`}>
                             BANNED BY: {bannedUser.banned_by_username} | {formatBanDate(bannedUser.banned_at)}
                           </div>
                         </div>
                       </div>
                       {bannedUser.reason && (
-                        <div className="bg-black border border-gray-500 rounded-none p-3 mt-3 shadow-inner">
-                          <div className="text-red-400 text-xs font-mono uppercase tracking-widest mb-1">BAN REASON:</div>
-                          <div className="text-gray-300 text-sm font-mono">{bannedUser.reason}</div>
+                        <div className={`${theme === 'dark' ? 'bg-black border-gray-500' : 'bg-gray-100 border-gray-400'} border rounded-none p-3 mt-3 shadow-inner`}>
+                          <div className={`${theme === 'dark' ? 'text-red-400' : 'text-red-600'} text-xs font-mono uppercase tracking-widest mb-1`}>BAN REASON:</div>
+                          <div className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} text-sm font-mono`}>{bannedUser.reason}</div>
                         </div>
                       )}
                     </div>
@@ -103,7 +103,7 @@ const BannedUsersModal: React.FC<BannedUsersModalProps> = ({
                       <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => handleUnbanMember(bannedUser)}
-                          className="p-3 bg-black text-green-400 border-2 border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
+                          className={`p-3 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border-2 rounded-none transition-all shadow-lg font-mono uppercase tracking-wide`}
                           title="UNBAN MEMBER"
                         >
                           <FontAwesomeIcon icon={faUndo} size="sm" className="mr-2" />

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUsers, faLock } from '@fortawesome/free-solid-svg-icons';
 import { useCSRFToken } from '../hooks/useCSRFToken';
+import { useTheme } from '../ThemeProvider';
 
 interface CreateGroupModalProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onSuccess,
   activeProfileType = 'basic'
 }) => {
+  const { theme } = useTheme();
   const { protectedFetch } = useCSRFToken();
   const [form, setForm] = useState({
     name: '',
@@ -115,18 +117,18 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
-      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md shadow-2xl">
+      <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none p-6 w-full max-w-md shadow-2xl`}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="text-red-500 font-mono uppercase tracking-widest text-xs mb-2">CREATE GROUP</div>
-            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+            <h2 className={`text-xl font-mono uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-black'} flex items-center`}>
               <FontAwesomeIcon icon={faUsers} className="mr-3" />
               CREATE GROUP
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
+            className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-500 border-red-500 hover:bg-red-500 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
@@ -134,7 +136,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+            <label className={`block ${theme === 'dark' ? 'text-white' : 'text-black'} text-sm font-mono uppercase tracking-wide mb-3`}>
               GROUP NAME
             </label>
             <input
@@ -142,21 +144,21 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               value={form.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               placeholder="ENTER GROUP NAME"
-              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg`}
               disabled={loading}
               required
             />
           </div>
 
           <div>
-            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+            <label className={`block ${theme === 'dark' ? 'text-white' : 'text-black'} text-sm font-mono uppercase tracking-wide mb-3`}>
               DESCRIPTION
             </label>
             <textarea
               value={form.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="ENTER GROUP DESCRIPTION"
-              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg"
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none p-3 focus:outline-none focus:border-blue-400 resize-none font-mono shadow-lg`}
               rows={3}
               disabled={loading}
               required
@@ -164,28 +166,28 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+            <label className={`block ${theme === 'dark' ? 'text-white' : 'text-black'} text-sm font-mono uppercase tracking-wide mb-3`}>
               PROFILE TYPE
             </label>
             <select
               value={form.profile_type}
               onChange={(e) => handleInputChange('profile_type', e.target.value as 'basic' | 'love' | 'business')}
-              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg`}
               disabled={loading}
             >
               {(['basic', 'love', 'business'] as const).map((type) => (
-                <option key={type} value={type} className="bg-black text-white">
+                <option key={type} value={type} className={theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}>
                   {getProfileLabel(type).toUpperCase()}
                 </option>
               ))}
             </select>
-            <div className="text-xs text-gray-400 mt-2 font-mono">
+            <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mt-2 font-mono`}>
               Groups are separated by profile type. Only users with the selected profile can join.
             </div>
           </div>
 
           <div>
-            <label className="block text-white text-sm font-mono uppercase tracking-wide mb-3">
+            <label className={`block ${theme === 'dark' ? 'text-white' : 'text-black'} text-sm font-mono uppercase tracking-wide mb-3`}>
               TOPIC (OPTIONAL)
             </label>
             <input
@@ -193,12 +195,12 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               value={form.topic}
               onChange={(e) => handleInputChange('topic', e.target.value)}
               placeholder="ENTER GROUP TOPIC"
-              className="w-full bg-black text-white border-2 border-white rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none p-3 focus:outline-none focus:border-blue-400 font-mono shadow-lg`}
               disabled={loading}
             />
           </div>
 
-          <div className="flex items-center space-x-3 p-3 bg-black border-2 border-gray-400 rounded-none shadow-lg">
+          <div className={`flex items-center space-x-3 p-3 ${theme === 'dark' ? 'bg-black border-gray-400' : 'bg-white border-gray-400'} border-2 rounded-none shadow-lg`}>
             <input
               type="checkbox"
               id="is_private"
@@ -207,7 +209,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               className="text-white focus:ring-white"
               disabled={loading}
             />
-            <label htmlFor="is_private" className="text-white text-sm flex items-center font-mono uppercase tracking-wide">
+            <label htmlFor="is_private" className={`${theme === 'dark' ? 'text-white' : 'text-black'} text-sm flex items-center font-mono uppercase tracking-wide`}>
               <FontAwesomeIcon icon={faLock} className="mr-2 text-red-400" />
               PRIVATE GROUP
             </label>
@@ -223,14 +225,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
+              className={`flex-1 ${theme === 'dark' ? 'bg-black text-gray-400 border-gray-400 hover:bg-gray-400 hover:text-black' : 'bg-white text-gray-600 border-gray-600 hover:bg-gray-600 hover:text-white'} border-2 py-3 px-4 rounded-none transition-all shadow-lg font-mono uppercase tracking-wide`}
               disabled={loading}
             >
               CANCEL
             </button>
             <button
               type="submit"
-              className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
+              className={`flex-1 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white disabled:border-gray-400 disabled:text-gray-400'} border-2 py-3 px-4 rounded-none transition-all shadow-lg font-mono uppercase tracking-wide disabled:cursor-not-allowed`}
               disabled={loading || !form.name.trim() || !form.description.trim()}
             >
               {loading ? 'CREATING...' : 'CREATE GROUP'}

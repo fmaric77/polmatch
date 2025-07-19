@@ -1,0 +1,5186 @@
+[
+  {
+    "id": "general_questionnaire",
+    "name": "General Profile Questionnaire",
+    "description": "Comprehensive profile questionnaire for matching",
+    "questions": [
+      {
+        "id": "q_1",
+        "text": "Are you currently open to meeting someone new?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_2",
+        "text": "What are you interested in finding?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Local Friends",
+            "value": "local_friends"
+          },
+          {
+            "id": "opt_2",
+            "text": "Internet friends",
+            "value": "internet_friends"
+          },
+          {
+            "id": "opt_3",
+            "text": "People to build a local community with",
+            "value": "people_to_build_a_local_community_with"
+          },
+          {
+            "id": "opt_4",
+            "text": "People to build a network of connections with",
+            "value": "people_to_build_a_network_of_connections_with"
+          },
+          {
+            "id": "opt_5",
+            "text": "A community to join to",
+            "value": "a_community_to_join_to"
+          }
+        ]
+      },
+      {
+        "id": "q_3",
+        "text": "Are you in a relationship?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Married",
+            "value": "married"
+          },
+          {
+            "id": "opt_2",
+            "text": "Unmarried",
+            "value": "unmarried"
+          },
+          {
+            "id": "opt_3",
+            "text": "Single",
+            "value": "single"
+          }
+        ]
+      },
+      {
+        "id": "q_4",
+        "text": "Do you have children?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_5",
+        "text": "What are your reasons for registering on the polmatch platform?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Just looking around",
+            "value": "just_looking_around"
+          },
+          {
+            "id": "opt_2",
+            "text": "To discover likeminded people",
+            "value": "to_discover_likeminded_people"
+          },
+          {
+            "id": "opt_3",
+            "text": "To discover a partner to create a family with",
+            "value": "to_discover_a_partner_to_create_a_family_with"
+          },
+          {
+            "id": "opt_4",
+            "text": "To organize with like-minded people and build something to secure our future in this world",
+            "value": "to_organize_with_like_minded_people_and_build_something_to_secure_our_future_in_this_world"
+          },
+          {
+            "id": "opt_5",
+            "text": "To improve my personal preparations for possible crisis situations by finding people which I may rely on or build something with",
+            "value": "to_improve_my_personal_preparations_for_possible_crisis_situations_by_finding_people_which_i_may_rely_on_or_build_something_with"
+          },
+          {
+            "id": "opt_6",
+            "text": "To find new business or work opportunities",
+            "value": "to_find_new_business_or_work_opportunities"
+          },
+          {
+            "id": "opt_7",
+            "text": "To exchange news and information",
+            "value": "to_exchange_news_and_information"
+          },
+          {
+            "id": "opt_8",
+            "text": "Other",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "id": "q_6",
+        "text": "Do you think the future of your nation/people is at risk?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_7",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_8",
+        "text": "What would you like to say about yourself (for a person visiting your profile)?",
+        "type": "textarea",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_9",
+        "text": "Do you identify with your biological sex?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Male",
+            "value": "male"
+          },
+          {
+            "id": "opt_2",
+            "text": "Female",
+            "value": "female"
+          }
+        ]
+      },
+      {
+        "id": "q_10",
+        "text": "What is your sexual orientation?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Your Age",
+            "value": "your_age"
+          }
+        ]
+      },
+      {
+        "id": "q_11",
+        "text": "What continent or region do you operate in?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "North America",
+            "value": "north_america"
+          },
+          {
+            "id": "opt_2",
+            "text": "Europe",
+            "value": "europe"
+          },
+          {
+            "id": "opt_3",
+            "text": "Australia and Oceania",
+            "value": "australia_and_oceania"
+          },
+          {
+            "id": "opt_4",
+            "text": "East Asia",
+            "value": "east_asia"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asia",
+            "value": "south_asia"
+          },
+          {
+            "id": "opt_6",
+            "text": "Middle-East",
+            "value": "middle_east"
+          },
+          {
+            "id": "opt_7",
+            "text": "South America",
+            "value": "south_america"
+          },
+          {
+            "id": "opt_8",
+            "text": "North Africa",
+            "value": "north_africa"
+          },
+          {
+            "id": "opt_9",
+            "text": "South Africa",
+            "value": "south_africa"
+          }
+        ]
+      },
+      {
+        "id": "q_12",
+        "text": "Which type of environment do you live in?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_13",
+        "text": "Is distance a problem for you?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Serbo-croatian",
+            "value": "serbo_croatian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Croato-serbian",
+            "value": "croato_serbian"
+          },
+          {
+            "id": "opt_3",
+            "text": "Bosnian",
+            "value": "bosnian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Montenegrin",
+            "value": "montenegrin"
+          },
+          {
+            "id": "opt_5",
+            "text": "Polish",
+            "value": "polish"
+          },
+          {
+            "id": "opt_6",
+            "text": "Slovak",
+            "value": "slovak"
+          }
+        ]
+      },
+      {
+        "id": "q_14",
+        "text": "What is your favorite quote?",
+        "type": "textarea",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_15",
+        "text": "What is your physical condition?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Very Bad",
+            "value": "very_bad"
+          },
+          {
+            "id": "opt_2",
+            "text": "Bad",
+            "value": "bad"
+          },
+          {
+            "id": "opt_3",
+            "text": "Poor",
+            "value": "poor"
+          },
+          {
+            "id": "opt_4",
+            "text": "Fair",
+            "value": "fair"
+          },
+          {
+            "id": "opt_5",
+            "text": "Average",
+            "value": "average"
+          },
+          {
+            "id": "opt_6",
+            "text": "Good",
+            "value": "good"
+          },
+          {
+            "id": "opt_7",
+            "text": "Very Good",
+            "value": "very_good"
+          },
+          {
+            "id": "opt_8",
+            "text": "Great",
+            "value": "great"
+          },
+          {
+            "id": "opt_9",
+            "text": "Excellent",
+            "value": "excellent"
+          },
+          {
+            "id": "opt_10",
+            "text": "Perfect",
+            "value": "perfect"
+          }
+        ]
+      },
+      {
+        "id": "q_16",
+        "text": "What is your mental condition?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Very Bad",
+            "value": "very_bad"
+          },
+          {
+            "id": "opt_2",
+            "text": "Bad",
+            "value": "bad"
+          },
+          {
+            "id": "opt_3",
+            "text": "Poor",
+            "value": "poor"
+          },
+          {
+            "id": "opt_4",
+            "text": "Fair",
+            "value": "fair"
+          },
+          {
+            "id": "opt_5",
+            "text": "Average",
+            "value": "average"
+          },
+          {
+            "id": "opt_6",
+            "text": "Good",
+            "value": "good"
+          },
+          {
+            "id": "opt_7",
+            "text": "Very Good",
+            "value": "very_good"
+          },
+          {
+            "id": "opt_8",
+            "text": "Great",
+            "value": "great"
+          },
+          {
+            "id": "opt_9",
+            "text": "Excellent",
+            "value": "excellent"
+          },
+          {
+            "id": "opt_10",
+            "text": "Perfect",
+            "value": "perfect"
+          }
+        ]
+      },
+      {
+        "id": "q_17",
+        "text": "Do you have anger issues?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_18",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_19",
+        "text": "Do you have good self-control?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Very good",
+            "value": "very_good"
+          },
+          {
+            "id": "opt_2",
+            "text": "Good",
+            "value": "good"
+          },
+          {
+            "id": "opt_3",
+            "text": "So-so",
+            "value": "so_so"
+          },
+          {
+            "id": "opt_4",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_20",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_21",
+        "text": "Do you suffer from depression?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_22",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_23",
+        "text": "Do you suffer from anxiety?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_24",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_25",
+        "text": "Do you have any phobias?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_26",
+        "text": "Do you suffer from any disabilities?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_27",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_28",
+        "text": "Do you suffer from any addictions?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_29",
+        "text": "Do you smoke?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "Sometimes",
+            "value": "sometimes"
+          },
+          {
+            "id": "opt_3",
+            "text": "Never",
+            "value": "never"
+          }
+        ]
+      },
+      {
+        "id": "q_30",
+        "text": "Do you drink alcohol?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "Sometimes",
+            "value": "sometimes"
+          },
+          {
+            "id": "opt_3",
+            "text": "Socially",
+            "value": "socially"
+          },
+          {
+            "id": "opt_4",
+            "text": "Never",
+            "value": "never"
+          },
+          {
+            "id": "opt_5",
+            "text": "I think I might be an alcoholic",
+            "value": "i_think_i_might_be_an_alcoholic"
+          }
+        ]
+      },
+      {
+        "id": "q_31",
+        "text": "Do you smoke weed?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_32",
+        "text": "Do you do drugs?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_33",
+        "text": "Did you take the “jab”?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_34",
+        "text": "Have you ever engaged in any degenerate behavior in the past?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_35",
+        "text": "If you have engaged in any degenerate behavior, are you willing to answer what it was?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Your race? (if you are mixed write more than one)",
+            "value": "your_race___if_you_are_mixed_write_more_than_one_"
+          },
+          {
+            "id": "opt_2",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_3",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_4",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_5",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_6",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_8",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_36",
+        "text": "What is your ethnicity?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Slavic",
+            "value": "slavic"
+          }
+        ]
+      },
+      {
+        "id": "q_37",
+        "text": "What is the ethnicity of your ancestors?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Slavic",
+            "value": "slavic"
+          }
+        ]
+      },
+      {
+        "id": "q_38",
+        "text": "Your skin tone?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Pale",
+            "value": "pale"
+          },
+          {
+            "id": "opt_2",
+            "text": "Ivory",
+            "value": "ivory"
+          },
+          {
+            "id": "opt_3",
+            "text": "Beige",
+            "value": "beige"
+          },
+          {
+            "id": "opt_4",
+            "text": "Light Brown",
+            "value": "light_brown"
+          },
+          {
+            "id": "opt_5",
+            "text": "Medium Brown",
+            "value": "medium_brown"
+          },
+          {
+            "id": "opt_6",
+            "text": "Dark Brown/Black",
+            "value": "dark_brown_black"
+          }
+        ]
+      },
+      {
+        "id": "q_39",
+        "text": "Height?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_40",
+        "text": "Your weight?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_41",
+        "text": "Your body type?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_42",
+        "text": "Do you exercise regularly and try to stay in shape?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_43",
+        "text": "Do you consider yourself a clean and tidy person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_44",
+        "text": "Do you have facial hair?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_45",
+        "text": "Your natural hair color?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "White",
+            "value": "white"
+          },
+          {
+            "id": "opt_2",
+            "text": "Blond",
+            "value": "blond"
+          },
+          {
+            "id": "opt_3",
+            "text": "Red",
+            "value": "red"
+          },
+          {
+            "id": "opt_4",
+            "text": "Brown",
+            "value": "brown"
+          },
+          {
+            "id": "opt_5",
+            "text": "Black",
+            "value": "black"
+          }
+        ]
+      },
+      {
+        "id": "q_46",
+        "text": "Your current hair color?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Black",
+            "value": "black"
+          }
+        ]
+      },
+      {
+        "id": "q_47",
+        "text": "Your typical hair length?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_48",
+        "text": "Your eye color?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Light Blue",
+            "value": "light_blue"
+          },
+          {
+            "id": "opt_2",
+            "text": "Dark Blue",
+            "value": "dark_blue"
+          },
+          {
+            "id": "opt_3",
+            "text": "Light Brown",
+            "value": "light_brown"
+          },
+          {
+            "id": "opt_4",
+            "text": "Dark Brown",
+            "value": "dark_brown"
+          },
+          {
+            "id": "opt_5",
+            "text": "Green",
+            "value": "green"
+          },
+          {
+            "id": "opt_6",
+            "text": "Hazel",
+            "value": "hazel"
+          },
+          {
+            "id": "opt_7",
+            "text": "Heterochromia",
+            "value": "heterochromia"
+          }
+        ]
+      },
+      {
+        "id": "q_49",
+        "text": "Do you have any tattoos?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_50",
+        "text": "Do you have any piercings?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_51",
+        "text": "Do you use makeup?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_52",
+        "text": "Have you had any cosmetic surgery?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_53",
+        "text": "Your blood type?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "AB+",
+            "value": "ab_"
+          },
+          {
+            "id": "opt_2",
+            "text": "AB-",
+            "value": "ab_"
+          }
+        ]
+      },
+      {
+        "id": "q_54",
+        "text": "How would you classify yourself?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_55",
+        "text": "Are you mostly positive or negative?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_56",
+        "text": "Are you a shy person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_57",
+        "text": "Are you a loner or a social-person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_58",
+        "text": "Are you a well-mannered person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_59",
+        "text": "Do you feel lonely?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_60",
+        "text": "Do you attempt parties?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_61",
+        "text": "Do you have real life friends?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_62",
+        "text": "Do you consider yourself an ‘alpha’?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_63",
+        "text": "Do you consider yourself a brave person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_64",
+        "text": "Do you consider yourself a physically strong person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_65",
+        "text": "Do you consider yourself a mentally strong person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_66",
+        "text": "Are you a more agreeable or assertive person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_67",
+        "text": "Are you a more rational or emotional person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_68",
+        "text": "Are you more of a thinker or a doer?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_69",
+        "text": "If you took the ‘16personalities’ test, what was your result?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_70",
+        "text": "What are your hobbies and interests?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_71",
+        "text": "What is your favorite outdoor activity?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_72",
+        "text": "How do you like to spend your free time?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "I like to read books.",
+            "value": "i_like_to_read_books_"
+          }
+        ]
+      },
+      {
+        "id": "q_73",
+        "text": "What books do you like and recommend?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_74",
+        "text": "Favorite movies, musical artists or genres?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Русский стяг",
+            "value": "____________"
+          },
+          {
+            "id": "opt_2",
+            "text": "traditional music",
+            "value": "traditional_music"
+          },
+          {
+            "id": "opt_3",
+            "text": "Game genres you like",
+            "value": "game_genres_you_like"
+          },
+          {
+            "id": "opt_4",
+            "text": "Sandbox",
+            "value": "sandbox"
+          },
+          {
+            "id": "opt_5",
+            "text": "Real-time strategy (RTS)",
+            "value": "real_time_strategy__rts_"
+          },
+          {
+            "id": "opt_6",
+            "text": "Shooters (FPS and TPS)",
+            "value": "shooters__fps_and_tps_"
+          },
+          {
+            "id": "opt_7",
+            "text": "Role-playing (RPG, ARPG, and More)",
+            "value": "role_playing__rpg__arpg__and_more_"
+          },
+          {
+            "id": "opt_8",
+            "text": "Multiplayer online battle arena (MOBA)",
+            "value": "multiplayer_online_battle_arena__moba_"
+          },
+          {
+            "id": "opt_9",
+            "text": "Simulation and sports",
+            "value": "simulation_and_sports"
+          },
+          {
+            "id": "opt_10",
+            "text": "Puzzlers and party games",
+            "value": "puzzlers_and_party_games"
+          },
+          {
+            "id": "opt_11",
+            "text": "Action-adventure",
+            "value": "action_adventure"
+          },
+          {
+            "id": "opt_12",
+            "text": "Survival and horror",
+            "value": "survival_and_horror"
+          },
+          {
+            "id": "opt_13",
+            "text": "Platformer",
+            "value": "platformer"
+          }
+        ]
+      },
+      {
+        "id": "q_75",
+        "text": "What games do you play?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Youtubers/channels/influencers which I watch are",
+            "value": "youtubers_channels_influencers_which_i_watch_are"
+          },
+          {
+            "id": "opt_2",
+            "text": "slawenska dela",
+            "value": "slawenska_dela"
+          }
+        ]
+      },
+      {
+        "id": "q_76",
+        "text": "What are your skills?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Writing",
+            "value": "writing"
+          },
+          {
+            "id": "opt_2",
+            "text": "Programming",
+            "value": "programming"
+          },
+          {
+            "id": "opt_3",
+            "text": "public speaking",
+            "value": "public_speaking"
+          },
+          {
+            "id": "opt_4",
+            "text": "foreign languages",
+            "value": "foreign_languages"
+          },
+          {
+            "id": "opt_5",
+            "text": "teaching",
+            "value": "teaching"
+          }
+        ]
+      },
+      {
+        "id": "q_77",
+        "text": "What type of teaching or training can you provide?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "teaching russian",
+            "value": "teaching_russian"
+          },
+          {
+            "id": "opt_2",
+            "text": "teaching croatian",
+            "value": "teaching_croatian"
+          },
+          {
+            "id": "opt_3",
+            "text": "teaching c#",
+            "value": "teaching_c_"
+          },
+          {
+            "id": "opt_4",
+            "text": "teaching c++",
+            "value": "teaching_c__"
+          }
+        ]
+      },
+      {
+        "id": "q_78",
+        "text": "Can you swim?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_79",
+        "text": "Do you know how to ride a horse?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_80",
+        "text": "Do you own a drivers license?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_81",
+        "text": "Can you drive?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_82",
+        "text": "If so, which vehicles can you drive?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Light land vehicles",
+            "value": "light_land_vehicles"
+          },
+          {
+            "id": "opt_2",
+            "text": "Heavy land vehicles",
+            "value": "heavy_land_vehicles"
+          },
+          {
+            "id": "opt_3",
+            "text": "Farm equipment",
+            "value": "farm_equipment"
+          },
+          {
+            "id": "opt_4",
+            "text": "Aircraft",
+            "value": "aircraft"
+          },
+          {
+            "id": "opt_5",
+            "text": "Watercraft",
+            "value": "watercraft"
+          },
+          {
+            "id": "opt_6",
+            "text": "Other",
+            "value": "other"
+          }
+        ]
+      },
+      {
+        "id": "q_83",
+        "text": "Do you feel you are better at physical or mental work?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_84",
+        "text": "Do you think you are a materialistic person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_85",
+        "text": "Do you have a job?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_86",
+        "text": "Are you looking for a job?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "programming",
+            "value": "programming"
+          },
+          {
+            "id": "opt_2",
+            "text": "translating",
+            "value": "translating"
+          },
+          {
+            "id": "opt_3",
+            "text": "teaching",
+            "value": "teaching"
+          }
+        ]
+      },
+      {
+        "id": "q_87",
+        "text": "How do you wish to be compensated?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_88",
+        "text": "Are you in debt?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_89",
+        "text": "If you are in debt are you willing to say why?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_90",
+        "text": "Would you prefer to live in the: City, Countryside or Suburbs?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Make a change",
+            "value": "make_a_change"
+          }
+        ]
+      },
+      {
+        "id": "q_91",
+        "text": "What is your biggest dream and what do you want from life?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Freeing my land",
+            "value": "freeing_my_land"
+          }
+        ]
+      },
+      {
+        "id": "q_92",
+        "text": "Which board(s) interest you (if any)?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "/gif",
+            "value": "_gif"
+          },
+          {
+            "id": "opt_2",
+            "text": "/hr",
+            "value": "_hr"
+          },
+          {
+            "id": "opt_3",
+            "text": "/vg",
+            "value": "_vg"
+          },
+          {
+            "id": "opt_4",
+            "text": "/vm",
+            "value": "_vm"
+          },
+          {
+            "id": "opt_5",
+            "text": "/vmg",
+            "value": "_vmg"
+          },
+          {
+            "id": "opt_6",
+            "text": "/vr",
+            "value": "_vr"
+          },
+          {
+            "id": "opt_7",
+            "text": "/vrpg",
+            "value": "_vrpg"
+          },
+          {
+            "id": "opt_8",
+            "text": "/vst",
+            "value": "_vst"
+          },
+          {
+            "id": "opt_9",
+            "text": "/wg",
+            "value": "_wg"
+          },
+          {
+            "id": "opt_10",
+            "text": "/ic",
+            "value": "_ic"
+          },
+          {
+            "id": "opt_11",
+            "text": "/r9k",
+            "value": "_r9k"
+          },
+          {
+            "id": "opt_12",
+            "text": "/s4s",
+            "value": "_s4s"
+          },
+          {
+            "id": "opt_13",
+            "text": "/vip",
+            "value": "_vip"
+          },
+          {
+            "id": "opt_14",
+            "text": "/qa",
+            "value": "_qa"
+          },
+          {
+            "id": "opt_15",
+            "text": "/cm",
+            "value": "_cm"
+          },
+          {
+            "id": "opt_16",
+            "text": "/hm",
+            "value": "_hm"
+          },
+          {
+            "id": "opt_17",
+            "text": "/lgbt",
+            "value": "_lgbt"
+          },
+          {
+            "id": "opt_18",
+            "text": "/aco",
+            "value": "_aco"
+          },
+          {
+            "id": "opt_19",
+            "text": "/adv",
+            "value": "_adv"
+          },
+          {
+            "id": "opt_20",
+            "text": "/an",
+            "value": "_an"
+          },
+          {
+            "id": "opt_21",
+            "text": "/bant",
+            "value": "_bant"
+          },
+          {
+            "id": "opt_22",
+            "text": "/biz",
+            "value": "_biz"
+          },
+          {
+            "id": "opt_23",
+            "text": "/cgl",
+            "value": "_cgl"
+          },
+          {
+            "id": "opt_24",
+            "text": "/ck",
+            "value": "_ck"
+          },
+          {
+            "id": "opt_25",
+            "text": "/co",
+            "value": "_co"
+          },
+          {
+            "id": "opt_26",
+            "text": "/diy",
+            "value": "_diy"
+          },
+          {
+            "id": "opt_27",
+            "text": "/fa",
+            "value": "_fa"
+          },
+          {
+            "id": "opt_28",
+            "text": "/fit",
+            "value": "_fit"
+          },
+          {
+            "id": "opt_29",
+            "text": "/gd",
+            "value": "_gd"
+          },
+          {
+            "id": "opt_30",
+            "text": "/hc",
+            "value": "_hc"
+          },
+          {
+            "id": "opt_31",
+            "text": "/his",
+            "value": "_his"
+          },
+          {
+            "id": "opt_32",
+            "text": "/int",
+            "value": "_int"
+          },
+          {
+            "id": "opt_33",
+            "text": "/jp",
+            "value": "_jp"
+          },
+          {
+            "id": "opt_34",
+            "text": "/lit",
+            "value": "_lit"
+          },
+          {
+            "id": "opt_35",
+            "text": "/mlp",
+            "value": "_mlp"
+          },
+          {
+            "id": "opt_36",
+            "text": "/mu",
+            "value": "_mu"
+          },
+          {
+            "id": "opt_37",
+            "text": "/news",
+            "value": "_news"
+          },
+          {
+            "id": "opt_38",
+            "text": "/out",
+            "value": "_out"
+          },
+          {
+            "id": "opt_39",
+            "text": "/po",
+            "value": "_po"
+          },
+          {
+            "id": "opt_40",
+            "text": "/pol",
+            "value": "_pol"
+          },
+          {
+            "id": "opt_41",
+            "text": "/pw",
+            "value": "_pw"
+          },
+          {
+            "id": "opt_42",
+            "text": "/qst",
+            "value": "_qst"
+          },
+          {
+            "id": "opt_43",
+            "text": "/sci",
+            "value": "_sci"
+          },
+          {
+            "id": "opt_44",
+            "text": "/soc",
+            "value": "_soc"
+          },
+          {
+            "id": "opt_45",
+            "text": "/sp",
+            "value": "_sp"
+          },
+          {
+            "id": "opt_46",
+            "text": "/tg",
+            "value": "_tg"
+          },
+          {
+            "id": "opt_47",
+            "text": "/toy",
+            "value": "_toy"
+          },
+          {
+            "id": "opt_48",
+            "text": "/trv",
+            "value": "_trv"
+          },
+          {
+            "id": "opt_49",
+            "text": "/tv",
+            "value": "_tv"
+          },
+          {
+            "id": "opt_50",
+            "text": "/vp",
+            "value": "_vp"
+          },
+          {
+            "id": "opt_51",
+            "text": "/vt",
+            "value": "_vt"
+          },
+          {
+            "id": "opt_52",
+            "text": "/wsg",
+            "value": "_wsg"
+          },
+          {
+            "id": "opt_53",
+            "text": "/wsr",
+            "value": "_wsr"
+          },
+          {
+            "id": "opt_54",
+            "text": "/xs",
+            "value": "_xs"
+          }
+        ]
+      },
+      {
+        "id": "q_93",
+        "text": "Your political allegiance or keywords which associate you with any political groups or activists?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "panslavist",
+            "value": "panslavist"
+          },
+          {
+            "id": "opt_2",
+            "text": "allslavist",
+            "value": "allslavist"
+          },
+          {
+            "id": "opt_3",
+            "text": "panslavism",
+            "value": "panslavism"
+          }
+        ]
+      },
+      {
+        "id": "q_94",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_95",
+        "text": "Is it important that your friend shares your political beliefs?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_96",
+        "text": "Did you vote in your country's elections?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_97",
+        "text": "Do you support the concept of an ethnostate?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_98",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_99",
+        "text": "Are you willing to fight and die if you must, to defend your country (your country in its current form)?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_100",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_101",
+        "text": "Do you think people should have the right to carry firearms?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_102",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_103",
+        "text": "Do you think people should have the right to wave their own national flags in foreign countries outside Olympic events?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_104",
+        "text": "Do you hate any particular race?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_3",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_6",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_105",
+        "text": "If you answered that you do hate some race, could you explain which race and why?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_3",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_6",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_106",
+        "text": "Do you think prostitution should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_107",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_108",
+        "text": "Do you think abortion should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_109",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_110",
+        "text": "Do you support the death penalty?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_111",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_112",
+        "text": "Do you think ritual slaughter of animals should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_113",
+        "text": "Do you believe rape culture is real?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_114",
+        "text": "Do you think there is a wage gap between the sexes and that it is due to discrimination?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Male",
+            "value": "male"
+          },
+          {
+            "id": "opt_2",
+            "text": "Female",
+            "value": "female"
+          }
+        ]
+      },
+      {
+        "id": "q_115",
+        "text": "If you answered \"yes\" to the question above, could you explain why you think so?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_116",
+        "text": "Are you a feminist?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_117",
+        "text": "Do you think drugs should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_118",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_119",
+        "text": "Do you approve of same-sex religious marriages?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Male",
+            "value": "male"
+          },
+          {
+            "id": "opt_2",
+            "text": "Female",
+            "value": "female"
+          }
+        ]
+      },
+      {
+        "id": "q_120",
+        "text": "Do you think baby mutilation according to religious beliefs and by parental choice should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_121",
+        "text": "What is your religious persuasion?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Orthodox Christian",
+            "value": "orthodox_christian"
+          }
+        ]
+      },
+      {
+        "id": "q_122",
+        "text": "Are you serious about your religious beliefs?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_123",
+        "text": "Do you think religious law is above governmental law?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_124",
+        "text": "Are you open to being friends with people who do not share your religious beliefs?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Christians, Muslims",
+            "value": "christians__muslims"
+          }
+        ]
+      },
+      {
+        "id": "q_125",
+        "text": "Do you believe in astrology?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_126",
+        "text": "What is your zodiac sign?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_127",
+        "text": "Do you consider yourself an honorable person?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Define what honor is for you, in your own words",
+            "value": "define_what_honor_is_for_you__in_your_own_words"
+          },
+          {
+            "id": "opt_2",
+            "text": "Keeping your word",
+            "value": "keeping_your_word"
+          }
+        ]
+      },
+      {
+        "id": "q_128",
+        "text": "Do you like animals?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_129",
+        "text": "Are you a vegetarian?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_130",
+        "text": "Are you ok with Halal/Kosher animal slaughter?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_131",
+        "text": "Do you think men and women are equal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_132",
+        "text": "Explain why men and women are or are not equal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_133",
+        "text": "Do you think men and women should be treated equally?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_134",
+        "text": "Explain why men and women should be or should not be treated equally?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_135",
+        "text": "Do you think men and women deserve the basic level of respect?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_136",
+        "text": "Do you hate men?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_137",
+        "text": "Do you hate women?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_138",
+        "text": "If you answered \"yes\" to the questions above, could you explain why you think so?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_139",
+        "text": "Do you think it's acceptable for a man to beat a woman?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_140",
+        "text": "Your stance on Chivalry?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_141",
+        "text": "Do you think it's ok to beat kids to discipline them?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_142",
+        "text": "Have you been raised in a good family with two parents?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_143",
+        "text": "Are you willing to share what was wrong with your family?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_144",
+        "text": "Do you have or are you looking for a real life or internet community?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_145",
+        "text": "Are you interested in real life communities or internet communities or both?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Internet community groups",
+            "value": "internet_community_groups"
+          },
+          {
+            "id": "opt_2",
+            "text": "Any",
+            "value": "any"
+          }
+        ]
+      },
+      {
+        "id": "q_146",
+        "text": "Do you have a community?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_147",
+        "text": "Are you looking for a community to join?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_148",
+        "text": "If you are looking for a community to join then what sort of community are you looking for? With what goals/purpose/objectives?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_149",
+        "text": "Do you want to create a community and are you looking for friends to create a community with?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_150",
+        "text": "If you do have a community, are you open to new people joining?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_151",
+        "text": "Why do you want to join/create a community group?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_152",
+        "text": "Do you own land?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_153",
+        "text": "If you do own land could you describe your land and the assets which you own on that land?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_154",
+        "text": "Are you strict about your community politics or are you willing to compromise?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Describe your prefered community religion",
+            "value": "describe_your_prefered_community_religion"
+          },
+          {
+            "id": "opt_2",
+            "text": "Orthodox Christian",
+            "value": "orthodox_christian"
+          }
+        ]
+      },
+      {
+        "id": "q_155",
+        "text": "Describe your vision for a community? How should it operate and with what purpose?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_156",
+        "text": "Your expectations for being a member of a community group?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_157",
+        "text": "If you are a member of a community, does your community have its own economy?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_158",
+        "text": "If your community has its own economy, are you willing to share the Professional account alias which we may use to find it?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_159",
+        "text": "If you have a community, are you a community leading figure?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_160",
+        "text": "How big is your community?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Slavic countries",
+            "value": "slavic_countries"
+          }
+        ]
+      },
+      {
+        "id": "q_161",
+        "text": "Your vision for a community system and politics?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_162",
+        "text": "Your vision for a community economy?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_163",
+        "text": "Are you using HAM radio?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_164",
+        "text": "Your HAM radio frequencies, area, range etc?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_165",
+        "text": "Do you own any businesses?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "Please choose the category of your business",
+            "value": "please_choose_the_category_of_your_business"
+          }
+        ]
+      },
+      {
+        "id": "q_166",
+        "text": "Are you interested in hiring new workers?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "Skills/requirements for recruits",
+            "value": "skills_requirements_for_recruits"
+          }
+        ]
+      },
+      {
+        "id": "q_167",
+        "text": "Do you have like minded/’aware’ people in your local area?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_168",
+        "text": "Are you a farmer or do you have farming experience?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_169",
+        "text": "Do you rent your current place of residence?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_170",
+        "text": "Are you self-sufficient in food production in case of any crisis situation?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_171",
+        "text": "Do you live with your parents/family?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_172",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_173",
+        "text": "Are you a prepper/prepping?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_174",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_175",
+        "text": "Do you believe we are all born equal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_176",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_177",
+        "text": "Do you think your government has your best interests at heart?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_178",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_179",
+        "text": "Do you think women are responsible for the downfall of Western civilization?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_180",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_181",
+        "text": "Do you think men are responsible for the downfall of the Western civilization?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_182",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_183",
+        "text": "Do you believe our governments and treacherous incompetent politicians are PURELY responsible for the worsening situation in our countries?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_184",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_185",
+        "text": "Do you think the coronavirus pandemic is real?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_186",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_187",
+        "text": "Do you think the Earth is flat?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_188",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_189",
+        "text": "Do you believe in climate change?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_190",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_191",
+        "text": "Do you believe in man-made climate change?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_192",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_193",
+        "text": "Do you believe there is an organized destabilization and destruction of nations with European origins?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_194",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_195",
+        "text": "Do you think unfair treatment against White people is real?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_196",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_197",
+        "text": "Do you think unfair treatment against Black people is real?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_198",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_199",
+        "text": "Do you believe there is a racial erasure of European nations taking place?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_200",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_201",
+        "text": "Do you think there is a globalist agenda with a plan to replace people with European origins on their homelands with non-Europeans or to mix them with non-Europeans to destroy their national unity?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_202",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_203",
+        "text": "Does race matter and should it be protected?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_3",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_6",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_204",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_205",
+        "text": "Do you believe all races are equal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_3",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_6",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_206",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_207",
+        "text": "Do you believe your race is superior to any other?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Caucasian",
+            "value": "caucasian"
+          },
+          {
+            "id": "opt_2",
+            "text": "Subsaharan African",
+            "value": "subsaharan_african"
+          },
+          {
+            "id": "opt_3",
+            "text": "East Asian",
+            "value": "east_asian"
+          },
+          {
+            "id": "opt_4",
+            "text": "Middle Eastern or North African",
+            "value": "middle_eastern_or_north_african"
+          },
+          {
+            "id": "opt_5",
+            "text": "South Asian",
+            "value": "south_asian"
+          },
+          {
+            "id": "opt_6",
+            "text": "Amerindian",
+            "value": "amerindian"
+          },
+          {
+            "id": "opt_7",
+            "text": "Mixed",
+            "value": "mixed"
+          }
+        ]
+      },
+      {
+        "id": "q_208",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_209",
+        "text": "Do you think a multicultural society may work well and prosper in the long run?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_210",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_211",
+        "text": "Do you think your country should accept every person from outside as equal citizens as soon as they convert to your religion?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_212",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_213",
+        "text": "Do you believe there are \"elite\" families of \"chosen people\" with Middle-Eastern origins; who control the world through the systems of banking, media, lobbying and education?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_214",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_215",
+        "text": "Do you think the world ruling \"elite\" consists of secret societies such as the Illuminati?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_216",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_217",
+        "text": "Do you think Masons are ruling the world?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_218",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_219",
+        "text": "Do you think the \"elite\" families are actually alien lizards?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_220",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_221",
+        "text": "Do you believe that there are international powers who use our governments, media and education to push destructive policies upon our nation's and the world in general?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_222",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_223",
+        "text": "Do you believe it’s globalists who are destroying European civilization?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_224",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_225",
+        "text": "Do you think Trump is a good guy who wants to save America?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_226",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_227",
+        "text": "Do you think actions of Trump as president were directed toward \"America First\" more than Israel First?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_228",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_229",
+        "text": "Do you believe in the \"Q Plan\" to save the world?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_230",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_231",
+        "text": "Do you believe the wall will stop illegal migrants from flooding the US from the south?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_232",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_233",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_234",
+        "text": "Do you think Russia is a country with traditional European values and is defending those values/culture?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_235",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_236",
+        "text": "Do you think that a political solution is a valid option for saving our future in our current situation?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_237",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_238",
+        "text": "Do you believe a “mass awakening” is a possible scenario?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_239",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_240",
+        "text": "Do you think civil war in our countries is just a matter of time?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_241",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_242",
+        "text": "Do you believe revolution may be the only solution to save your country?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_243",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_244",
+        "text": "Do you think World War 3 is imminent?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_245",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_246",
+        "text": "Do you believe we should trust that God will save us from our destruction?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_247",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_248",
+        "text": "Do you believe that our fate is in God’s hands only, and we should trust God in saving our future?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_249",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_250",
+        "text": "Do you think World War 2 was won by the good guys?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_251",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_252",
+        "text": "Do you believe 9/11 was an inside job?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_253",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_254",
+        "text": "Do you think historical revisionism of WW2 should be legal?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_255",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_256",
+        "text": "Do you know and agree with the claims of Yuri Bezmenov?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_257",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_258",
+        "text": "Do you think your country is truly independent?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_259",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_260",
+        "text": "Do you believe that Russia is truly an independent country?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_261",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_262",
+        "text": "Do you believe that the USA is truly an independent country?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_263",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_264",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_265",
+        "text": "Do you think the moon landing happened?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_266",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_267",
+        "text": "Do you think UFO/Aliens exist?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_268",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_269",
+        "text": "Do you think there are chemicals in the water which are poisoning people?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_270",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_271",
+        "text": "Do you think 5G is dangerous for people?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_272",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_273",
+        "text": "Do you think marriage is a trap for men in XXI Century?",
+        "type": "number",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_274",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_275",
+        "text": "Do you think the demographic gap among European people is a serious problem?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_276",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_277",
+        "text": "Do you know any REALISTIC solution(s) to any of the problems mentioned above?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_278",
+        "text": "Are you Blackpilled?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_279",
+        "text": "If you are blackpilled; why?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_280",
+        "text": "Did you ever contribute to improving the situation within your own country or generally towards saving our future?",
+        "type": "text_tags",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_281",
+        "text": "Would you like to add anything to your answer above?",
+        "type": "textarea",
+        "required": false,
+        "options": []
+      },
+      {
+        "id": "q_282",
+        "text": "After filling up this questionnaire could you summarize in a few words: What are you really good at?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Speaking",
+            "value": "speaking"
+          }
+        ]
+      },
+      {
+        "id": "q_283",
+        "text": "What are you really bad at?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Math",
+            "value": "math"
+          },
+          {
+            "id": "opt_2",
+            "text": "Poor math grades",
+            "value": "poor_math_grades"
+          }
+        ]
+      },
+      {
+        "id": "q_284",
+        "text": "Did you encounter any bugs? Anything problematic in our platform's use? Anything that you think is missing and we should add?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_285",
+        "text": "If yes could you please explain?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_286",
+        "text": "How often do you intend to visit our platform?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Every time I receive an email notification",
+            "value": "every_time_i_receive_an_email_notification"
+          },
+          {
+            "id": "opt_2",
+            "text": "Once or twice a week",
+            "value": "once_or_twice_a_week"
+          },
+          {
+            "id": "opt_3",
+            "text": "A few times a week",
+            "value": "a_few_times_a_week"
+          },
+          {
+            "id": "opt_4",
+            "text": "A few times a month",
+            "value": "a_few_times_a_month"
+          },
+          {
+            "id": "opt_5",
+            "text": "A few times per year",
+            "value": "a_few_times_per_year"
+          },
+          {
+            "id": "opt_6",
+            "text": "Never again",
+            "value": "never_again"
+          }
+        ]
+      },
+      {
+        "id": "q_287",
+        "text": "How did you discover the existence of this platform?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Rate our platform (higher/better)",
+            "value": "rate_our_platform__higher_better_"
+          }
+        ]
+      },
+      {
+        "id": "q_288",
+        "text": "Any thoughts to share about our platform thus far?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "I like:",
+            "value": "i_like_"
+          },
+          {
+            "id": "opt_2",
+            "text": "I dislike:",
+            "value": "i_dislike_"
+          },
+          {
+            "id": "opt_3",
+            "text": "Rate the Personal Profile questionnaire:",
+            "value": "rate_the_personal_profile_questionnaire_"
+          }
+        ]
+      },
+      {
+        "id": "q_289",
+        "text": "Do you have any idea/ideas on how to improve our platform?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "id": "q_290",
+        "text": "What are your ideas for platform improvements?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_291",
+        "text": "Do you find our platform compromising for your personal security or real world identity in any way?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_292",
+        "text": "If yes could you explain how you think our platform compromises your security?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_293",
+        "text": "Do you care more about security or comfort while using our platform?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_294",
+        "text": "Will you/did you share the word about our platform with any friends or community groups which you are a member of?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_295",
+        "text": "Are you willing/did you financially support our work for further platform development and our plan realization?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "id": "q_296",
+        "text": "Are you open and willing to join our work team if we show interest in your person based on your profile data?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "q_297",
+        "text": "Do you understand the plan?",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "id": "opt_1",
+            "text": "Yes",
+            "value": "yes"
+          },
+          {
+            "id": "opt_2",
+            "text": "No",
+            "value": "no"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTheme } from './ThemeProvider';
 
 interface PollOption {
   option_id: string;
@@ -37,6 +38,7 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
   currentUser,
   groupId
 }) => {
+  const { theme } = useTheme();
   const [pollResults, setPollResults] = useState<PollResult | undefined>(initialPollResults);
 
   // Fetch poll results if not provided
@@ -91,17 +93,17 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
   };
 
   return (
-    <div className="bg-black border-2 border-purple-400 rounded-none p-4 font-mono shadow-lg">
+    <div className={`${theme === 'dark' ? 'bg-black border-purple-400' : 'bg-white border-purple-600'} border-2 rounded-none p-4 font-mono shadow-lg`}>
       {/* Poll Header */}
-      <div className="flex items-center justify-between mb-3 border-b-2 border-purple-400 pb-2">
+      <div className={`flex items-center justify-between mb-3 border-b-2 ${theme === 'dark' ? 'border-purple-400' : 'border-purple-600'} pb-2`}>
         <div className="flex items-center space-x-2">
-          <span className="text-purple-400 text-lg">📊</span>
-          <span className="text-purple-400 font-mono uppercase tracking-widest text-sm font-bold">POLL</span>
+          <span className={`${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} text-lg`}>📊</span>
+          <span className={`${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} font-mono uppercase tracking-widest text-sm font-bold`}>POLL</span>
         </div>
-        <div className="flex flex-col items-end text-xs text-gray-300 font-mono">
-          <div className="text-white">{totalVotes} {totalVotes === 1 ? 'VOTE' : 'VOTES'}</div>
+        <div className={`flex flex-col items-end text-xs ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} font-mono`}>
+          <div className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{totalVotes} {totalVotes === 1 ? 'VOTE' : 'VOTES'}</div>
           {pollData.expires_at && (
-            <div className={`${isExpired ? 'text-red-400' : 'text-yellow-400'} font-bold`}>
+            <div className={`${isExpired ? (theme === 'dark' ? 'text-red-400' : 'text-red-600') : (theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600')} font-bold`}>
               {getTimeUntilExpiry()}
             </div>
           )}
@@ -109,7 +111,7 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
       </div>
 
       {/* Poll Question */}
-      <div className="text-white font-bold mb-4 font-mono uppercase tracking-wide text-lg bg-gray-800 border border-gray-600 rounded-none p-3">
+      <div className={`${theme === 'dark' ? 'text-white bg-gray-800 border-gray-600' : 'text-black bg-gray-200 border-gray-400'} font-bold mb-4 font-mono uppercase tracking-wide text-lg border rounded-none p-3`}>
         {pollData.question}
       </div>
 
@@ -130,10 +132,16 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
                   isUserChoice
                     ? 'bg-green-600 border-green-400 text-white shadow-green-400/50'
                     : isExpired
-                      ? 'bg-gray-800 border-gray-600 text-gray-400 cursor-not-allowed'
+                      ? theme === 'dark' 
+                        ? 'bg-gray-800 border-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-200 border-gray-400 text-gray-500 cursor-not-allowed'
                       : hasVoted
-                        ? 'bg-gray-800 border-gray-500 text-gray-300 cursor-not-allowed'
-                        : 'bg-black border-white text-white hover:bg-white hover:text-black'
+                        ? theme === 'dark'
+                          ? 'bg-gray-800 border-gray-500 text-gray-300 cursor-not-allowed'
+                          : 'bg-gray-200 border-gray-400 text-gray-600 cursor-not-allowed'
+                        : theme === 'dark'
+                          ? 'bg-black border-white text-white hover:bg-white hover:text-black'
+                          : 'bg-white border-black text-black hover:bg-black hover:text-white'
                 }`}
               >
                 {/* Vote percentage bar */}
@@ -150,8 +158,8 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
                     {isUserChoice && <span className="text-green-300 font-bold">✓ YOUR VOTE</span>}
                     {hasVoted && (
                       <div className="flex items-center space-x-2">
-                        <span className="text-white font-bold">{voteCount}</span>
-                        <span className="text-gray-300">({percentage}%)</span>
+                        <span className={theme === 'dark' ? 'text-white font-bold' : 'text-black font-bold'}>{voteCount}</span>
+                        <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>({percentage}%)</span>
                       </div>
                     )}
                   </div>
@@ -163,7 +171,7 @@ const PollArtifact: React.FC<PollArtifactProps> = ({
       </div>
 
       {/* Poll Status */}
-      <div className="mt-4 pt-3 border-t-2 border-gray-600 text-sm font-mono uppercase tracking-widest text-center">
+      <div className={`mt-4 pt-3 border-t-2 ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'} text-sm font-mono uppercase tracking-widest text-center`}>
         {isExpired ? (
           <span className="text-red-400 font-bold">❌ POLL EXPIRED</span>
         ) : hasVoted ? (

@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUsers, faCrown, faUserShield, faUser, faUserPlus, faUserMinus, faUserTimes, faBan } from '@fortawesome/free-solid-svg-icons';
 import { getAnonymousDisplayName } from '../../lib/anonymization';
+import { useTheme } from '../ThemeProvider';
 
 interface GroupMember {
   user_id: string;
@@ -34,6 +35,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
   onBanMember,
   onClose
 }) => {
+  const { theme } = useTheme();
   const getRoleIcon = (role: string): React.ReactElement => {
     switch (role) {
       case 'owner':
@@ -138,18 +140,18 @@ const MembersModal: React.FC<MembersModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono p-4">
-      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none p-6 w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1 pr-4">
             <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-2">GROUP MEMBERS</div>
-            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+            <h2 className={`text-xl font-mono uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-black'} flex items-center`}>
               <FontAwesomeIcon icon={faUsers} className="mr-3" />
               MEMBERS ({groupMembers.length})
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono flex-shrink-0"
+            className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-500 border-red-500 hover:bg-red-500 hover:text-white'} border rounded-none transition-all shadow-lg font-mono flex-shrink-0`}
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
@@ -158,8 +160,8 @@ const MembersModal: React.FC<MembersModalProps> = ({
         <div className="flex-1 min-h-0 overflow-hidden">
           {groupMembers.length === 0 ? (
             <div className="text-center py-8">
-              <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
-                <div className="text-gray-400 font-mono uppercase tracking-wide">NO MEMBERS</div>
+              <div className={`${theme === 'dark' ? 'bg-black border-gray-400' : 'bg-white border-gray-400'} border-2 rounded-none p-4 shadow-lg`}>
+                <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono uppercase tracking-wide`}>NO MEMBERS</div>
               </div>
             </div>
           ) : (
@@ -167,15 +169,15 @@ const MembersModal: React.FC<MembersModalProps> = ({
               {sortedMembers.map((member) => (
                 <div
                   key={member.user_id}
-                  className="p-3 bg-black border-2 border-gray-400 rounded-none hover:border-white transition-all shadow-lg min-w-0"
+                  className={`p-3 ${theme === 'dark' ? 'bg-black border-gray-400 hover:border-white' : 'bg-white border-gray-400 hover:border-black'} border-2 rounded-none transition-all shadow-lg min-w-0`}
                 >
                   <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="border border-white rounded-none p-1 flex-shrink-0">
+                      <div className={`${theme === 'dark' ? 'border-white' : 'border-black'} border rounded-none p-1 flex-shrink-0`}>
                         {getRoleIcon(member.role)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-mono uppercase tracking-wide truncate">
+                        <div className={`${theme === 'dark' ? 'text-white' : 'text-black'} font-mono uppercase tracking-wide truncate`}>
                           {getAnonymousDisplayName(member.display_name, member.username, member.user_id)}
                         </div>
                         <div className={`text-sm font-mono uppercase tracking-widest ${getRoleColor(member.role)} truncate`}>
@@ -189,7 +191,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           {member.role === 'member' && (
                             <button
                               onClick={() => handlePromoteToAdmin(member)}
-                              className="p-1 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-sm font-mono text-xs"
+                              className={`p-1 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-500 border-blue-500 hover:bg-blue-500 hover:text-white'} border rounded-none transition-all shadow-sm font-mono text-xs`}
                               title="PROMOTE TO ADMIN"
                             >
                               <FontAwesomeIcon icon={faUserPlus} size="sm" />
@@ -198,7 +200,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           {member.role === 'admin' && (
                             <button
                               onClick={() => handleDemoteToMember(member)}
-                              className="p-1 bg-black text-yellow-400 border border-yellow-400 rounded-none hover:bg-yellow-400 hover:text-black transition-all shadow-sm font-mono text-xs"
+                              className={`p-1 ${theme === 'dark' ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' : 'bg-white text-yellow-500 border-yellow-500 hover:bg-yellow-500 hover:text-white'} border rounded-none transition-all shadow-sm font-mono text-xs`}
                               title="DEMOTE TO MEMBER"
                             >
                               <FontAwesomeIcon icon={faUserMinus} size="sm" />
@@ -206,14 +208,14 @@ const MembersModal: React.FC<MembersModalProps> = ({
                           )}
                           <button
                             onClick={() => handleKickMember(member)}
-                            className="p-1 bg-black text-orange-400 border border-orange-400 rounded-none hover:bg-orange-400 hover:text-black transition-all shadow-sm font-mono text-xs"
+                            className={`p-1 ${theme === 'dark' ? 'bg-black text-orange-400 border-orange-400 hover:bg-orange-400 hover:text-black' : 'bg-white text-orange-500 border-orange-500 hover:bg-orange-500 hover:text-white'} border rounded-none transition-all shadow-sm font-mono text-xs`}
                             title="KICK MEMBER"
                           >
                             <FontAwesomeIcon icon={faUserTimes} size="sm" />
                           </button>
                           <button
                             onClick={() => handleBanMember(member)}
-                            className="p-1 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-sm font-mono text-xs"
+                            className={`p-1 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-500 border-red-500 hover:bg-red-500 hover:text-white'} border rounded-none transition-all shadow-sm font-mono text-xs`}
                             title="BAN MEMBER"
                           >
                             <FontAwesomeIcon icon={faBan} size="sm" />
