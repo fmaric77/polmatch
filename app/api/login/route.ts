@@ -402,6 +402,7 @@ export async function POST(request: Request) {
         is_superadmin: user.is_superadmin,
         account_status: user.account_status,
         two_factor_enabled: user.two_factor_enabled || false,
+        force_2fa_enabled: user.force_2fa_enabled || false,
       },
     });
   } catch (err) {

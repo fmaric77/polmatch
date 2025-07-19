@@ -29,6 +29,8 @@ export async function GET(): Promise<NextResponse> {
         is_superadmin: auth.user.is_superadmin,
         account_status: auth.user.account_status,
         two_factor_enabled: auth.user.two_factor_enabled || false,
+        force_2fa_enabled: auth.user.force_2fa_enabled || false,
+        forced_by_admin: auth.user.forced_by_admin || null,
       }
     });
   } catch (err) {
