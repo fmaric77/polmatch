@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSearch, faHeart, faBriefcase } from '@fortawesome/free-solid-svg-icons';
 import { getAnonymousDisplayName } from '../../lib/anonymization';
 import { useCSRFToken } from '../hooks/useCSRFToken';
+import { useTheme } from '../ThemeProvider';
 
 interface User {
   user_id: string;
@@ -40,6 +41,7 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   senderProfileType,
   receiverProfileType
 }) => {
+  const { theme } = useTheme();
   const { protectedFetch } = useCSRFToken();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -150,31 +152,31 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-      <div className="bg-black border border-white/30 rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+      <div className={`${theme === 'dark' ? 'bg-black border-white/30' : 'bg-white border-black/30'} border rounded-lg w-full max-w-md max-h-[80vh] flex flex-col`}>
         {/* Header */}
-        <div className="border-b border-white/30 bg-white/5 p-4">
+        <div className={`border-b ${theme === 'dark' ? 'border-white/30 bg-white/5' : 'border-black/30 bg-black/5'} p-4`}>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Start New Conversation</h2>
+            <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Start New Conversation</h2>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-300 transition-colors text-xl"
+              className={`${theme === 'dark' ? 'text-white hover:text-gray-300' : 'text-black hover:text-gray-600'} transition-colors text-xl`}
             >
               ×
             </button>
           </div>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 flex flex-col bg-black text-white">
+        <div className={`p-4 space-y-4 flex-1 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
           {/* Profile Context Info */}
-          <div className="bg-white/5 border border-white/30 p-3 rounded-lg">
-            <div className="text-sm text-center text-gray-400">
+          <div className={`${theme === 'dark' ? 'bg-white/5 border-white/30' : 'bg-black/5 border-black/30'} border p-3 rounded-lg`}>
+            <div className={`text-sm text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               Select a user to message
             </div>
           </div>
 
           {fetchingUsers ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-white">
+              <div className={theme === 'dark' ? 'text-white' : 'text-black'}>
                 Loading users...
               </div>
             </div>
@@ -191,16 +193,16 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
-                  className="w-full bg-black text-white border border-white/30 rounded-lg p-3 pl-10 focus:outline-none focus:border-white/60"
+                  className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white/30 focus:border-white/60' : 'bg-white text-black border-black/30 focus:border-black/60'} border rounded-lg p-3 pl-10 focus:outline-none`}
                   disabled={loading}
                 />
               </div>
 
               {/* Users List */}
-              <div className="flex-1 min-h-0 border border-white/30 rounded-lg p-3 bg-white/5">
+              <div className={`flex-1 min-h-0 border ${theme === 'dark' ? 'border-white/30 bg-white/5' : 'border-black/30 bg-black/5'} rounded-lg p-3`}>
                 <div className="h-full overflow-y-auto space-y-2">
                   {filteredUsers.length === 0 ? (
-                    <div className="text-gray-400 text-center py-4">
+                    <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
                       {searchQuery ? 'No matching users found' : `No ${getProfileLabel(receiverProfileType).toLowerCase()} users available`}
                     </div>
                   ) : (
@@ -210,8 +212,12 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                         onClick={() => handleUserSelect(user)}
                         className={`w-full text-left p-3 rounded-lg border transition-colors ${
                           selectedUser?.user_id === user.user_id
-                            ? 'bg-white text-black border-white'
-                            : 'bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/60'
+                            ? theme === 'dark'
+                              ? 'bg-white text-black border-white'
+                              : 'bg-black text-white border-black'
+                            : theme === 'dark'
+                              ? 'bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/60'
+                              : 'bg-transparent text-black border-black/30 hover:bg-black/10 hover:border-black/60'
                         }`}
                         disabled={loading}
                       >
@@ -262,14 +268,14 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded-lg border border-gray-600 hover:bg-gray-700 hover:border-gray-500 transition-colors"
+              className={`flex-1 ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-600 hover:bg-gray-700 hover:border-gray-500' : 'bg-gray-200 text-black border-gray-400 hover:bg-gray-300 hover:border-gray-300'} py-2 px-4 rounded-lg border transition-colors`}
               disabled={loading}
             >
               Cancel
             </button>
             <button
               onClick={handleStartConversation}
-              className="flex-1 bg-white text-black py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+              className={`flex-1 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400' : 'bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500'} py-2 px-4 rounded-lg transition-colors disabled:cursor-not-allowed`}
               disabled={loading || !selectedUser || fetchingUsers}
             >
               {loading ? 'Starting...' : 'Start Conversation'}

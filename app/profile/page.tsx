@@ -7,6 +7,7 @@ import Friends from '../../components/Friends';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import MessageExpirySettings from '../../components/MessageExpirySettings';
 import TwoFactorSettings from '../../components/TwoFactorSettings';
+import ThemeToggle from '../../components/ThemeToggle';
 import "./styles.css";
 import { useCSRFToken } from '../../components/hooks/useCSRFToken';
 import ImageUrlInput from '../../components/ImageUrlInput';
@@ -507,7 +508,7 @@ export default function ProfilePage() {
             type="text"
             value={value}
             onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
-            className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
             required={question.is_required}
             placeholder="Enter your answer"
           />
@@ -518,19 +519,19 @@ export default function ProfilePage() {
   // Show active questionnaire form if one is selected
   if (activeTab === 'questionnaires' && activeQuestionnaire) {
     return (
-      <div className="flex h-screen bg-black text-white">
+      <div className="flex h-screen bg-white dark:bg-black text-black dark:text-white">
         <Navigation currentPage="profile" />
         <main className="flex-1 flex flex-col overflow-y-auto">
           <div className="w-full max-w-4xl mx-auto mt-4 sm:mt-8 md:mt-12 p-4 sm:p-6 pb-8 sm:pb-16">
-            <div className="bg-black border-2 border-white rounded-none p-4 sm:p-6 md:p-8">
+            <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-4 sm:p-6 md:p-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
                 <div>
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Questionnaire: {activeQuestionnaire.title}</h1>
-                  <p className="text-gray-300 text-xs sm:text-sm mt-2">Complete this questionnaire: {activeQuestionnaire.description}</p>
+                  <p className="text-gray-500 dark:text-gray-300 text-xs sm:text-sm mt-2">Complete this questionnaire: {activeQuestionnaire.description}</p>
                 </div>
                 <button
                   onClick={() => setActiveQuestionnaire(null)}
-                  className="px-3 sm:px-4 py-2 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm w-full sm:w-auto"
+                  className="px-3 sm:px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors text-xs sm:text-sm w-full sm:w-auto"
                 >
                   ← Back to List
                 </button>
@@ -538,7 +539,7 @@ export default function ProfilePage() {
 
               <form onSubmit={(e) => { e.preventDefault(); submitQuestionnaire(); }} className="space-y-6">
                 {activeQuestionnaire.questions?.map((question, index) => (
-                  <div key={question.question_id} className="border-2 border-white rounded-none p-4 bg-gray-900">
+                  <div key={question.question_id} className="border-2 border-black dark:border-white rounded-none p-4 bg-white dark:bg-black">
                     <label className="block text-sm font-medium mb-3">
                       Question {String(index + 1)}: {question.question_text}
                       {question.is_required && <span className="text-red-400 ml-1">(Required)</span>}
@@ -546,8 +547,8 @@ export default function ProfilePage() {
                     {renderQuestion(question)}
                     
                     {/* Privacy Controls */}
-                    <div className="mt-4 pt-4 border-t-2 border-white">
-                      <label className="block text-xs font-medium mb-2 text-gray-300">
+                    <div className="mt-4 pt-4 border-t-2 border-black dark:border-white">
+                      <label className="block text-xs font-medium mb-2 text-gray-500 dark:text-gray-300">
                         Answer Visibility
                       </label>
                       <select
@@ -556,7 +557,7 @@ export default function ProfilePage() {
                           ...prev,
                           [question.question_id]: e.target.value
                         }))}
-                        className="w-full p-2 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 text-xs"
+                        className="w-full p-2 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 text-xs"
                       >
                         <option value="public">🌍 Public - Everyone can see this answer</option>
                         <option value="friends">👥 Friends Only - Only friends can see this answer</option>
@@ -573,18 +574,18 @@ export default function ProfilePage() {
                   </div>
                 ))}
 
-                <div className="flex flex-col xs:flex-row gap-3 sm:gap-4 pt-6 border-t-2 border-white">
+                <div className="flex flex-col xs:flex-row gap-3 sm:gap-4 pt-6 border-t-2 border-black dark:border-white">
                   <button
                     type="button"
                     onClick={() => setActiveQuestionnaire(null)}
-                    className="px-4 sm:px-6 py-2 sm:py-3 bg-black text-white border-2 border-white rounded-none hover:bg-gray-800 transition-colors text-xs sm:text-sm"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none hover:bg-gray-100 dark:hover:bg-black transition-colors text-xs sm:text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
                   >
                     {submitting ? 'Submitting...' : 'Submit Questionnaire'}
                   </button>
@@ -604,24 +605,24 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-white dark:bg-black text-black dark:text-white">
       <Navigation currentPage="profile" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 p-4 md:p-6 pb-8">
-          <div className="bg-black border-2 border-white rounded-none">
+          <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none">
             {/* Header */}
-            <div className="border-b-2 border-white p-3 text-center">
+            <div className="border-b-2 border-black dark:border-white p-3 text-center">
               <h1 className="text-xl sm:text-2xl font-bold">Profile</h1>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex flex-col sm:flex-row border-b-2 border-white">
+            <div className="flex flex-col sm:flex-row border-b-2 border-black dark:border-white">
               <button
                 onClick={() => setActiveTab('settings')}
                 className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'settings'
-                    ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
+                    ? 'bg-black dark:bg-white text-white dark:text-black border-b-2 border-black dark:border-white'
+                    : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black border-b sm:border-b-0 border-black dark:border-white'
                 }`}
               >
                 Profiles
@@ -630,8 +631,8 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab('general')}
                 className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'general'
-                    ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
+                    ? 'bg-black dark:bg-white text-white dark:text-black border-b-2 border-black dark:border-white'
+                    : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black border-b sm:border-b-0 border-black dark:border-white'
                 }`}
               >
                 Settings
@@ -640,8 +641,8 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab('questionnaires')}
                 className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'questionnaires'
-                    ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 border-white'
+                    ? 'bg-black dark:bg-white text-white dark:text-black border-b-2 border-black dark:border-white'
+                    : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black border-b sm:border-b-0 border-black dark:border-white'
                 }`}
               >
                 Questionnaires
@@ -650,8 +651,8 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab('friends')}
                 className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center transition-colors text-xs sm:text-sm ${
                   activeTab === 'friends'
-                    ? 'bg-white text-black border-b-2 border-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-black dark:bg-white text-white dark:text-black border-b-2 border-black dark:border-white'
+                    : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black'
                 }`}
               >
                 Friends
@@ -666,19 +667,19 @@ export default function ProfilePage() {
                   {/* Profile Type Tabs */}
                   <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'basic' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'basic' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white hover:bg-white dark:hover:bg-black'}`} 
                       onClick={() => setActiveProfileTab('basic')}
                     >
                       General
                     </button>
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'love' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'love' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white hover:bg-white dark:hover:bg-black'}`} 
                       onClick={() => setActiveProfileTab('love')}
                     >
                       Dating
                     </button>
                     <button 
-                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'business' ? 'bg-white text-black' : 'bg-black border-2 border-white text-white hover:bg-gray-800'}`} 
+                      className={`px-3 sm:px-4 py-2 rounded-none text-xs sm:text-sm ${activeProfileTab === 'business' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white hover:bg-white dark:hover:bg-black'}`} 
                       onClick={() => setActiveProfileTab('business')}
                     >
                       Business
@@ -690,7 +691,7 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       {activeProfileTab === 'basic' && (basicProfile || userId) && (
-                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
+                        <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             handleProfileSave('basic'); 
@@ -703,7 +704,7 @@ export default function ProfilePage() {
                                 placeholder="Your display name" 
                                 value={basicProfile?.display_name || tempBasicForm.display_name} 
                                 onChange={e => handleProfileChange('basic', 'display_name', e.target.value)}
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
@@ -713,7 +714,7 @@ export default function ProfilePage() {
                                 placeholder="About you" 
                                 value={basicProfile?.bio || tempBasicForm.bio} 
                                 onChange={e => handleProfileChange('basic', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -726,18 +727,18 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             {userId && (
-                              <div className="flex items-center space-x-3 p-3 bg-gray-800 border-2 border-white rounded-none">
-                                <span className="text-white text-sm">Preview:</span>
+                              <div className="flex items-center space-x-3 p-3 bg-white dark:bg-black border-2 border-black dark:border-white rounded-none">
+                                <span className="text-black dark:text-white text-sm">Preview:</span>
                                 <ProfileAvatar userId={userId} size={48} />
                               </div>
                             )}
                             <div>
-                              <label className="text-white text-sm font-medium">Visibility</label>
+                              <label className="text-black dark:text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={basicProfile?.visibility || tempBasicForm.visibility} 
                                 onChange={e => handleProfileChange('basic', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -752,12 +753,12 @@ export default function ProfilePage() {
                                   onChange={e => handleProfileChange('basic', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-medium">Exclude from AI</span>
+                                <span className="text-black dark:text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
+                              className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
                             >
                               {basicProfile ? 'Update' : 'Create'}
                             </button>
@@ -766,7 +767,7 @@ export default function ProfilePage() {
                       )}
 
                       {activeProfileTab === 'love' && (loveProfile || userId) && (
-                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
+                        <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             handleProfileSave('love'); 
@@ -779,7 +780,7 @@ export default function ProfilePage() {
                                 placeholder="Dating profile name" 
                                 value={loveProfile?.display_name || tempLoveForm.display_name} 
                                 onChange={e => handleProfileChange('love', 'display_name', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
@@ -789,7 +790,7 @@ export default function ProfilePage() {
                                 placeholder="Dating bio" 
                                 value={loveProfile?.bio || tempLoveForm.bio} 
                                 onChange={e => handleProfileChange('love', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -802,12 +803,12 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             <div>
-                              <label className="text-white text-sm font-medium">Visibility</label>
+                              <label className="text-black dark:text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={loveProfile?.visibility || tempLoveForm.visibility} 
                                 onChange={e => handleProfileChange('love', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -822,12 +823,12 @@ export default function ProfilePage() {
                                   onChange={e => handleProfileChange('love', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-medium">Exclude from AI</span>
+                                <span className="text-black dark:text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
+                              className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
                             >
                               {loveProfile ? 'Update' : 'Create'}
                             </button>
@@ -836,7 +837,7 @@ export default function ProfilePage() {
                       )}
 
                       {activeProfileTab === 'business' && (businessProfile || userId) && (
-                        <div className="bg-gray-900 border-2 border-white rounded-none p-6">
+                        <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-6">
                           <form onSubmit={e => { 
                             e.preventDefault(); 
                             handleProfileSave('business'); 
@@ -849,7 +850,7 @@ export default function ProfilePage() {
                                 placeholder="Professional name" 
                                 value={businessProfile?.display_name || tempBusinessForm.display_name} 
                                 onChange={e => handleProfileChange('business', 'display_name', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                               />
                             </div>
                             <div>
@@ -859,7 +860,7 @@ export default function ProfilePage() {
                                 placeholder="Professional bio" 
                                 value={businessProfile?.bio || tempBusinessForm.bio} 
                                 onChange={e => handleProfileChange('business', 'bio', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                                 rows={3}
                               />
                             </div>
@@ -872,12 +873,12 @@ export default function ProfilePage() {
                               validateOnLoad={true}
                             />
                             <div>
-                              <label className="text-white text-sm font-medium">Visibility</label>
+                              <label className="text-black dark:text-white text-sm font-medium">Visibility</label>
                               <select 
                                 name="visibility" 
                                 value={businessProfile?.visibility || tempBusinessForm.visibility} 
                                 onChange={e => handleProfileChange('business', 'visibility', e.target.value)} 
-                                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+                                className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
                               >
                                 <option value="public">Public</option>
                                 <option value="friends">Friends Only</option>
@@ -892,12 +893,12 @@ export default function ProfilePage() {
                                   onChange={e => handleProfileChange('business', 'ai_excluded', e.target.checked)}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-white text-sm font-medium">Exclude from AI</span>
+                                <span className="text-black dark:text-white text-sm font-medium">Exclude from AI</span>
                               </label>
                             </div>
                             <button 
                               type="submit" 
-                              className="p-3 bg-white text-black rounded-none hover:bg-gray-200 transition-colors"
+                              className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
                             >
                               {businessProfile ? 'Update' : 'Create'}
                             </button>
@@ -920,15 +921,15 @@ export default function ProfilePage() {
                 <div>
                   {/* Profile Type Selector */}
                   <div className="flex justify-center mb-6 sm:mb-8">
-                    <div className="flex flex-col sm:flex-row bg-black border-2 border-white rounded-none p-1">
+                    <div className="flex flex-col sm:flex-row bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-1">
                       {(['basic', 'business', 'love'] as const).map((type) => (
                         <button
                           key={type}
                           onClick={() => setSelectedProfileType(type)}
                           className={`px-3 sm:px-4 py-2 rounded-none transition-colors text-xs sm:text-sm ${
                             selectedProfileType === type
-                              ? 'bg-white text-black'
-                              : 'text-gray-300 hover:text-white hover:bg-gray-800 border-b sm:border-b-0 sm:border-r-2 border-white last:border-none'
+                              ? 'bg-black dark:bg-white text-white dark:text-black'
+                              : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black border-b sm:border-b-0 sm:border-r-2 border-black dark:border-white last:border-none'
                           }`}
                         >
                           {type === 'basic' ? 'General' : type === 'business' ? 'Business' : 'Dating'}
@@ -948,12 +949,12 @@ export default function ProfilePage() {
                   ) : (
                     <div className="space-y-6">
                       {questionnaireGroups.map((group) => (
-                        <div key={group.group_id} className="border-2 border-white rounded-none p-6 bg-gray-900">
+                        <div key={group.group_id} className="border-2 border-black dark:border-white rounded-none p-6 bg-white dark:bg-black">
                           <h2 className="text-xl font-bold mb-2">{group.title}</h2>
                           
                           <div className="space-y-3">
                             {group.questionnaires.map((questionnaire) => (
-                              <div key={questionnaire.questionnaire_id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-800 border-2 border-white p-3 sm:p-4 rounded-none">
+                              <div key={questionnaire.questionnaire_id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-black border-2 border-black dark:border-white p-3 sm:p-4 rounded-none">
                                 <div className="mb-3 sm:mb-0">
                                   <h3 className="font-semibold text-sm sm:text-base">{questionnaire.title}</h3>
                                 </div>
@@ -963,7 +964,7 @@ export default function ProfilePage() {
                                       <span className="text-green-400 text-xs sm:text-sm order-2 sm:order-1">Completed</span>
                                       <button
                                         onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                        className="px-3 py-1 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm order-1 sm:order-2"
+                                        className="px-3 py-1 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors text-xs sm:text-sm order-1 sm:order-2"
                                       >
                                         Edit
                                       </button>
@@ -971,7 +972,7 @@ export default function ProfilePage() {
                                   ) : (
                                     <button
                                       onClick={() => startQuestionnaire(questionnaire.questionnaire_id)}
-                                      className="px-3 sm:px-4 py-1 sm:py-2 bg-white text-black rounded-none hover:bg-gray-200 transition-colors text-xs sm:text-sm"
+                                      className="px-3 sm:px-4 py-1 sm:py-2 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors text-xs sm:text-sm"
                                     >
                                       Start
                                     </button>
@@ -994,7 +995,7 @@ export default function ProfilePage() {
               {activeTab === 'general' && (
                 <div className="space-y-8">
                   {/* Password Change Section */}
-                  <div className="bg-gray-900 border-2 border-white rounded-none p-6">
+                  <div className="bg-white dark:bg-black border-2 border-black dark:border-white rounded-none p-6">
                     <h2 className="text-xl font-bold mb-4">Change Password</h2>
                     <form onSubmit={handlePasswordChange} className="flex flex-col gap-4 max-w-md">
                       <div>
@@ -1004,7 +1005,7 @@ export default function ProfilePage() {
                           placeholder="Current password" 
                           value={passwordForm.oldPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                          className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                         />
                       </div>
@@ -1016,7 +1017,7 @@ export default function ProfilePage() {
                           placeholder="New password" 
                           value={passwordForm.newPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                          className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                           minLength={6}
                         />
@@ -1029,7 +1030,7 @@ export default function ProfilePage() {
                           placeholder="Confirm password" 
                           value={passwordForm.confirmPassword} 
                           onChange={e => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                          className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
+                          className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors" 
                           required
                         />
                       </div>
@@ -1037,7 +1038,7 @@ export default function ProfilePage() {
                       <button 
                         type="submit" 
                         disabled={passwordLoading}
-                        className="p-3 bg-white text-black rounded-none hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {passwordLoading ? 'Updating...' : 'Update Password'}
                       </button>
@@ -1054,6 +1055,9 @@ export default function ProfilePage() {
 
                   {/* Two-Factor Authentication Section */}
                   <TwoFactorSettings currentUser={currentUser} />
+
+                  {/* Theme Toggle Section */}
+                  <ThemeToggle />
                 </div>
               )}
             </div>

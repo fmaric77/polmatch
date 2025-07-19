@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUserPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { useTheme } from '../ThemeProvider';
 
 interface User {
   user_id: string;
@@ -21,6 +22,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
   onInvite,
   onFetchUsers
 }) => {
+  const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -116,25 +118,25 @@ const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono">
-      <div className="bg-black border-2 border-white rounded-none p-6 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 font-mono p-4">
+      <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none p-6 w-full max-w-md h-[90vh] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden`}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="text-green-400 font-mono uppercase tracking-widest text-xs mb-2">INVITE USERS</div>
-            <h2 className="text-xl font-mono uppercase tracking-wider text-white flex items-center">
+            <h2 className={`text-xl font-mono uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-black'} flex items-center`}>
               <FontAwesomeIcon icon={faUserPlus} className="mr-3" />
               INVITE MEMBERS
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
+            className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-500 border-red-500 hover:bg-red-500 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
 
-        <div className="space-y-4 flex-1 flex flex-col">
+        <div className="space-y-4 flex-1 flex flex-col min-h-0">
           {/* Search Input */}
           <div className="relative">
             <FontAwesomeIcon 
@@ -146,7 +148,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="SEARCH USERS..."
-              className="w-full bg-black text-white border-2 border-white rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none p-3 pl-10 focus:outline-none focus:border-blue-400 font-mono shadow-lg`}
               disabled={loading}
             />
           </div>
@@ -161,12 +163,12 @@ const InviteModal: React.FC<InviteModalProps> = ({
           )}
 
           {/* Users List */}
-          <div className="flex-1 min-h-0 border-2 border-white rounded-none p-3 bg-black shadow-inner">
+          <div className={`flex-1 min-h-0 border-2 ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} rounded-none p-3 shadow-inner`}>
             <div className="h-full overflow-y-auto space-y-2">
               {filteredUsers.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="bg-black border-2 border-gray-400 rounded-none p-4 shadow-lg">
-                    <div className="text-gray-400 font-mono uppercase tracking-wide">
+                  <div className={`${theme === 'dark' ? 'bg-black border-gray-400' : 'bg-white border-gray-400'} border-2 rounded-none p-4 shadow-lg`}>
+                    <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono uppercase tracking-wide`}>
                       {searchQuery ? 'NO MATCHING USERS' : 'NO AVAILABLE USERS'}
                     </div>
                   </div>
@@ -179,7 +181,9 @@ const InviteModal: React.FC<InviteModalProps> = ({
                     className={`w-full text-left p-3 rounded-none border-2 transition-all flex items-center justify-between shadow-lg font-mono ${
                       selectedUsers.has(user.user_id)
                         ? 'bg-green-600 border-green-400 text-white shadow-green-400/30'
-                        : 'bg-black border-gray-400 hover:border-white text-white'
+                        : theme === 'dark'
+                          ? 'bg-black border-gray-400 hover:border-white text-white'
+                          : 'bg-white border-gray-400 hover:border-black text-black'
                     }`}
                     disabled={loading || inviting.has(user.user_id)}
                   >
@@ -187,7 +191,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
                       <FontAwesomeIcon icon={faUserPlus} className="text-green-400" />
                       <div>
                         <div className="uppercase tracking-wide">{user.display_name}</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-widest">
+                        <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-widest`}>
                           STATUS: {selectedUsers.has(user.user_id) ? 'SELECTED' : 'AVAILABLE'}
                         </div>
                       </div>
@@ -218,14 +222,14 @@ const InviteModal: React.FC<InviteModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-black text-gray-400 border-2 border-gray-400 py-3 px-4 rounded-none hover:bg-gray-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide"
+              className={`flex-1 ${theme === 'dark' ? 'bg-black text-gray-400 border-gray-400 hover:bg-gray-400 hover:text-black' : 'bg-white text-gray-600 border-gray-600 hover:bg-gray-600 hover:text-white'} border-2 py-3 px-4 rounded-none transition-all shadow-lg font-mono uppercase tracking-wide`}
               disabled={loading}
             >
               {selectedUsers.size === 0 ? 'CLOSE' : 'ABORT'}
             </button>
             <button
               onClick={handleInviteSelected}
-              className="flex-1 bg-black text-green-400 border-2 border-green-400 py-3 px-4 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wide disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed"
+              className={`flex-1 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white disabled:border-gray-400 disabled:text-gray-400'} border-2 py-3 px-4 rounded-none transition-all shadow-lg font-mono uppercase tracking-wide disabled:cursor-not-allowed`}
               disabled={loading || selectedUsers.size === 0}
             >
               {loading ? 'INVITING...' : `INVITE ${selectedUsers.size || ''} USER${selectedUsers.size !== 1 ? 'S' : ''}`}

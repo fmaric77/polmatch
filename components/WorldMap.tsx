@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson'; // Import GeoJSON types
+import { useTheme } from './ThemeProvider';
 
 // Dynamically import react-globe.gl to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -19,6 +20,7 @@ interface CountryStatsResponse {
 }
 
 export default function WorldMap() {
+  const { theme } = useTheme();
   const [continents, setContinents] = useState<Feature<Geometry, GeoJsonProperties>[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,21 +123,21 @@ export default function WorldMap() {
   // If WebGL is not available, show a friendly message
   if (!webglSupported) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-black text-red-400 text-base sm:text-lg p-4">
+      <div className="w-full h-full flex items-center justify-center bg-white dark:bg-black text-red-600 dark:text-red-400 text-base sm:text-lg p-4">
         WebGL is not supported or is disabled in your browser. Please enable WebGL to view the world map.
       </div>
     );
   }
 
   if (error) {
-    return <div className="w-full h-full flex items-center justify-center bg-black text-red-500 text-xl">{error}</div>;
+    return <div className="w-full h-full flex items-center justify-center bg-white dark:bg-black text-red-600 dark:text-red-500 text-xl">{error}</div>;
   }
 
   return (
-    <div className="w-full h-full bg-black">
+    <div className="w-full h-full bg-white dark:bg-black">
       <Globe
         globeImageUrl={null}
-        backgroundColor={"#000000"}
+        backgroundColor={theme === 'dark' ? "#000000" : "#ffffff"}
         width={width}
         height={height}
         polygonsData={continents}
@@ -155,8 +157,8 @@ export default function WorldMap() {
             ? countryStats[currentPolygonName].count 
             : 0;
           
-          // Color based on user density
-          let baseColor = '#444444'; // Default dark gray for no users
+          // Color based on user density - adjust for theme
+          let baseColor = theme === 'dark' ? '#444444' : '#cccccc'; // Default gray for no users
           if (userCount > 0) {
             if (userCount >= 10) {
               baseColor = '#FF4444'; // Bright red for high user count
@@ -180,7 +182,7 @@ export default function WorldMap() {
             if (kosovoCount >= 5) return '#FF8844';
             if (kosovoCount >= 2) return '#FFAA44';
             if (kosovoCount >= 1) return '#FFDD44';
-            return '#444444';
+            return theme === 'dark' ? '#444444' : '#cccccc';
           }
 
           if (currentPolygonName === 'Serbia') {
@@ -197,8 +199,8 @@ export default function WorldMap() {
           
           return baseColor;
         }}
-        polygonSideColor={() => '#222'}
-        polygonStrokeColor={() => '#fff'}
+        polygonSideColor={() => theme === 'dark' ? '#222' : '#ddd'}
+        polygonStrokeColor={() => theme === 'dark' ? '#fff' : '#000'}
         onPolygonHover={(polygon) => {
           const feature = polygon as Feature<Geometry, GeoJsonProperties>;
           let nameForHover: string | null = null;
@@ -229,30 +231,30 @@ export default function WorldMap() {
         polygonsTransitionDuration={300}
         showGlobe={true}
         showGraticules={true}
-        atmosphereColor="#000000"
+        atmosphereColor={theme === 'dark' ? "#000000" : "#ffffff"}
         atmosphereAltitude={0.15}
       />
       {hovered && (
-        <div className="fixed left-1/2 top-8 -translate-x-1/2 px-6 py-3 bg-black/90 text-white rounded-lg border border-white text-lg pointer-events-none z-50 shadow-lg min-w-[200px]">
+        <div className="fixed left-1/2 top-8 -translate-x-1/2 px-6 py-3 bg-white/90 dark:bg-black/90 text-black dark:text-white rounded-lg border border-black dark:border-white text-lg pointer-events-none z-50 shadow-lg min-w-[200px]">
           <div className="font-bold text-xl mb-1">{hovered}</div>
           {countryStats[hovered] ? (
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
                 <span>Users:</span>
-                <span className="font-semibold text-blue-300">{countryStats[hovered].count}</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-300">{countryStats[hovered].count}</span>
               </div>
               <div className="flex justify-between">
                 <span>Percentage:</span>
-                <span className="font-semibold text-green-300">{countryStats[hovered].percentage}%</span>
+                <span className="font-semibold text-green-600 dark:text-green-300">{countryStats[hovered].percentage}%</span>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-300">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               {loadingStats ? 'Loading stats...' : 'No users found'}
             </div>
           )}
           {totalUsers > 0 && (
-            <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-600">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
               Total active users: {totalUsers}
             </div>
           )}

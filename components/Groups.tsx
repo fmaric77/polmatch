@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import { getAnonymousDisplayName } from '../lib/anonymization';
 import { useCSRFToken } from './hooks/useCSRFToken';
+import { useTheme } from './ThemeProvider';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -69,6 +70,7 @@ interface PollVote { _id: string; count: number; }
 interface PollResult { votes: PollVote[]; userVote: string | null; }
 
 const Groups = () => {
+  const { theme } = useTheme();
   const { protectedFetch } = useCSRFToken();
   // Profile separation state
   const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
@@ -981,29 +983,29 @@ const Groups = () => {
       {/* Polls Modal */}
       {showPollModal && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-black border border-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-white mb-4">Group Polls</h2>
-            <button onClick={() => setShowPollModal(false)} className="absolute top-4 right-4 text-white">✕</button>
+          <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'} mb-4`}>Group Polls</h2>
+            <button onClick={() => setShowPollModal(false)} className={`absolute top-4 right-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>✕</button>
 
             {/* Create Poll Form */}
             <form onSubmit={handleCreatePoll} className="mb-6">
               <input value={newPollQuestion} onChange={e => setNewPollQuestion(e.target.value)}
-                placeholder="Poll question" className="w-full p-2 bg-gray-800 text-white border border-white rounded mb-2" required />
+                placeholder="Poll question" className={`w-full p-2 ${theme === 'dark' ? 'bg-gray-800 text-white border-white' : 'bg-white text-black border-black'} border rounded mb-2`} required />
               {newPollOptions.map((opt, idx) => (
                 <input key={idx} value={opt} onChange={e => {
                   const arr = [...newPollOptions]; arr[idx] = e.target.value; setNewPollOptions(arr);
-                }} placeholder={`Option ${idx+1}`} className="w-full p-2 bg-gray-800 text-white border border-white rounded mb-2" required />
+                }} placeholder={`Option ${idx+1}`} className={`w-full p-2 ${theme === 'dark' ? 'bg-gray-800 text-white border-white' : 'bg-white text-black border-black'} border rounded mb-2`} required />
               ))}
               <button type="button" onClick={() => setNewPollOptions([...newPollOptions, ''])}
                 className="text-sm text-blue-400 mb-4">+ Add Option</button>
-              <button type="submit" className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200">Create Poll</button>
+              <button type="submit" className={`px-4 py-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} rounded transition-all`}>Create Poll</button>
             </form>
 
             {/* Polls List */}
             <div className="space-y-4">
               {polls.map(poll => (
-                <div key={poll.poll_id} className="bg-gray-900 p-4 rounded border border-gray-700">
-                  <div className="text-white font-medium mb-2">{poll.question}</div>
+                <div key={poll.poll_id} className={`${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} p-4 rounded border`}>
+                  <div className={`${theme === 'dark' ? 'text-white' : 'text-black'} font-medium mb-2`}>{poll.question}</div>
                   <div className="space-y-2">
                     {poll.options.map(opt => {
                       const result = pollResults[poll.poll_id];
@@ -1013,9 +1015,9 @@ const Groups = () => {
                         <div key={opt.option_id} className="flex items-center justify-between">
                           <button onClick={() => handleVote(poll.poll_id, opt.option_id)}
                             disabled={!!result?.userVote}
-                            className={`flex-1 text-left p-2 rounded ${isVoted ? 'bg-green-600 text-white' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+                            className={`flex-1 text-left p-2 rounded ${isVoted ? 'bg-green-600 text-white' : theme === 'dark' ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-black hover:bg-gray-200 border border-gray-300'}`}
                           >{opt.text}</button>
-                          <span className="text-gray-400 text-sm ml-2">{count}</span>
+                          <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-sm ml-2`}>{count}</span>
                         </div>
                       );
                     })}

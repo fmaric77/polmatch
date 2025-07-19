@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '../../components/Navigation';
 import { useCSRFToken } from '../../components/hooks/useCSRFToken';
+import { useTheme } from '../../components/ThemeProvider';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faBriefcase, 
@@ -48,6 +49,7 @@ interface User {
 }
 
 export default function JobsPage(): JSX.Element {
+  const { theme } = useTheme();
   const { protectedFetch } = useCSRFToken();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [jobs, setJobs] = useState<JobPosting[]>([]);
@@ -274,12 +276,12 @@ export default function JobsPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-black text-white">
+      <div className={`flex h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
         <Navigation currentPage="jobs" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl mb-4">Loading...</h2>
-            <p className="text-gray-400">Finding job opportunities for you</p>
+            <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Finding job opportunities for you</p>
           </div>
         </div>
       </div>
@@ -287,7 +289,7 @@ export default function JobsPage(): JSX.Element {
   }
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <Navigation currentPage="jobs" />
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="w-full max-w-7xl mx-auto mt-2 md:mt-4 lg:mt-8 p-2 md:p-4 lg:p-6 pb-8">
@@ -295,7 +297,7 @@ export default function JobsPage(): JSX.Element {
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center justify-center"
+              className={`${theme === 'dark' ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white py-3 px-6 rounded-lg transition-all shadow-lg flex items-center justify-center`}
               disabled={!currentUser}
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
@@ -304,7 +306,7 @@ export default function JobsPage(): JSX.Element {
             
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center"
+              className={`${theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white py-3 px-6 rounded-lg transition-all shadow-lg flex items-center justify-center`}
             >
               <FontAwesomeIcon icon={faFilter} className="mr-2" />
               {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -312,19 +314,19 @@ export default function JobsPage(): JSX.Element {
           </div>
 
           {/* Search and Filters */}
-          <div className="bg-black/80 border border-white rounded-lg shadow-lg mb-6 p-4">
+          <div className={`${theme === 'dark' ? 'bg-black/80 border-white' : 'bg-gray-100/80 border-gray-400'} border rounded-lg shadow-lg mb-6 p-4`}>
             {/* Search Bar */}
             <div className="relative mb-4">
               <FontAwesomeIcon 
                 icon={faSearch} 
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+                className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} 
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search job titles, companies, or descriptions..."
-                className="w-full bg-black text-white border border-gray-600 rounded-lg p-3 pl-10 focus:outline-none focus:border-blue-400 shadow-lg"
+                className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600 focus:border-blue-400' : 'bg-white text-black border-gray-400 focus:border-blue-600'} border rounded-lg p-3 pl-10 focus:outline-none shadow-lg transition-colors`}
               />
             </div>
 
@@ -332,22 +334,22 @@ export default function JobsPage(): JSX.Element {
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Location</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Location</label>
                   <input
                     type="text"
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
                     placeholder="Enter location..."
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600 focus:border-blue-400' : 'bg-white text-black border-gray-400 focus:border-blue-600'} border rounded-lg p-2 focus:outline-none transition-colors`}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Job Type</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Job Type</label>
                   <select
                     value={jobTypeFilter}
                     onChange={(e) => setJobTypeFilter(e.target.value)}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600 focus:border-blue-400' : 'bg-white text-black border-gray-400 focus:border-blue-600'} border rounded-lg p-2 focus:outline-none transition-colors`}
                   >
                     <option value="">All Types</option>
                     <option value="full-time">Full Time</option>
@@ -358,11 +360,11 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Experience Level</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Experience Level</label>
                   <select
                     value={experienceFilter}
                     onChange={(e) => setExperienceFilter(e.target.value)}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600 focus:border-blue-400' : 'bg-white text-black border-gray-400 focus:border-blue-600'} border rounded-lg p-2 focus:outline-none transition-colors`}
                   >
                     <option value="">All Levels</option>
                     <option value="entry">Entry Level</option>
@@ -378,10 +380,10 @@ export default function JobsPage(): JSX.Element {
           {/* Job Listings */}
           <div className="space-y-4">
             {filteredJobs.length === 0 ? (
-              <div className="bg-black/80 border border-white rounded-lg shadow-lg p-8 text-center">
-                <FontAwesomeIcon icon={faBriefcase} className="text-4xl text-gray-500 mb-4" />
-                <h3 className="text-xl text-gray-300 mb-2">No Jobs Found</h3>
-                <p className="text-gray-500">
+              <div className={`${theme === 'dark' ? 'bg-black/80 border-white' : 'bg-gray-100/80 border-gray-400'} border rounded-lg shadow-lg p-8 text-center`}>
+                <FontAwesomeIcon icon={faBriefcase} className={`text-4xl ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'} mb-4`} />
+                <h3 className={`text-xl ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>No Jobs Found</h3>
+                <p className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                   {searchQuery || locationFilter || jobTypeFilter || experienceFilter 
                     ? 'No jobs match your current search criteria.' 
                     : 'No job postings are available at this time.'}
@@ -392,22 +394,22 @@ export default function JobsPage(): JSX.Element {
                 const isExpanded = expandedJobs.has(job.job_id);
                 
                 return (
-                  <div key={job.job_id} className="bg-black/80 border border-white rounded-lg shadow-lg">
+                  <div key={job.job_id} className={`${theme === 'dark' ? 'bg-black/80 border-white' : 'bg-gray-100/80 border-gray-400'} border rounded-lg shadow-lg`}>
                     {/* Job Header - Always Visible - Clickable */}
                     <div 
-                      className="p-6 cursor-pointer hover:bg-gray-900/50 transition-colors rounded-t-lg"
+                      className={`p-6 cursor-pointer ${theme === 'dark' ? 'hover:bg-gray-900/50' : 'hover:bg-gray-200/50'} transition-colors rounded-t-lg`}
                       onClick={() => toggleJobExpanded(job.job_id)}
                     >
                       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xl font-bold text-white">{job.title}</h3>
+                            <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{job.title}</h3>
                             <FontAwesomeIcon 
                               icon={isExpanded ? faChevronUp : faChevronDown} 
-                              className="text-gray-400 ml-4 text-lg"
+                              className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} ml-4 text-lg`}
                             />
                           </div>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+                          <div className={`flex flex-wrap items-center gap-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                             <span className="flex items-center">
                               <FontAwesomeIcon icon={faBuilding} className="mr-1 text-blue-400" />
                               {job.company}
@@ -434,7 +436,7 @@ export default function JobsPage(): JSX.Element {
                               {job.salary_range}
                             </span>
                           )}
-                          <div className="text-xs text-gray-400">
+                          <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                             Click to {isExpanded ? 'collapse' : 'expand'}
                           </div>
                         </div>
@@ -443,17 +445,17 @@ export default function JobsPage(): JSX.Element {
 
                     {/* Job Details - Collapsible Content */}
                     {isExpanded && (
-                      <div className="px-6 pb-6 border-t border-gray-600">
+                      <div className={`px-6 pb-6 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'}`}>
                         <div className="pt-4 space-y-4">
                           <div>
-                            <h4 className="text-white font-bold mb-2">Description</h4>
-                            <p className="text-gray-300 leading-relaxed">{job.description}</p>
+                            <h4 className={`${theme === 'dark' ? 'text-white' : 'text-black'} font-bold mb-2`}>Description</h4>
+                            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{job.description}</p>
                           </div>
                           
                           {job.requirements.length > 0 && (
                             <div>
                               <h4 className="text-yellow-400 font-bold mb-2">Requirements</h4>
-                              <ul className="list-disc list-inside text-gray-300 space-y-1">
+                              <ul className={`list-disc list-inside ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} space-y-1`}>
                                 {job.requirements.map((req, index) => (
                                   <li key={index} className="text-sm">{req}</li>
                                 ))}
@@ -461,11 +463,11 @@ export default function JobsPage(): JSX.Element {
                             </div>
                           )}
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+                          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                             <div>
-                              <p className="mb-2"><strong className="text-white">Industry:</strong> {job.industry}</p>
-                              <p className="mb-2"><strong className="text-white">Posted by:</strong> {job.posted_by_display_name || job.posted_by_username}</p>
-                              <p className="mb-2"><strong className="text-white">Posted:</strong> {new Date(job.posted_at).toLocaleDateString()}</p>
+                              <p className="mb-2"><strong className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>Industry:</strong> {job.industry}</p>
+                              <p className="mb-2"><strong className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>Posted by:</strong> {job.posted_by_display_name || job.posted_by_username}</p>
+                              <p className="mb-2"><strong className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>Posted:</strong> {new Date(job.posted_at).toLocaleDateString()}</p>
                             </div>
                             <div>
                               {job.application_deadline && (
@@ -474,7 +476,7 @@ export default function JobsPage(): JSX.Element {
                             </div>
                           </div>
 
-                          <div className="flex justify-end gap-3 pt-4 border-t border-gray-600">
+                          <div className={`flex justify-end gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'}`}>
                             {job.posted_by === currentUser?.user_id ? (
                               // Show delete button for own postings
                               <button
@@ -516,16 +518,16 @@ export default function JobsPage(): JSX.Element {
       {/* Create Job Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-black border border-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-gray-400'} border rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto`}>
             {/* Modal Header */}
-            <div className="bg-black text-white p-4 rounded-t-lg flex items-center justify-between border-b border-gray-600">
+            <div className={`${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-gray-50 text-black border-gray-300'} p-4 rounded-t-lg flex items-center justify-between border-b`}>
               <h2 className="text-lg font-bold">
                 <FontAwesomeIcon icon={faPlus} className="mr-2" />
                 Create Job Posting
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-white hover:text-gray-300 transition-colors text-xl"
+                className={`${theme === 'dark' ? 'text-white hover:text-gray-300' : 'text-black hover:text-gray-600'} transition-colors text-xl`}
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -535,55 +537,55 @@ export default function JobsPage(): JSX.Element {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Job Title *</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Job Title *</label>
                   <input
                     type="text"
                     value={newJob.title}
                     onChange={(e) => setNewJob(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                     placeholder="Enter job title..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Company *</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Company *</label>
                   <input
                     type="text"
                     value={newJob.company}
                     onChange={(e) => setNewJob(prev => ({ ...prev, company: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                     placeholder="Enter company name..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Location *</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Location *</label>
                   <input
                     type="text"
                     value={newJob.location}
                     onChange={(e) => setNewJob(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                     placeholder="Enter location..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Salary Range</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Salary Range</label>
                   <input
                     type="text"
                     value={newJob.salary_range}
                     onChange={(e) => setNewJob(prev => ({ ...prev, salary_range: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                     placeholder="e.g. $50,000 - $70,000"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Job Type *</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Job Type *</label>
                   <select
                     value={newJob.job_type}
                     onChange={(e) => setNewJob(prev => ({ ...prev, job_type: e.target.value as JobPosting['job_type'] }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                   >
                     <option value="full-time">Full Time</option>
                     <option value="part-time">Part Time</option>
@@ -593,11 +595,11 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Experience Level *</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Experience Level *</label>
                   <select
                     value={newJob.experience_level}
                     onChange={(e) => setNewJob(prev => ({ ...prev, experience_level: e.target.value as JobPosting['experience_level'] }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                   >
                     <option value="entry">Entry Level</option>
                     <option value="mid">Mid Level</option>
@@ -607,45 +609,45 @@ export default function JobsPage(): JSX.Element {
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Industry</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Industry</label>
                   <input
                     type="text"
                     value={newJob.industry}
                     onChange={(e) => setNewJob(prev => ({ ...prev, industry: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                     placeholder="e.g. Technology, Finance..."
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-2">Application Deadline</label>
+                  <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Application Deadline</label>
                   <input
                     type="date"
                     value={newJob.application_deadline}
                     onChange={(e) => setNewJob(prev => ({ ...prev, application_deadline: e.target.value }))}
-                    className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                    className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                   />
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm text-gray-300 mb-2">Job Description *</label>
+                <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Job Description *</label>
                 <textarea
                   value={newJob.description}
                   onChange={(e) => setNewJob(prev => ({ ...prev, description: e.target.value }))}
                   rows={4}
-                  className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                  className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                   placeholder="Describe the job role, responsibilities, and what you're looking for..."
                 />
               </div>
               
               <div>
-                <label className="block text-sm text-gray-300 mb-2">Requirements (one per line)</label>
+                <label className={`block text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Requirements (one per line)</label>
                 <textarea
                   value={newJob.requirements}
                   onChange={(e) => setNewJob(prev => ({ ...prev, requirements: e.target.value }))}
                   rows={4}
-                  className="w-full bg-black text-white border border-gray-600 rounded-lg p-2 focus:outline-none focus:border-blue-400"
+                  className={`w-full ${theme === 'dark' ? 'bg-black text-white border-gray-600' : 'bg-white text-black border-gray-300'} border rounded-lg p-2 focus:outline-none focus:border-blue-400`}
                   placeholder={`Bachelor's degree required\n3+ years experience\nProficient in specific skills...`}
                 />
               </div>
@@ -654,7 +656,7 @@ export default function JobsPage(): JSX.Element {
               <div className="flex space-x-4 pt-4">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 bg-gray-700 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+                  className={`flex-1 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'} ${theme === 'dark' ? 'text-white' : 'text-black'} py-3 px-4 rounded-lg transition-colors`}
                 >
                   Cancel
                 </button>

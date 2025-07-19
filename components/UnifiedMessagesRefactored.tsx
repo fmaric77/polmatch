@@ -12,6 +12,7 @@ import { VoiceCallEventData } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
 import { useSSE } from './providers/SSEProvider';
+import { useTheme } from './ThemeProvider';
 import SidebarNavigation from './SidebarNavigation';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
@@ -134,6 +135,7 @@ interface Channel {
 
 const UnifiedMessages: React.FC = () => {
   const { protectedFetch } = useCSRFToken();
+  const { theme } = useTheme();
   
   // Core state - currentUser is now provided by SSEProvider
   const [loading, setLoading] = useState(true);
@@ -1282,17 +1284,17 @@ const UnifiedMessages: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-black text-white">
+      <div className={`flex-1 flex items-center justify-center ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
         <div className="text-center">
           <h2 className="text-2xl mb-4">Loading...</h2>
-          <p className="text-gray-400">Setting up your messages</p>
+          <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Setting up your messages</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
       {/* Mobile overlay */}
       {isMobile && isSidebarVisible && (
         <div 
@@ -1302,7 +1304,7 @@ const UnifiedMessages: React.FC = () => {
       )}
 
       {/* Main Content Container */}
-      <div className="flex-1 flex bg-black text-white h-full overflow-hidden relative">
+      <div className={`flex-1 flex ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'} h-full overflow-hidden relative`}>
 
       {/* Main navigation sidebar */}
       <SidebarNavigation

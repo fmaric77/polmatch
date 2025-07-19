@@ -25,6 +25,7 @@ import { TypingData } from './hooks/useTypingIndicator';
 import { profilePictureCache } from '../lib/profilePictureCache';
 import { useCSRFToken } from './hooks/useCSRFToken';
 import { UserStatus } from './hooks/useUserStatus';
+import { useTheme } from './ThemeProvider';
 
 interface PrivateMessage {
   _id?: string;
@@ -190,6 +191,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   getUserStatus
 }) => {
   const { protectedFetch } = useCSRFToken();
+  const { theme } = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
@@ -299,9 +301,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!selectedConversation) {
     return (
-      <div className="flex-1 flex flex-col bg-black text-white font-mono">
+      <div className={`flex-1 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'} font-mono`}>
         {/* FBI Navigation Header */}
-        <div className="p-4 border-b-2 border-white rounded-none flex items-center justify-between shadow-lg">
+        <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
           <div className="flex items-center space-x-4">
             {/* Mobile Toggle Buttons */}
             {isMobile && (
@@ -309,7 +311,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 {/* Main Navigation Toggle */}
                 <button
                   onClick={() => setIsSidebarVisible(true)}
-                  className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+                  className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
                   title="SHOW NAVIGATION"
                 >
                   <FontAwesomeIcon icon={faBars} />
@@ -319,7 +321,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 {isConversationsSidebarHidden && (
                   <button
                     onClick={() => setIsConversationsSidebarHidden(false)}
-                    className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+                    className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
                     title="SHOW CONVERSATIONS"
                   >
                     <FontAwesomeIcon icon={faEnvelope} />
@@ -332,7 +334,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             {!isMobile && isConversationsSidebarHidden && (
               <button
                 onClick={() => setIsConversationsSidebarHidden(false)}
-                className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
                 title="SHOW CONVERSATIONS"
               >
                 <FontAwesomeIcon icon={faEnvelope} />
@@ -367,26 +369,26 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
 
           {/* Main Content */}
-          <div className="text-center bg-black/80 border-2 border-white rounded-none p-8 sm:p-12 shadow-2xl relative z-10 backdrop-blur-sm">
+          <div className={`text-center ${theme === 'dark' ? 'bg-black/80 border-white text-white' : 'bg-white/80 border-black text-black'} border-2 rounded-none p-8 sm:p-12 shadow-2xl relative z-10 backdrop-blur-sm`}>
             {/* Main Title with Glow */}
-            <h2 className="text-3xl sm:text-4xl mb-6 font-mono uppercase tracking-wider text-white animate-pulse shadow-lg" 
-                style={{ textShadow: '0 0 10px rgba(255, 255, 255, 0.5)' }}>
+            <h2 className={`text-3xl sm:text-4xl mb-6 font-mono uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-black'} animate-pulse shadow-lg`} 
+                style={{ textShadow: theme === 'dark' ? '0 0 10px rgba(255, 255, 255, 0.5)' : '0 0 10px rgba(0, 0, 0, 0.5)' }}>
               POLMATCH
             </h2>
 
             {/* Animated Divider */}
             <div className="flex justify-center items-center mb-6">
-              <div className="w-8 h-px bg-white/30"></div>
-              <div className="w-16 h-px bg-gradient-to-r from-transparent via-white to-transparent mx-2 animate-pulse"></div>
-              <div className="w-8 h-px bg-white/30"></div>
+              <div className={`w-8 h-px ${theme === 'dark' ? 'bg-white/30' : 'bg-black/30'}`}></div>
+              <div className={`w-16 h-px ${theme === 'dark' ? 'bg-gradient-to-r from-transparent via-white to-transparent' : 'bg-gradient-to-r from-transparent via-black to-transparent'} mx-2 animate-pulse`}></div>
+              <div className={`w-8 h-px ${theme === 'dark' ? 'bg-white/30' : 'bg-black/30'}`}></div>
             </div>
 
             {/* Status Message */}
             <div className="space-y-3">
-              <p className="text-green-400 font-mono text-sm uppercase tracking-widest animate-pulse">
+              <p className={`${theme === 'dark' ? 'text-green-400' : 'text-green-600'} font-mono text-sm uppercase tracking-widest animate-pulse`}>
                 SYSTEM READY
               </p>
-              <p className="text-gray-300 font-mono text-sm">
+              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} font-mono text-sm`}>
                 Select a conversation to start messaging
               </p>
             </div>
@@ -409,18 +411,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-black text-white relative font-mono">
+    <div className={`flex-1 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'} relative font-mono`}>
       {/* Loading Overlay for Context Switches */}
       {contextSwitchLoading && (
-        <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-50 border-2 border-white rounded-none">
-          <div className="bg-black border-2 border-yellow-400 rounded-none p-4 shadow-2xl">
-            <div className="text-yellow-400 text-xl font-mono uppercase tracking-wider">Loading...</div>
+        <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-black/90 border-white' : 'bg-white/90 border-black'} flex items-center justify-center z-50 border-2 rounded-none`}>
+          <div className={`${theme === 'dark' ? 'bg-black border-yellow-400' : 'bg-white border-yellow-600'} border-2 rounded-none p-4 shadow-2xl`}>
+            <div className={`${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} text-xl font-mono uppercase tracking-wider`}>Loading...</div>
           </div>
         </div>
       )}
 
       {/* FBI Chat Header */}
-      <div className="p-4 border-b-2 border-white rounded-none flex items-center justify-between shadow-lg">
+      <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
         <div className="flex items-center space-x-4">
           {/* Mobile Toggle Buttons */}
           {isMobile && (
@@ -428,7 +430,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               {/* Main Navigation Toggle */}
               <button
                 onClick={() => setIsSidebarVisible(true)}
-                className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
                 title="SHOW NAVIGATION"
               >
                 <FontAwesomeIcon icon={faBars} />
@@ -438,7 +440,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               {isConversationsSidebarHidden && (
                 <button
                   onClick={() => setIsConversationsSidebarHidden(false)}
-                  className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+                  className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
                   title="SHOW CONVERSATIONS"
                 >
                   <FontAwesomeIcon icon={faEnvelope} />
@@ -451,7 +453,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           {!isMobile && isConversationsSidebarHidden && (
             <button
               onClick={() => setIsConversationsSidebarHidden(false)}
-              className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono uppercase tracking-wider"
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
               title="SHOW CONVERSATIONS"
             >
               <FontAwesomeIcon icon={faEnvelope} />
@@ -460,7 +462,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
           {/* Conversation Info */}
           {selectedConversationData?.type === 'direct' && selectedConversationData.user_id ? (
-            <div className="border-2 border-white rounded-none p-1 shadow-lg relative">
+            <div className={`border-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none p-1 shadow-lg relative`}>
               <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
               {/* Status Indicator for Direct Chat Header */}
               {getUserStatus && (() => {
@@ -478,10 +480,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               })()}
             </div>
           ) : (
-            <div className="w-8 h-8 bg-black border-2 border-white rounded-none flex items-center justify-center shadow-lg">
+            <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none flex items-center justify-center shadow-lg`}>
               <FontAwesomeIcon 
                 icon={selectedConversationType === 'group' ? faHashtag : faUsers} 
-                className="text-white text-sm"
+                className={`${theme === 'dark' ? 'text-white' : 'text-black'} text-sm`}
               />
             </div>
           )}
@@ -492,8 +494,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 {selectedConversationData?.name || 'Unknown Contact'}
                 {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
                   <>
-                    <span className="text-gray-400 mx-2">/</span>
-                    <span className="text-blue-400">
+                    <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mx-2`}>/</span>
+                    <span className={`${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
                       #{groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
                     </span>
                   </>
@@ -513,7 +515,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               })()}
             </div>
             {selectedConversationData?.members_count && (
-              <p className="text-sm text-gray-400 font-mono">
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
                 {selectedConversationData.members_count} members
               </p>
             )}
@@ -525,21 +527,21 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={onMembersClick}
-              className="p-2 bg-black text-blue-400 border border-blue-400 rounded-none hover:bg-blue-400 hover:text-black transition-all shadow-lg font-mono"
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
               title="View Members"
             >
               <FontAwesomeIcon icon={faUsers} />
             </button>
             <button
               onClick={() => setShowPollModal(true)}
-              className="p-2 bg-black text-purple-400 border border-purple-400 rounded-none hover:bg-purple-400 hover:text-black transition-all shadow-lg font-mono"
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-black' : 'bg-white text-purple-600 border-purple-600 hover:bg-purple-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
               title="Create Polls"
             >
               <FontAwesomeIcon icon={faChartBar} />
             </button>
             <button
               onClick={onPinnedMessagesClick}
-              className="p-2 bg-black text-yellow-400 border border-yellow-400 rounded-none hover:bg-yellow-400 hover:text-black transition-all shadow-lg font-mono"
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' : 'bg-white text-yellow-600 border-yellow-600 hover:bg-yellow-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
               title="View Pinned Messages"
             >
               <FontAwesomeIcon icon={faThumbtack} />
@@ -548,14 +550,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <>
                 <button
                   onClick={onInviteClick}
-                  className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono"
+                  className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
                   title="Invite User"
                 >
                   <FontAwesomeIcon icon={faUserPlus} />
                 </button>
                 <button
                   onClick={onBannedUsersClick}
-                  className="p-2 bg-black text-red-400 border border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all shadow-lg font-mono"
+                  className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-600 border-red-600 hover:bg-red-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
                   title="Banned Users"
                 >
                   <FontAwesomeIcon icon={faBan} />
@@ -570,7 +572,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={startVoiceCall}
-              className="p-2 bg-black text-green-400 border border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all shadow-lg font-mono"
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
               title="Start Voice Call"
             >
               <FontAwesomeIcon icon={faPhone} />
@@ -581,11 +583,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Group Channels Navigation */}
       {selectedConversationType === 'group' && groupChannels.length > 0 && (
-        <div className="px-4 py-3 border-b-2 border-gray-700 bg-black shadow-inner">
+        <div className={`px-4 py-3 border-b-2 ${theme === 'dark' ? 'border-gray-700 bg-black' : 'border-gray-300 bg-white'} shadow-inner`}>
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs">Channels</div>
+            <div className={`${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} font-mono uppercase tracking-widest text-xs`}>Channels</div>
             {isMobile && groupChannels.length > 3 && (
-              <div className="text-xs text-gray-400 font-mono">
+              <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
                 {groupChannels.findIndex(ch => ch.channel_id === selectedChannel) + 1}/{groupChannels.length}
               </div>
             )}
@@ -596,17 +598,17 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowChannelDropdown(!showChannelDropdown)}
-                className="w-full flex items-center justify-between bg-blue-600 border-2 border-blue-400 px-3 py-2 rounded-none transition-all"
+                className={`w-full flex items-center justify-between ${theme === 'dark' ? 'bg-blue-600 border-blue-400' : 'bg-blue-500 border-blue-300'} border-2 px-3 py-2 rounded-none transition-all`}
               >
                 <div className="flex items-center space-x-2">
-                  <FontAwesomeIcon icon={faHashtag} className="text-xs text-white" />
-                  <span className="text-sm text-white font-mono uppercase tracking-wide">
+                  <FontAwesomeIcon icon={faHashtag} className={`text-xs ${theme === 'dark' ? 'text-white' : 'text-white'}`} />
+                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-white'} font-mono uppercase tracking-wide`}>
                     {groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
                   </span>
                 </div>
                 <FontAwesomeIcon 
                   icon={faChevronDown} 
-                  className={`text-xs text-white transition-transform ${showChannelDropdown ? 'rotate-180' : ''}`}
+                  className={`text-xs ${theme === 'dark' ? 'text-white' : 'text-white'} transition-transform ${showChannelDropdown ? 'rotate-180' : ''}`}
                 />
               </button>
               
@@ -633,10 +635,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           onChannelContextMenu(e, channel);
                           setShowChannelDropdown(false);
                         }}
-                        className={`w-full flex items-center space-x-2 px-3 py-2 border-b border-gray-600 transition-colors font-mono text-sm ${
+                        className={`w-full flex items-center space-x-2 px-3 py-2 ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'} border-b transition-colors font-mono text-sm ${
                           selectedChannel === channel.channel_id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-black text-gray-300 hover:bg-gray-800 hover:text-white'
+                            ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white')
+                            : (theme === 'dark' ? 'bg-black text-gray-300 hover:bg-gray-800 hover:text-white' : 'bg-white text-gray-700 hover:bg-gray-100 hover:text-black')
                         } ${index === groupChannels.length - 1 && !canManageMembers ? 'border-b-0' : ''}`}
                       >
                         <FontAwesomeIcon icon={faHashtag} className="text-xs" />
@@ -698,19 +700,19 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* FBI Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black">
+      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
         {channelLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="bg-black border-2 border-yellow-400 rounded-none p-4 shadow-2xl">
-              <div className="text-yellow-400 font-mono uppercase tracking-wider">Loading messages...</div>
+            <div className={`${theme === 'dark' ? 'bg-black border-yellow-400' : 'bg-white border-yellow-600'} border-2 rounded-none p-4 shadow-2xl`}>
+              <div className={`${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} font-mono uppercase tracking-wider`}>Loading messages...</div>
             </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center bg-black border-2 border-white rounded-none p-6 shadow-2xl">
+            <div className={`text-center ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none p-6 shadow-2xl`}>
               <p className="mb-2 font-mono uppercase tracking-wide">No messages yet</p>
-              <div className="w-12 h-px bg-white mx-auto mb-3"></div>
-              <p className="text-sm text-gray-400 font-mono">Start the conversation</p>
+              <div className={`w-12 h-px ${theme === 'dark' ? 'bg-white' : 'bg-black'} mx-auto mb-3`}></div>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono`}>Start the conversation</p>
             </div>
           </div>
         ) : (
@@ -751,7 +753,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               >
                 {!isCurrentUser && showAvatar && (
                   <div className="mr-3">
-                    <div className="border-2 border-white rounded-none p-1 shadow-lg">
+                    <div className={`border-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none p-1 shadow-lg`}>
                       <ProfileAvatar userId={message.sender_id} size={32} />
                     </div>
                   </div>
@@ -759,7 +761,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 
                 <div className={`max-w-md break-words ${!isCurrentUser && !showAvatar ? 'ml-12' : ''}`}>
                   {!isCurrentUser && showAvatar && (
-                    <div className="mb-2 bg-black border border-gray-500 rounded-none p-2 shadow-lg">
+                    <div className={`mb-2 ${theme === 'dark' ? 'bg-black border-gray-500' : 'bg-white border-gray-400'} border rounded-none p-2 shadow-lg`}>
                       <div className="flex items-center space-x-2">
                         {(() => {
                           let displayName = null;
@@ -775,11 +777,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           }
                           
                           return displayName ? (
-                            <span className="text-sm font-mono uppercase tracking-wide text-blue-400">
+                            <span className={`text-sm font-mono uppercase tracking-wide ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
                               {displayName}
                             </span>
                           ) : (
-                            <span className="text-sm font-mono uppercase tracking-wide text-gray-500">
+                            <span className={`text-sm font-mono uppercase tracking-wide ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
                               [NO PROFILE NAME]
                             </span>
                           );
@@ -791,17 +793,17 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   <div
                     className={`p-4 rounded-none border-2 shadow-lg font-mono break-words ${
                       isCurrentUser
-                        ? 'bg-black border-blue-400 text-white shadow-blue-400/30'
-                        : 'bg-black border-gray-400 text-white shadow-gray-400/30'
+                        ? (theme === 'dark' ? 'bg-black border-blue-400 text-white shadow-blue-400/30' : 'bg-blue-100 border-blue-600 text-black shadow-blue-600/30')
+                        : (theme === 'dark' ? 'bg-black border-gray-400 text-white shadow-gray-400/30' : 'bg-gray-100 border-gray-600 text-black shadow-gray-600/30')
                     }`}
                   >
                     {/* Reply indicator */}
                     {message.reply_to && (
-                      <div className="mb-3 p-2 bg-gray-800 border-l-4 border-blue-400 rounded-r text-sm">
-                        <div className="text-blue-400 text-xs font-mono uppercase tracking-wider mb-1">
+                      <div className={`mb-3 p-2 ${theme === 'dark' ? 'bg-gray-800 border-blue-400' : 'bg-gray-200 border-blue-600'} border-l-4 rounded-r text-sm`}>
+                        <div className={`${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} text-xs font-mono uppercase tracking-wider mb-1`}>
                           REPLYING TO {message.reply_to.sender_name}
                         </div>
-                        <div className="text-gray-300 text-xs break-words">
+                        <div className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} text-xs break-words`}>
                           {message.reply_to.content}
                         </div>
                       </div>
@@ -830,14 +832,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       }
                     })()}
                     
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-600">
+                    <div className={`flex items-center justify-between mt-3 pt-2 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-400'}`}>
                       <div className="flex items-center space-x-3">
-                        <span className="text-xs text-gray-400 font-mono uppercase tracking-widest">
+                        <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono uppercase tracking-widest`}>
                           {new Date(message.timestamp).toLocaleTimeString()}
                         </span>
                         {/* Pin indicator for group messages */}
                         {selectedConversationType === 'group' && (message as GroupMessage).is_pinned && (
-                          <div className="flex items-center space-x-1 text-xs text-yellow-400">
+                          <div className={`flex items-center space-x-1 text-xs ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
                             <FontAwesomeIcon icon={faThumbtack} />
                             <span className="font-mono uppercase tracking-widest">PINNED</span>
                           </div>
@@ -849,17 +851,19 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           <FontAwesomeIcon
                             icon={(message as PrivateMessage).read ? faCheckDouble : faCheck}
                             className={`text-xs ${
-                              (message as PrivateMessage).read ? 'text-green-400' : 'text-gray-400'
+                              (message as PrivateMessage).read 
+                                ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
+                                : (theme === 'dark' ? 'text-gray-400' : 'text-gray-600')
                             }`}
                           />
-                          <span className="text-xs font-mono uppercase tracking-widest text-gray-400">
+                          <span className={`text-xs font-mono uppercase tracking-widest ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                             {(message as PrivateMessage).read ? 'DELIVERED' : 'SENT'}
                           </span>
                         </div>
                       )}
                       
                       {isCurrentUser && selectedConversationType === 'group' && (
-                        <div className="flex items-center space-x-2 text-xs text-gray-400">
+                        <div className={`flex items-center space-x-2 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                           <FontAwesomeIcon icon={faCheckDouble} />
                           <span className="font-mono uppercase tracking-widest">
                             READ: {(message as GroupMessage).read_count || 0}/{(message as GroupMessage).total_members || 1}
@@ -888,13 +892,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <div className="text-blue-400 text-xs font-mono uppercase tracking-wider mb-1">
                 REPLYING TO {replyTo.sender_name}
               </div>
-              <div className="text-gray-300 text-sm truncate">
+              <div className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} text-sm truncate`}>
                 {replyTo.content}
               </div>
             </div>
             <button
               onClick={() => setReplyTo && setReplyTo(null)}
-              className="ml-3 text-gray-400 hover:text-white transition-colors"
+              className={`ml-3 ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'} transition-colors`}
               title="Cancel Reply"
             >
               ✕
@@ -910,14 +914,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             }}
             onKeyPress={handleKeyPress}
             placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
-            className="flex-1 bg-black text-white border-2 border-white rounded-none p-3 resize-none focus:outline-none focus:border-blue-400 font-mono shadow-lg"
+            className={`flex-1 ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
             rows={1}
             style={{ minHeight: '48px', maxHeight: '120px' }}
           />
           <button
             onClick={onSendMessage}
             disabled={!newMessage.trim() || sending}
-            className="bg-black text-green-400 border-2 border-green-400 px-6 py-3 rounded-none hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wider"
+            className={`${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white disabled:border-gray-400 disabled:text-gray-400'} border-2 px-6 py-3 rounded-none disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wider`}
           >
             <FontAwesomeIcon icon={sending ? faSpinner : faPaperPlane} className={`mr-2 ${sending ? 'animate-spin' : ''}`} />
             {sending ? 'SENDING...' : 'SEND'}
@@ -928,25 +932,25 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Polls Modal */}
       {showPollModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 font-mono">
-          <div className="bg-black border-2 border-white rounded-none p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-6 border-b-2 border-white pb-4">
-              <h2 className="text-xl font-bold text-white uppercase tracking-wider">Group Polls</h2>
+          <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl`}>
+            <div className={`flex items-center justify-between mb-6 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} pb-4`}>
+              <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'} uppercase tracking-wider`}>Group Polls</h2>
               <button 
                 onClick={() => setShowPollModal(false)} 
-                className="text-white hover:text-red-400 transition-colors text-xl font-mono"
+                className={`${theme === 'dark' ? 'text-white hover:text-red-400' : 'text-black hover:text-red-500'} transition-colors text-xl font-mono`}
               >
                 ✕
               </button>
             </div>
 
             {/* Create Poll Form */}
-            <form onSubmit={handleCreatePoll} className="mb-6 bg-black border border-gray-600 rounded-none p-4">
+            <form onSubmit={handleCreatePoll} className={`mb-6 ${theme === 'dark' ? 'bg-black border-gray-600' : 'bg-white border-gray-400'} border rounded-none p-4`}>
               <div className="text-yellow-400 font-mono uppercase tracking-widest text-xs mb-3">Create New Poll</div>
               <input 
                 value={newPollQuestion} 
                 onChange={e => setNewPollQuestion(e.target.value)}
                 placeholder="Poll question" 
-                className="w-full p-2 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-blue-400 font-mono mb-3" 
+                className={`w-full p-2 ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none focus:outline-none focus:border-blue-400 font-mono mb-3`}
                 required 
               />
               {newPollOptions.map((opt, idx) => (
@@ -959,7 +963,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     setNewPollOptions(arr);
                   }} 
                   placeholder={`Option ${idx + 1}`} 
-                  className="w-full p-2 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-blue-400 font-mono mb-2" 
+                  className={`w-full p-2 ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none focus:outline-none focus:border-blue-400 font-mono mb-2`}
                   required 
                 />
               ))}
@@ -979,7 +983,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <select 
                   value={newPollExpiryHours} 
                   onChange={e => setNewPollExpiryHours(Number(e.target.value))}
-                  className="w-full p-2 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-blue-400 font-mono"
+                  className={`w-full p-2 ${theme === 'dark' ? 'bg-black text-white border-white' : 'bg-white text-black border-black'} border-2 rounded-none focus:outline-none focus:border-blue-400 font-mono`}
                 >
                   <option value={0}>No expiry (permanent)</option>
                   <option value={1}>1 hour</option>
@@ -994,23 +998,23 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <div className="flex space-x-3">
                 <button 
                   type="submit" 
-                  className="px-4 py-2 bg-black text-green-400 border-2 border-green-400 rounded-none hover:bg-green-400 hover:text-black transition-all font-mono uppercase tracking-wider"
+                  className={`px-4 py-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border-2 rounded-none transition-all font-mono uppercase tracking-wider`}
                 >
                   Create Poll
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setShowPollModal(false)}
-                  className="px-4 py-2 bg-black text-red-400 border-2 border-red-400 rounded-none hover:bg-red-400 hover:text-black transition-all font-mono uppercase tracking-wider"
+                  className={`px-4 py-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-500 border-red-500 hover:bg-red-500 hover:text-white'} border-2 rounded-none transition-all font-mono uppercase tracking-wider`}
                 >
                   Cancel
                 </button>
               </div>
             </form>
 
-            <div className="text-center text-gray-400 font-mono text-sm">
-              <div className="border border-gray-600 bg-gray-900/50 p-4 rounded-none">
-                <div className="text-yellow-400 mb-2">📊 POLL CREATION</div>
+            <div className={`text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono text-sm`}>
+              <div className={`border ${theme === 'dark' ? 'border-gray-600 bg-gray-900/50' : 'border-gray-400 bg-gray-100/50'} p-4 rounded-none`}>
+                <div className={`${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} mb-2`}>📊 POLL CREATION</div>
                 <div className="text-xs uppercase tracking-wider">
                   Created polls will appear as message artifacts in the chat
                 </div>

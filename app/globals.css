@@ -4,14 +4,16 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
+  --card-bg: #ffffff;
+  --border-color: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card-bg: #000000;
+  --border-color: #ffffff;
 }
 
 body {
