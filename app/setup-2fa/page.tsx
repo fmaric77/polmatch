@@ -98,8 +98,8 @@ export default function SetupTwoFactor() {
 
       const data = await response.json();
       if (data.success) {
-        // Redirect to home page after successful setup
-        router.replace('/');
+        // Redirect to frontpage after successful forced 2FA setup
+        router.replace('/frontpage');
       } else {
         setError(data.message || 'Invalid verification code');
       }
