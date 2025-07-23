@@ -480,6 +480,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                                 <option value="year">Year</option>
                                 <option value="email">Email</option>
                                 <option value="url">URL</option>
+                                <option value="countryofcurrentresidence">Current Country of Residence</option>
                               </select>
 
                               <label className="flex items-center">
@@ -673,6 +674,7 @@ export default function ManageQuestionnaireGroup({ params }: { params: Promise<{
                                 <option value="year">Year</option>
                                 <option value="email">Email</option>
                                 <option value="url">URL</option>
+                                <option value="countryofcurrentresidence">Current Country of Residence</option>
                               </select>
                               <label className="flex items-center">
                                 <input
