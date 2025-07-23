@@ -26,7 +26,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!profileType || !['basic', 'love', 'business'].includes(profileType)) {
       return NextResponse.json({ 
         success: false, 
-        message: 'Valid profile_type parameter is required (basic, love, or business)' 
+        options: { $exists: true, $ne: [] },
       }, { status: 400 });
     }
 

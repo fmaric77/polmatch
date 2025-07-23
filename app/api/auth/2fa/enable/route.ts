@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const sessionToken = cookieStore.get('session')?.value;
     
     if (!sessionToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.redirect(new URL('/', req.nextUrl), 302);
     }
 
     const { code, forced } = await req.json();
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     
     if (!session) {
       await client.close();
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+      return NextResponse.redirect(new URL('/', req.nextUrl), 302);
     }
 
     const user = await db.collection('users').findOne({ 
@@ -105,6 +105,13 @@ export async function POST(req: NextRequest) {
         }
       }
     );
+
+    // If this is forced 2FA, delete all user sessions to log them out from all devices
+    if (forced) {
+      await db.collection('sessions').deleteMany({
+        user_id: session.user_id
+      });
+    }
 
     await client.close();
 

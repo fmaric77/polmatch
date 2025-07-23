@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Navigation from '../../components/Navigation';
 import Friends from '../../components/Friends';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import countries from '../utils/countries';
 import MessageExpirySettings from '../../components/MessageExpirySettings';
 import TwoFactorSettings from '../../components/TwoFactorSettings';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -502,6 +503,20 @@ export default function ProfilePage() {
           </div>
         );
       
+      case 'countryofcurrentresidence':
+        return (
+          <select
+            value={answers[question.question_id] || ''}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+          >
+            <option value="" disabled>Select your country</option>
+            {countries.map((country) => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        );
       default:
         return (
           <input
