@@ -2,6 +2,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson'; // Import GeoJSON types
 import { useTheme } from './ThemeProvider';
+import { useRouter } from 'next/navigation';
 
 // Dynamically import react-globe.gl to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -21,6 +22,7 @@ interface CountryStatsResponse {
 
 export default function WorldMap() {
   const { theme } = useTheme();
+  const router = useRouter();
   const [continents, setContinents] = useState<Feature<Geometry, GeoJsonProperties>[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -224,8 +226,10 @@ export default function WorldMap() {
             name = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
           }
           if (name) {
-            alert(`Clicked: ${name}`);
-            console.log("WorldMap: Clicked on polygon:", feature);
+            // Navigate to search page with country filter applied
+            // Open '/profile' listing filtered by country (aliasing to search page)
+            router.push(`/search?country=${encodeURIComponent(name)}`);
+            console.log("WorldMap: Navigating to search for country:", name);
           }
         }}
         polygonsTransitionDuration={300}
