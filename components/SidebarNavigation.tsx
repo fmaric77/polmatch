@@ -54,7 +54,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       isMobile ? (isSidebarVisible ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
     }`}>
       {/* Header */}
-      <div className={`border-b ${theme === 'dark' ? 'border-white bg-white/5' : 'border-black bg-black/5'} p-2`}>
+      <div className={`border-b ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} p-2`}>
       </div>
       
       <div className="p-2 space-y-2">

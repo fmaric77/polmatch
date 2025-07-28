@@ -126,18 +126,18 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
 
   if (!isConversationsSidebarHidden) {
     return (
-      <div className={`${isMobile ? 'fixed left-20 top-0 z-40 h-full' : ''} w-80 ${theme === 'dark' ? 'bg-black/40 border-white/30' : 'bg-white/40 border-black/30'} border rounded-lg flex flex-col h-full transition-transform duration-300 ${
+      <div className={`${isMobile ? 'fixed left-20 top-0 z-40 h-full' : ''} w-80 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-lg flex flex-col h-full transition-transform duration-300 ${
         isMobile ? (isConversationsSidebarHidden ? '-translate-x-full' : 'translate-x-0') : 'translate-x-0'
       }`}>
         {/* Header */}
-        <div className={`border-b ${theme === 'dark' ? 'border-white/30 bg-white/5 text-white' : 'border-black/30 bg-black/5 text-black'} p-3 text-center`}>
-          <h1 className="text-lg font-bold tracking-wider uppercase">
-            {selectedCategory === 'direct' ? 'Messages' : 'Groups'}
-          </h1>
+        <div className={`border-b ${theme === 'dark' ? 'border-white bg-black text-white' : 'border-black bg-white text-black'} p-3 text-center`}>
+          <h2 className="text-lg font-bold font-mono">
+            {selectedCategory === 'direct' ? 'DIRECT MESSAGES' : 'GROUPS'}
+          </h2>
         </div>
 
         {/* Control Panel */}
-        <div className={`p-4 border-b ${theme === 'dark' ? 'border-white/30 bg-black/40' : 'border-black/30 bg-white/40'}`}>
+        <div className={`p-4 border-b ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <FontAwesomeIcon 
@@ -256,11 +256,11 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
         </div>
 
         {/* Communications List */}
-        <div className="flex-1 overflow-y-auto bg-black/20">
+        <div className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
           {(() => {
             if (filteredConversations.length === 0 && allConversationsForCategory.length > 0) {
               return (
-                <div className="p-6 text-center border border-white/30 bg-black/40 m-4 rounded">
+                <div className={`p-6 text-center border ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} m-4 rounded`}>
                   <div className="font-mono text-gray-400 mb-2 uppercase tracking-wider">
                     No {selectedCategory === 'direct' ? 'messages' : 'groups'} found
                   </div>
@@ -273,7 +273,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
             
             if (allConversationsForCategory.length === 0) {
               return (
-                <div className="p-6 text-center border border-white/30 bg-black/40 m-4 rounded">
+                <div className={`p-6 text-center border ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} m-4 rounded`}>
                   <div className="font-mono text-gray-400 mb-2 uppercase tracking-wider">
                     No {selectedCategory === 'direct' ? 'messages' : 'groups'} yet
                   </div>
@@ -295,14 +295,14 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                   if (isMobile) setIsSidebarVisible(false);
                 }}
                 onContextMenu={e => onConversationContextMenu(e, conversation)}
-                className={`mx-4 my-2 border border-white/30 bg-black/40 hover:bg-black/60 transition-colors cursor-pointer rounded ${
-                  selectedConversation === conversation.id ? 'bg-white/10 border-white' : ''
-                }`}
+                              className={`mx-4 my-2 border ${theme === 'dark' ? 'border-white bg-black hover:bg-gray-800' : 'border-black bg-white hover:bg-gray-200'} transition-colors cursor-pointer rounded ${
+              selectedConversation === conversation.id ? (theme === 'dark' ? 'bg-gray-800 border-white' : 'bg-gray-200 border-black') : ''
+            }`}
               >
                 <div className="p-3">
                   <div className="flex items-start space-x-3">
                     {/* Avatar/Icon Section */}
-                    <div className="border border-white/30 bg-black/60 p-2 flex-shrink-0 rounded relative">
+                    <div className={`border ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} p-2 flex-shrink-0 rounded relative`}>
                       {conversation.type === 'direct' && conversation.user_id ? (
                         <>
                           <ProfileAvatar userId={conversation.user_id} size={32} />
