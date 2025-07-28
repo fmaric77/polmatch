@@ -170,6 +170,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }
     }
 
+    // Check if all questions are answered (for completion status)
+    const totalQuestions = questions.length;
+    const answeredQuestions = answers.filter(answer => answer.answer && answer.answer.trim() !== '').length;
+    const isCompleted = answeredQuestions === totalQuestions;
+
     // Delete existing answers for this questionnaire
     await db.collection('user_questionnaire_answers').deleteMany({
       user_id: session.user_id,
@@ -191,7 +196,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       await db.collection('user_questionnaire_answers').insertMany(answerDocuments);
     }
 
-    // Update user's completed questionnaires in profile
+    // Update user's completed questionnaires in profile only if truly completed
     const questionnaireGroup = await db.collection('questionnaire_groups').findOne({
       group_id: questionnaire.group_id
     });
@@ -200,41 +205,68 @@ export async function POST(req: NextRequest, context: RouteContext) {
       const profileType = questionnaireGroup.profile_type;
       const collectionName = `${profileType}profiles`;
       
-      await db.collection(collectionName).updateOne(
-        { user_id: session.user_id },
-        { 
-          $set: { 
-            [`completed_questionnaires.${questionnaireId}`]: true,
-            last_updated: new Date().toISOString()
-          }
-        },
-        { upsert: true }
-      );
+      if (isCompleted) {
+        // Mark as completed only when all questions are answered
+        await db.collection(collectionName).updateOne(
+          { user_id: session.user_id },
+          { 
+            $set: { 
+              [`completed_questionnaires.${questionnaireId}`]: true,
+              last_updated: new Date().toISOString()
+            }
+          },
+          { upsert: true }
+        );
+      } else {
+        // Remove from completed questionnaires if not fully completed
+        await db.collection(collectionName).updateOne(
+          { user_id: session.user_id },
+          { 
+            $unset: { 
+              [`completed_questionnaires.${questionnaireId}`]: 1
+            },
+            $set: {
+              last_updated: new Date().toISOString()
+            }
+          },
+          { upsert: true }
+        );
+      }
 
-      // Add to searchable answers for profile matching
-      const searchableAnswers = answers.map(answer => ({
-        question_id: answer.question_id,
-        answer_value: answer.answer,
-        user_id: session.user_id,
-        questionnaire_id: questionnaireId,
-        profile_type: profileType
-      }));
+      // Add to searchable answers for profile matching only if completed
+      if (isCompleted) {
+        const searchableAnswers = answers.map(answer => ({
+          question_id: answer.question_id,
+          answer_value: answer.answer,
+          user_id: session.user_id,
+          questionnaire_id: questionnaireId,
+          profile_type: profileType
+        }));
 
-      // Remove existing searchable answers for this questionnaire
-      await db.collection('searchable_questionnaire_answers').deleteMany({
-        user_id: session.user_id,
-        questionnaire_id: questionnaireId
-      });
+        // Remove existing searchable answers for this questionnaire
+        await db.collection('searchable_questionnaire_answers').deleteMany({
+          user_id: session.user_id,
+          questionnaire_id: questionnaireId
+        });
 
-      // Add new searchable answers
-      if (searchableAnswers.length > 0) {
-        await db.collection('searchable_questionnaire_answers').insertMany(searchableAnswers);
+        // Add new searchable answers
+        if (searchableAnswers.length > 0) {
+          await db.collection('searchable_questionnaire_answers').insertMany(searchableAnswers);
+        }
+      } else {
+        // Remove from searchable answers if not completed
+        await db.collection('searchable_questionnaire_answers').deleteMany({
+          user_id: session.user_id,
+          questionnaire_id: questionnaireId
+        });
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Questionnaire completed successfully' 
+      message: isCompleted 
+        ? 'Questionnaire completed successfully!' 
+        : `Progress saved! You have answered ${answeredQuestions} out of ${totalQuestions} questions. Complete all questions to finish the questionnaire.`
     });
 
   } catch (error) {

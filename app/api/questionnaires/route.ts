@@ -76,18 +76,40 @@ export async function GET(request: NextRequest) {
       { $sort: { creation_date: 1 } }
     ]).toArray();
 
-    // Get user's completed questionnaires
-    const completedQuestionnaires = await db.collection('user_questionnaire_answers').aggregate([
-      { $match: { user_id: session.user_id } },
-      { $group: { _id: '$questionnaire_id' } }
+    // Get user's completed questionnaires - properly check if ALL questions are answered
+    const userAnswers = await db.collection('user_questionnaire_answers').find({
+      user_id: session.user_id
+    }).toArray();
+
+    // Group answers by questionnaire_id and count them
+    const answerCounts = new Map();
+    userAnswers.forEach(answer => {
+      if (answer.answer && answer.answer.trim() !== '') {
+        const count = answerCounts.get(answer.questionnaire_id) || 0;
+        answerCounts.set(answer.questionnaire_id, count + 1);
+      }
+    });
+
+    // Get question counts for each questionnaire
+    const allQuestionnaires = questionnaireGroups.flatMap(group => group.questionnaires);
+    const questionnaireIds = allQuestionnaires.map(q => q.questionnaire_id);
+    
+    const questionCounts = await db.collection('questions').aggregate([
+      { $match: { questionnaire_id: { $in: questionnaireIds } } },
+      { $group: { _id: '$questionnaire_id', count: { $sum: 1 } } }
     ]).toArray();
 
-    const completedIds = new Set(completedQuestionnaires.map(item => item._id));
+    const questionCountMap = new Map();
+    questionCounts.forEach(item => {
+      questionCountMap.set(item._id, item.count);
+    });
 
-    // Mark completed questionnaires
+    // Mark completed questionnaires - only if all questions are answered
     questionnaireGroups.forEach(group => {
       group.questionnaires.forEach((questionnaire: { questionnaire_id: string; completed?: boolean }) => {
-        questionnaire.completed = completedIds.has(questionnaire.questionnaire_id);
+        const answeredCount = answerCounts.get(questionnaire.questionnaire_id) || 0;
+        const totalQuestions = questionCountMap.get(questionnaire.questionnaire_id) || 0;
+        questionnaire.completed = answeredCount === totalQuestions && totalQuestions > 0;
       });
     });
 

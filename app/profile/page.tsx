@@ -427,14 +427,25 @@ export default function ProfilePage() {
       const data = await res.json();
       
       if (data.success) {
-        setSubmitMessage('Questionnaire completed successfully!');
-        setTimeout(() => {
-          setActiveQuestionnaire(null);
-          setAnswers({});
-          setAnswerVisibility({});
-          setSubmitMessage('');
-          fetchQuestionnaires();
-        }, 1500);
+        setSubmitMessage(data.message);
+        
+        // Only close the form and clear answers if the questionnaire is truly completed
+        const isCompleted = data.message.includes('completed successfully');
+        
+        if (isCompleted) {
+          setTimeout(() => {
+            setActiveQuestionnaire(null);
+            setAnswers({});
+            setAnswerVisibility({});
+            setSubmitMessage('');
+            fetchQuestionnaires();
+          }, 1500);
+        } else {
+          // For partial saves, just clear the message after showing it
+          setTimeout(() => {
+            setSubmitMessage('');
+          }, 3000);
+        }
       } else {
         setSubmitMessage(data.message || 'Failed to submit questionnaire');
       }
@@ -456,7 +467,8 @@ export default function ProfilePage() {
     const value = answers[question.question_id] || '';
     
     switch (question.question_type) {
-      case 'multiple_choice':
+      case 'radio':
+      case 'multiple_choice': // Keep backward compatibility
         return (
           <div className="space-y-2">
             {question.options.map((option, idx) => (
@@ -474,6 +486,21 @@ export default function ProfilePage() {
               </label>
             ))}
           </div>
+        );
+      
+      case 'select':
+        return (
+          <select
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+          >
+            <option value="" disabled>Select an option</option>
+            {question.options.map((option, idx) => (
+              <option key={idx} value={option}>{option}</option>
+            ))}
+          </select>
         );
       
       case 'checkbox':
@@ -503,6 +530,67 @@ export default function ProfilePage() {
           </div>
         );
       
+      case 'textarea':
+        return (
+          <textarea
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors min-h-[100px] resize-vertical"
+            required={question.is_required}
+            placeholder="Enter your answer"
+          />
+        );
+      
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+            placeholder="Enter a number"
+          />
+        );
+      
+      case 'year':
+        return (
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+            placeholder="Enter a year (e.g., 1990)"
+            min="1900"
+            max="2100"
+          />
+        );
+      
+      case 'email':
+        return (
+          <input
+            type="email"
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+            placeholder="Enter your email address"
+          />
+        );
+      
+      case 'url':
+        return (
+          <input
+            type="url"
+            value={value}
+            onChange={(e) => handleAnswerChange(question.question_id, e.target.value)}
+            className="w-full p-3 bg-white dark:bg-black text-black dark:text-white border-2 border-black dark:border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
+            required={question.is_required}
+            placeholder="Enter a URL (e.g., https://example.com)"
+          />
+        );
+      
       case 'countryofcurrentresidence':
         return (
           <select
@@ -517,6 +605,8 @@ export default function ProfilePage() {
             ))}
           </select>
         );
+      
+      case 'text':
       default:
         return (
           <input
@@ -602,13 +692,13 @@ export default function ProfilePage() {
                     disabled={submitting}
                     className="px-4 sm:px-6 py-2 sm:py-3 bg-black dark:bg-white text-white dark:text-black rounded-none hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
                   >
-                    {submitting ? 'Submitting...' : 'Submit Questionnaire'}
+                    {submitting ? 'Saving...' : 'Save Progress'}
                   </button>
                 </div>
 
                 {submitMessage && (
-                  <div className={`text-center mt-4 ${submitMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>
-                    {submitMessage.includes('success') ? 'Questionnaire submitted successfully!' : 'Failed to submit questionnaire'}
+                  <div className={`text-center mt-4 ${submitMessage.includes('success') || submitMessage.includes('Progress saved') ? 'text-green-400' : 'text-red-400'}`}>
+                    {submitMessage}
                   </div>
                 )}
               </form>
