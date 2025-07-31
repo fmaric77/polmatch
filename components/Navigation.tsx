@@ -46,11 +46,11 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
   const handleLogout = async () => {
     try {
       await protectedFetch('/api/logout', { method: 'POST' });
-      window.location.href = '/';
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout failed:', error);
       // Even if logout fails, redirect to login page
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   };
 

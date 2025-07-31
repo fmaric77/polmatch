@@ -151,8 +151,8 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-      <div className={`${theme === 'dark' ? 'bg-black border-white/30' : 'bg-white border-black/30'} border rounded-lg w-full max-w-md max-h-[80vh] flex flex-col`}>
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+      <div className={`${theme === 'dark' ? 'bg-black border-white/30' : 'bg-white border-black/30'} border rounded-lg w-full max-w-lg h-[600px] max-h-[90vh] flex flex-col shadow-2xl`}>
         {/* Header */}
         <div className={`border-b ${theme === 'dark' ? 'border-white/30 bg-white/5' : 'border-black/30 bg-black/5'} p-4`}>
           <div className="flex items-center justify-between">
@@ -166,11 +166,11 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
           </div>
         </div>
 
-        <div className={`p-4 space-y-4 flex-1 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
+        <div className={`p-4 space-y-4 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
           {/* Profile Context Info */}
           <div className={`${theme === 'dark' ? 'bg-white/5 border-white/30' : 'bg-black/5 border-black/30'} border p-3 rounded-lg`}>
             <div className={`text-sm text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Select a user to message
+              Select a user to message ({filteredUsers.length} available)
             </div>
           </div>
 
@@ -199,28 +199,39 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
               </div>
 
               {/* Users List */}
-              <div className={`flex-1 min-h-0 border ${theme === 'dark' ? 'border-white/30 bg-white/5' : 'border-black/30 bg-black/5'} rounded-lg p-3`}>
-                <div className="h-full overflow-y-auto space-y-2">
+              <div className={`border ${theme === 'dark' ? 'border-white/30 bg-white/5' : 'border-black/30 bg-black/5'} rounded-lg overflow-hidden h-80`}>
+                <div className="h-full overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
                   {filteredUsers.length === 0 ? (
-                    <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
-                      {searchQuery ? 'No matching users found' : `No ${getProfileLabel(receiverProfileType).toLowerCase()} users available`}
+                    <div className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-center py-8`}>
+                      <div className="mb-2">
+                        {searchQuery ? '🔍 No matching users found' : `👤 No ${getProfileLabel(receiverProfileType).toLowerCase()} users available`}
+                      </div>
+                      <div className="text-xs opacity-70">
+                        {searchQuery ? 'Try a different search term' : 'Check back later for new members'}
+                      </div>
                     </div>
                   ) : (
-                    filteredUsers.map((user) => (
-                      <button
-                        key={user.user_id}
-                        onClick={() => handleUserSelect(user)}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                          selectedUser?.user_id === user.user_id
-                            ? theme === 'dark'
-                              ? 'bg-white text-black border-white'
-                              : 'bg-black text-white border-black'
-                            : theme === 'dark'
-                              ? 'bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/60'
-                              : 'bg-transparent text-black border-black/30 hover:bg-black/10 hover:border-black/60'
-                        }`}
-                        disabled={loading}
-                      >
+                    <>
+                      {filteredUsers.length > 5 && (
+                        <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} text-center pb-2 border-b ${theme === 'dark' ? 'border-white/10' : 'border-black/10'} mb-2`}>
+                          💬 {filteredUsers.length} users available • Scroll to see all
+                        </div>
+                      )}
+                      {filteredUsers.map((user) => (
+                        <button
+                          key={user.user_id}
+                          onClick={() => handleUserSelect(user)}
+                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                            selectedUser?.user_id === user.user_id
+                              ? theme === 'dark'
+                                ? 'bg-white text-black border-white'
+                                : 'bg-black text-white border-black'
+                              : theme === 'dark'
+                                ? 'bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/60'
+                                : 'bg-transparent text-black border-black/30 hover:bg-black/10 hover:border-black/60'
+                          }`}
+                          disabled={loading}
+                        >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="text-gray-400">
@@ -239,8 +250,9 @@ const NewDMModal: React.FC<NewDMModalProps> = ({
                             {user.visibility === 'friends' ? 'Friends only' : 'Public'}
                           </div>
                         </div>
-                      </button>
-                    ))
+                        </button>
+                      ))}
+                    </>
                   )}
                 </div>
               </div>

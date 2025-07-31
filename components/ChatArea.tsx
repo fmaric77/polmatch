@@ -436,28 +436,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <FontAwesomeIcon icon={faBars} />
               </button>
               
-              {/* Conversations Toggle (only show if conversations are hidden) */}
-              {isConversationsSidebarHidden && (
-                <button
-                  onClick={() => setIsConversationsSidebarHidden(false)}
-                  className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
-                  title="SHOW CONVERSATIONS"
-                >
-                  <FontAwesomeIcon icon={faEnvelope} />
-                </button>
-              )}
             </div>
-          )}
-
-          {/* Desktop Conversations Toggle - Always show if conversations are hidden */}
-          {!isMobile && isConversationsSidebarHidden && (
-            <button
-              onClick={() => setIsConversationsSidebarHidden(false)}
-              className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono uppercase tracking-wider`}
-              title="SHOW CONVERSATIONS"
-            >
-              <FontAwesomeIcon icon={faEnvelope} />
-            </button>
           )}
 
           {/* Conversation Info */}

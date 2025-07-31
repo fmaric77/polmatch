@@ -171,7 +171,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const getMenuItems = (): ContextMenuItem[] => {
     switch (contextMenu.type) {
       case 'message': {
-        const message = contextMenu.extra as { content?: string; sender_id?: string; is_pinned?: boolean; channel_id?: string; [key: string]: unknown };
+        const message = contextMenu.extra as { 
+          content?: string; 
+          sender_id?: string; 
+          is_pinned?: boolean; 
+          channel_id?: string;
+          sender_display_name?: string;
+          sender_profile_data?: {
+            display_name: string;
+            profile_picture_url: string;
+          };
+          [key: string]: unknown; 
+        };
         const isOwnMessage = currentUser?.user_id === message?.sender_id;
         
         // Check if user can pin messages (only in group conversations, and only if user is owner/admin)
@@ -188,10 +199,21 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             color: 'text-blue-400',
             onClick: () => {
               if (messages.setReplyTo && message.content) {
-                // Get sender name from message - NEVER use username for group messages
-                const messageWithSender = message as { sender_display_name?: string; sender_username?: string; sender_id?: string };
-                const senderName = messageWithSender.sender_display_name || 
-                                 '[NO PROFILE NAME]';
+                let senderName = '[NO PROFILE NAME]';
+                
+                if (selectedConversationType === 'direct') {
+                  // For direct messages, use conversation name (which is the other user's display name)
+                  const conversation = conversations.conversations.find(conv => conv.id === selectedConversation);
+                  if (conversation?.name && conversation.name !== 'Unknown Contact') {
+                    senderName = conversation.name;
+                  } else if (message.sender_profile_data?.display_name) {
+                    // Fallback to profile data for profile-specific direct messages
+                    senderName = message.sender_profile_data.display_name;
+                  }
+                } else {
+                  // For group messages, use sender_display_name
+                  senderName = message.sender_display_name || '[NO PROFILE NAME]';
+                }
                 
                 messages.setReplyTo({
                   id: contextMenu.id,
@@ -331,8 +353,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               label: 'Delete Group',
               icon: faTrash,
               color: 'text-red-500',
-              onClick: () => {
-                conversations.deleteConversation(contextMenu.id);
+              onClick: async () => {
+                await conversations.deleteConversation(contextMenu.id);
+                setContextMenu(null);
               }
             });
           } else {
@@ -342,8 +365,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               label: 'Leave Group',
               icon: faSignOutAlt,
               color: 'text-orange-500',
-              onClick: () => {
-                conversations.leaveGroup(contextMenu.id);
+              onClick: async () => {
+                await conversations.leaveGroup(contextMenu.id);
+                setContextMenu(null);
               }
             });
           }
@@ -357,8 +381,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               label: 'Delete Conversation',
               icon: faTrash,
               color: 'text-red-500',
-              onClick: () => {
-                conversations.deleteConversation(contextMenu.id);
+              onClick: async () => {
+                await conversations.deleteConversation(contextMenu.id);
+                setContextMenu(null);
               }
             }
           ];

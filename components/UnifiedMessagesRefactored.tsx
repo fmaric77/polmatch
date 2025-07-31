@@ -7,7 +7,7 @@ import type { ProfileMessage } from './hooks/useProfileMessaging';
 import { useGroupManagement } from './hooks/useGroupManagement';
 import { useModalStates } from './hooks/useModalStates';
 import { useMessages } from './hooks/useMessages';
-import { useUserStatus } from './hooks/useUserStatus';
+import { useUserStatus, UserStatus } from './hooks/useUserStatus';
 import { VoiceCallEventData } from './hooks/useWebSocket';
 import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
@@ -143,8 +143,8 @@ const UnifiedMessages: React.FC = () => {
   // Profile separation state
   const [activeProfileType, setActiveProfileType] = useState<ProfileType>('basic');
   
-  // Navigation state
-  const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups'>('direct');
+  // Navigation state - unified messaging only
+  const [selectedCategory, setSelectedCategory] = useState<'direct' | 'groups' | 'unified'>('unified');
   const [selectedConversation, setSelectedConversation] = useState<string>('');
   const [selectedConversationType, setSelectedConversationType] = useState<'direct' | 'group'>('direct');
   const [selectedChannel, setSelectedChannel] = useState<string>('');
@@ -157,6 +157,7 @@ const UnifiedMessages: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isConversationsSidebarHidden, setIsConversationsSidebarHidden] = useState(false);
+  const [isMainSidebarMinimized, setIsMainSidebarMinimized] = useState(false);
 
   // Message input state
   const [newMessage, setNewMessage] = useState('');
@@ -194,7 +195,7 @@ const UnifiedMessages: React.FC = () => {
   const userStatus = useUserStatus(currentUser);
 
   // Custom hooks that depend on currentUser
-  const conversations = useConversations(currentUser, activeProfileType, selectedCategory === 'groups' ? 'groups' : 'all');
+  const conversations = useConversations(currentUser, activeProfileType, 'all'); // Always fetch all for unified view
   const profileConversations = useProfileConversations(activeProfileType);
   const profileMessages = useProfileMessages(activeProfileType);
   const groupManagement = useGroupManagement(currentUser, activeProfileType);
@@ -390,8 +391,8 @@ const UnifiedMessages: React.FC = () => {
           ((data.sender_id === selectedConversation && data.receiver_id === currentUser?.user_id) ||
            (data.sender_id === currentUser?.user_id && data.receiver_id === selectedConversation))) {
         
-        // If we're viewing profile conversations, use profile messages
-        if (selectedCategory === 'direct') {
+        // Always use profile messages for direct messages (both direct and unified views)
+        if (selectedCategory === 'direct' || selectedCategory === 'unified') {
           // Add the message directly to profile messages state for instant display
           const newProfileMessage: ProfileMessage = {
             _id: data.message_id,
@@ -733,9 +734,9 @@ const UnifiedMessages: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]); // Only depend on currentUser to prevent infinite loops
 
-  // Fetch profile conversations when profile type changes - ONLY for direct messages
+  // Fetch profile conversations when profile type changes - for both direct and unified views
   useEffect(() => {
-    if (currentUser && selectedCategory === 'direct') {
+    if (currentUser && (selectedCategory === 'direct' || selectedCategory === 'unified')) {
       console.log('🔄 Fetching profile conversations for category:', selectedCategory, 'profile:', activeProfileType);
       profileConversations.fetchConversations();
     }
@@ -752,16 +753,11 @@ const UnifiedMessages: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileType, currentUser]);
 
-  // Clear selected group/channel when profile type changes and we're in groups category
+  // Refresh groups and invitations when profile type changes (unified view)
   useEffect(() => {
-    if (selectedCategory === 'groups') {
-      console.log('🔧 Profile type changed in groups, clearing selected group/channel');
-      setSelectedConversation('');
-      setSelectedConversationType('direct');
-      setSelectedChannel('');
-      setReplyTo(null);
-      // Clear any loading states
-      messages.setContextSwitchLoading(false);
+    if (selectedCategory === 'unified') {
+      console.log('🔧 Profile type changed in unified view, refreshing groups and invitations for profile:', activeProfileType);
+      
       // Refresh groups and invitations for the new profile type
       conversations.fetchConversations();
       groupManagement.fetchInvitations();
@@ -790,12 +786,13 @@ const UnifiedMessages: React.FC = () => {
 
   // Clear and refetch messages when profile type changes for selected conversation
   useEffect(() => {
-    if (currentUser && selectedConversation && selectedConversationType === 'direct' && selectedCategory === 'direct' && !profileMessages.loading) {
+    if (currentUser && selectedConversation && selectedConversationType === 'direct' && !profileMessages.loading) {
       // Fetch messages for the new profile type (clearing is handled by the hook)
+      console.log('🔄 Profile type changed, refetching direct messages for:', selectedConversation, 'profile:', activeProfileType);
       profileMessages.fetchMessages(selectedConversation);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfileType, selectedConversation, selectedConversationType, selectedCategory]); // Removed currentUser dependency to reduce re-renders
+  }, [activeProfileType, selectedConversation, selectedConversationType]); // Removed selectedCategory dependency
 
   // Handle conversation selection
   const selectConversation = useCallback((conversation: Conversation) => {
@@ -815,15 +812,12 @@ const UnifiedMessages: React.FC = () => {
         messages.setContextSwitchLoading(false);
       });
     } else {
-      // For direct messages, fetch using appropriate hook
-      if (selectedCategory === 'direct') {
-        profileMessages.fetchMessages(conversation.id);
-      } else {
-        messages.fetchMessages(conversation.id, conversation.type);
-      }
+      // For direct messages, always use profile messages hook
+      console.log('📥 Fetching direct messages for user:', conversation.id);
+      profileMessages.fetchMessages(conversation.id);
       messages.setContextSwitchLoading(false);
     }
-  }, [messages, groupManagement]);
+  }, [messages, groupManagement, profileMessages]);
 
   // Memoized callback for fetching available users to prevent infinite re-renders
   const handleFetchAvailableUsers = useCallback(() => {
@@ -839,16 +833,10 @@ const UnifiedMessages: React.FC = () => {
     
     const dmUserId = searchParams.get('user');
     const profileParam = searchParams.get('profile') as ProfileType;
-    const categoryParam = searchParams.get('category') as 'direct' | 'groups';
     
     // Set profile type from URL parameter if provided
     if (profileParam && ['basic', 'love', 'business'].includes(profileParam)) {
       setActiveProfileType(profileParam);
-    }
-    
-    // Set category from URL parameter if provided
-    if (categoryParam && ['direct', 'groups'].includes(categoryParam)) {
-      setSelectedCategory(categoryParam);
     }
     
     if (dmUserId) {
@@ -858,8 +846,6 @@ const UnifiedMessages: React.FC = () => {
           pc => pc.other_user.user_id === dmUserId
         );
         if (targetConversation) {
-          // Set category to direct to use profile conversations
-          setSelectedCategory('direct');
           selectConversation({
             id: targetConversation.other_user.user_id,
             name: targetConversation.other_user.display_name || targetConversation.other_user.username,
@@ -1029,6 +1015,11 @@ const UnifiedMessages: React.FC = () => {
 
   // Send message handler
   const handleSendMessage = useCallback(async () => {
+    // Prevent empty messages or rapid double-clicks
+    if (!newMessage.trim() || profileMessages.sending || messages.sending) {
+      return;
+    }
+    
     // Check for /poll command first
     if (selectedConversationType === 'group') {
       const pollCommand = parsePollCommand(newMessage);
@@ -1057,14 +1048,14 @@ const UnifiedMessages: React.FC = () => {
     });
     
     // Use profile messages for direct conversations, regular messages for groups
-    if (selectedConversationType === 'direct' && selectedCategory === 'direct') {
-      console.log('📨 Using profileMessages.sendMessage');
+    if (selectedConversationType === 'direct') {
+      console.log('📨 Using profileMessages.sendMessage for direct message');
       success = await profileMessages.sendMessage(selectedConversation, newMessage, replyTo || undefined);
     } else if (selectedConversationType === 'group') {
-      console.log('📨 Using messages.sendMessage with profile type for group');
+      console.log('📨 Using messages.sendMessage for group message');
       success = await messages.sendMessage(newMessage, replyTo || undefined);
     } else {
-      console.log('📨 Using messages.sendMessage');
+      console.log('📨 Fallback to messages.sendMessage');
       success = await messages.sendMessage(newMessage, replyTo || undefined);
     }
     
@@ -1315,27 +1306,47 @@ const UnifiedMessages: React.FC = () => {
         isMobile={isMobile}
         isSidebarVisible={isSidebarVisible}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
-        activeProfileType={activeProfileType}
+        isMinimized={isMainSidebarMinimized}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
-        onNewAction={() => selectedCategory === 'direct' ? modals.openModal('showNewDMModal') : modals.openModal('showCreateGroupModal')}
+        setIsMinimized={setIsMainSidebarMinimized}
         onInvitationsClick={() => modals.openModal('showInvitationsModal')}
-        onProfileTypeChange={setActiveProfileType}
       />
 
       {/* Conversations list */}
       <ConversationsList
         conversations={
-          selectedCategory === 'direct' 
-            ? profileConversations.conversations.map(pc => ({
-                id: pc.other_user.user_id,
-                name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
-                type: 'direct' as const,
-                last_message: pc.latest_message?.content,
-                last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
-                unread_count: 0,
-                user_id: pc.other_user.user_id,
-              }))
-            : conversations.conversations.filter(c => c.type === 'group')
+          selectedCategory === 'unified' 
+            ? (() => {
+                // Get direct conversations from profile conversations
+                const directConversations = profileConversations.conversations.map(pc => ({
+                  id: pc.other_user.user_id,
+                  name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
+                  type: 'direct' as const,
+                  last_message: pc.latest_message?.content,
+                  last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
+                  unread_count: 0,
+                  user_id: pc.other_user.user_id,
+                }));
+                
+                // Get group conversations (filter out any direct conversations to avoid duplicates)
+                const groupConversations = conversations.conversations.filter(c => c.type === 'group');
+                
+                // Combine and sort by activity
+                return [...directConversations, ...groupConversations].sort((a, b) => 
+                  new Date(b.last_activity || 0).getTime() - new Date(a.last_activity || 0).getTime()
+                );
+              })()
+            : selectedCategory === 'direct' 
+              ? profileConversations.conversations.map(pc => ({
+                  id: pc.other_user.user_id,
+                  name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
+                  type: 'direct' as const,
+                  last_message: pc.latest_message?.content,
+                  last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
+                  unread_count: 0,
+                  user_id: pc.other_user.user_id,
+                }))
+              : conversations.conversations.filter(c => c.type === 'group')
         }
         selectedCategory={selectedCategory}
         selectedConversation={selectedConversation}
@@ -1343,10 +1354,8 @@ const UnifiedMessages: React.FC = () => {
         setSearchQuery={setSearchQuery}
         onSelectConversation={selectConversationWithReset}
         onConversationContextMenu={handleConversationContextMenu}
-        isMobile={isMobile}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
-        setIsSidebarVisible={setIsSidebarVisible}
         // SSE status props
         isConnected={isConnected}
         connectionError={connectionError}
@@ -1360,7 +1369,16 @@ const UnifiedMessages: React.FC = () => {
         invitationSummary={groupManagement.invitationSummary}
         // Status props
         getUserStatus={userStatus.getUserStatus}
-        onStatusChange={userStatus.updateStatus}
+        onStatusChange={async (userId: string, status: UserStatus, customMessage?: string) => {
+          // Only allow changing the current user's status
+          if (userId === currentUser?.user_id) {
+            return await userStatus.updateStatus(status, customMessage);
+          }
+          return false;
+        }}
+        // Action props
+        onCreateGroup={() => modals.openModal('showCreateGroupModal')}
+        onNewMessage={() => modals.openModal('showNewDMModal')}
       />
 
       {/* Chat area */}
@@ -1372,7 +1390,7 @@ const UnifiedMessages: React.FC = () => {
         selectedConversationData={selectedConversationData}
         groupChannels={groupManagement.groupChannels}
         messages={
-          selectedConversationType === 'direct' && selectedCategory === 'direct'
+          selectedConversationType === 'direct'
             ? profileMessages.messages
             : messages.messages
         }
@@ -1438,17 +1456,42 @@ const UnifiedMessages: React.FC = () => {
             conversations: conversations.conversations,
             fetchConversations: conversations.fetchConversations,
             deleteConversation: async (id: string): Promise<boolean> => {
-              // Check if we're in profile mode and should use profile-specific deletion
-              if (selectedCategory === 'direct') {
-                // Use profile conversations delete which sends proper profile types
-                return await profileConversations.deleteConversation(id);
-              } else {
-                // Use regular conversations delete for legacy/mixed conversations
-                const conversation = conversations.conversations.find(c => c.id === id);
-                if (conversation) {
-                  await conversations.deleteConversation(conversation);
-                  return true;
+              try {
+                // Check if this is the currently selected conversation
+                const isCurrentlySelected = selectedConversation === id;
+                
+                // Determine if it's a direct message by looking in profileConversations first
+                const isDirectMessage = profileConversations.conversations.some(c => c.other_user.user_id === id);
+                
+                let deleteSuccess = false;
+                
+                if (isDirectMessage) {
+                  // Use profile conversations delete which sends proper profile types
+                  deleteSuccess = await profileConversations.deleteConversation(id);
+                } else {
+                  // Use regular conversations delete for group conversations
+                  const conversation = conversations.conversations.find(c => c.id === id);
+                  if (conversation) {
+                    await conversations.deleteConversation(conversation);
+                    deleteSuccess = true;
+                  }
                 }
+                
+                // Clear the selected conversation if it was the one being deleted
+                if (deleteSuccess && isCurrentlySelected) {
+                  setSelectedConversation('');
+                  setSelectedConversationType('direct');
+                }
+                
+                // Refresh both conversation lists to ensure consistency
+                if (deleteSuccess) {
+                  conversations.fetchConversations();
+                  profileConversations.fetchConversations();
+                }
+                
+                return deleteSuccess;
+              } catch (error) {
+                console.error('Error deleting conversation:', error);
                 return false;
               }
             },
@@ -1487,7 +1530,7 @@ const UnifiedMessages: React.FC = () => {
             groupChannels: groupManagement.groupChannels
           }}
           messages={{ 
-            deleteMessage: selectedCategory === 'direct' && selectedConversationType === 'direct' 
+            deleteMessage: selectedConversationType === 'direct' 
               ? profileMessages.deleteMessage 
               : messages.deleteMessage,
             setReplyTo: setReplyTo,
