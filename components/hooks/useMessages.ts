@@ -245,21 +245,34 @@ export const useMessages = (
       } else {
         if (selectedChannel) {
           url = `/api/groups/${selectedConversation}/channels/${selectedChannel}/messages`;
+          body = {
+            content: content,
+            channel_id: selectedChannel, // Add the channel_id to the body
+            attachments: [],
+            ...(profileType && { profile_type: profileType }),
+            ...(replyTo && { 
+              reply_to: {
+                message_id: replyTo.id,
+                content: replyTo.content,
+                sender_name: replyTo.sender_name
+              }
+            })
+          };
         } else {
           url = `/api/groups/${selectedConversation}/messages`;
+          body = {
+            content: content,
+            attachments: [],
+            ...(profileType && { profile_type: profileType }),
+            ...(replyTo && { 
+              reply_to: {
+                message_id: replyTo.id,
+                content: replyTo.content,
+                sender_name: replyTo.sender_name
+              }
+            })
+          };
         }
-        body = {
-          content: content,
-          attachments: [],
-          ...(profileType && { profile_type: profileType }),
-          ...(replyTo && { 
-            reply_to: {
-              message_id: replyTo.id,
-              content: replyTo.content,
-              sender_name: replyTo.sender_name
-            }
-          })
-        };
       }
 
       const res = await protectedFetch(url, {
@@ -272,27 +285,8 @@ export const useMessages = (
       if (data.success) {
         lastMessageTimestampRef.current = '';
         
-        // Add optimistic update for direct messages
-        if (selectedConversationType === 'direct' && data.message) {
-          setMessages(prevMessages => {
-            const newMessage = data.message;
-            
-            // For direct messages, ensure we have the required fields
-            if (newMessage.is_read !== undefined) {
-              newMessage.read = newMessage.is_read;
-            }
-            // Ensure we have a proper _id for direct messages
-            if (!newMessage._id && newMessage.message_id) {
-              newMessage._id = newMessage.message_id;
-            }
-            
-            // Sort messages by timestamp to maintain order
-            const updatedMessages = [...prevMessages, newMessage];
-            return updatedMessages.sort((a, b) => 
-              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
-          });
-        }
+        // Note: Direct messages are handled by useProfileMessages hook
+        // Only handle group message optimistic updates here
         
         // Add optimistic update for group messages (sender only)
         // SSE will handle updates for other group members

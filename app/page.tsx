@@ -1,86 +1,79 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faQuestion } from '@fortawesome/free-solid-svg-icons';
-import InfoModal from "../components/modals/InfoModal";
-import { useCSRFToken } from "../components/hooks/useCSRFToken";
-import { createDebouncedBreachChecker } from "../lib/password-breach-client";
+import { 
+  faShieldAlt, 
+  faUsers, 
+  faHeart, 
+  faBriefcase, 
+  faLock, 
+  faGlobe,
+  faComments,
+  faUserSecret,
+  faArrowRight,
+  faCheck,
+  faStar,
+  faQuoteLeft,
+  faInfinity,
+  faRocket,
+  faEye,
+  faBolt
+} from '@fortawesome/free-solid-svg-icons';
 
-
-export default function Login() {
+export default function LandingPage() {
   const router = useRouter();
-  const { protectedFetch } = useCSRFToken();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [requires2FA, setRequires2FA] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [passwordBreachStatus, setPasswordBreachStatus] = useState<{
-    checked: boolean;
-    isBreached: boolean;
-    count?: number;
-  }>({ checked: false, isBreached: false });
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
-  // Create debounced breach checker
-  const debouncedBreachChecker = useCallback(
-    createDebouncedBreachChecker(800), // 800ms delay
-    []
-  );
-
-  // Check password breach status when password changes (during registration)
-  useEffect(() => {
-    if (isRegistering && password.length >= 6) {
-      setPasswordBreachStatus({ checked: false, isBreached: false });
-      
-      debouncedBreachChecker(password, (result) => {
-        setPasswordBreachStatus({
-          checked: true,
-          isBreached: result.isBreached,
-          count: result.count
-        });
-      });
-    } else {
-      setPasswordBreachStatus({ checked: false, isBreached: false });
+  const testimonials = [
+    {
+      text: "Polmatch transformed how our team communicates. The security features give us peace of mind for sensitive business discussions.",
+      author: "Sarah Chen",
+      role: "CTO, TechStart Inc",
+      rating: 5
+    },
+    {
+      text: "Finally found a platform where I can have genuine conversations without worrying about privacy. Met some amazing people here!",
+      author: "Marcus Rodriguez",
+      role: "Freelance Designer",
+      rating: 5
+    },
+    {
+      text: "The business networking features are incredible. Made connections that led to three new partnerships this quarter.",
+      author: "Emily Watson",
+      role: "Business Development Director",
+      rating: 5
     }
-  }, [password, isRegistering, debouncedBreachChecker]);
+  ];
 
-  // Check session on mount
+  const stats = [
+    { number: "50K+", label: "Active Users", icon: faUsers },
+    { number: "1M+", label: "Messages Sent", icon: faComments },
+    { number: "99.9%", label: "Uptime", icon: faRocket },
+    { number: "256-bit", label: "Encryption", icon: faShieldAlt }
+  ];
+
+  // Check if user is already logged in
   useEffect(() => {
     async function checkSession() {
       try {
         const res = await fetch('/api/session', {
-          credentials: 'include' // Ensure cookies are sent
+          credentials: 'include'
         });
         
         if (res.ok) {
           const data = await res.json();
           if (data.valid) {
             setIsLoggedIn(true);
-            
-            // Check if user needs to set up forced 2FA
-            if (data.user?.force_2fa_enabled && !data.user?.two_factor_enabled && !data.user?.is_admin) {
-              router.push('/setup-2fa');
-            } else {
-              router.push('/frontpage');
-            }
+            // If logged in, redirect to frontpage
+            router.push('/frontpage');
             return;
           }
         }
-        
-        // If we get here, either the response wasn't ok or data.valid was false
-        // This is expected when not logged in, so we silently set isLoggedIn to false
         setIsLoggedIn(false);
       } catch (error) {
-        // Network error or other issues - assume not logged in
         console.error('Session check failed:', error);
         setIsLoggedIn(false);
       }
@@ -88,444 +81,566 @@ export default function Login() {
     checkSession();
   }, [router]);
 
-  // Only show login form after session check
+  // Testimonial rotation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
+
+  // Show loading while checking session
   if (isLoggedIn === null) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div>Checking session...</div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-xl">Loading...</div>
+        </div>
       </div>
     );
   }
+
+  // If logged in, show nothing (will redirect)
   if (isLoggedIn) {
     return null;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-    setUserType(null);
-    setLoading(true);
-    
-    try {
-      const res = await protectedFetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          twoFactorCode: requires2FA ? twoFactorCode : undefined
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        if (data.requires2FA) {
-          setRequires2FA(true);
-          setLoginError(data.message || 'Two-factor authentication required');
-        } else {
-          setLoginError(data.message || 'Login failed');
-        }
-      } else {
-        setUserType(data.user.is_admin ? 'Admin' : 'User');
-        
-        // Check if user needs to set up forced 2FA
-        if (data.user.force_2fa_enabled && !data.user.two_factor_enabled && !data.user.is_admin) {
-          router.push('/setup-2fa');
-        } else {
-          router.push('/frontpage');
-        }
-      }
-    } catch {
-      setLoginError('Server error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-    setUserType(null);
-    setLoading(true);
-    
-    // Enhanced client-side validation with specific error messages
-    if (!email.trim()) {
-      setLoginError('Email address is required');
-      setLoading(false);
-      return;
-    }
-    
-    if (!email.includes('@') || !email.includes('.')) {
-      setLoginError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
-    
-    if (!username.trim()) {
-      setLoginError('Username is required');
-      setLoading(false);
-      return;
-    }
-    
-    if (username.trim().length < 3) {
-      setLoginError('Username must be at least 3 characters long');
-      setLoading(false);
-      return;
-    }
-    
-    if (username.trim().length > 20) {
-      setLoginError('Username must be 20 characters or less');
-      setLoading(false);
-      return;
-    }
-    
-    if (!password) {
-      setLoginError('Password is required');
-      setLoading(false);
-      return;
-    }
-    
-    if (password.length < 6) {
-      setLoginError('Password must be at least 6 characters long');
-      setLoading(false);
-      return;
-    }
-    
-    if (password.length > 128) {
-      setLoginError('Password is too long (maximum 128 characters)');
-      setLoading(false);
-      return;
-    }
-    
-    if (!/\d/.test(password)) {
-      setLoginError('Password must contain at least one number');
-      setLoading(false);
-      return;
-    }
-    
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      setLoginError('Password must contain at least one special character');
-      setLoading(false);
-      return;
-    }
-    
-    // Check if password contains username or email parts
-    const passwordLower = password.toLowerCase();
-    if (username && username.length > 2 && passwordLower.includes(username.toLowerCase())) {
-      setLoginError('Password cannot contain your username');
-      setLoading(false);
-      return;
-    }
-    
-    const emailPart = email.split('@')[0];
-    if (emailPart.length > 2 && passwordLower.includes(emailPart.toLowerCase())) {
-      setLoginError('Password cannot contain part of your email address');
-      setLoading(false);
-      return;
-    }
-    
-    // Check for common password patterns
-    const commonPatterns = [
-      'password', 'pass', '1234', '123456', '12345678', '123456789',
-      'qwerty', 'abc123', 'password123', 'admin', 'login', 'welcome'
-    ];
-    
-    for (const pattern of commonPatterns) {
-      if (passwordLower.includes(pattern)) {
-        setLoginError(`Password cannot contain common pattern "${pattern}"`);
-        setLoading(false);
-        return;
-      }
-    }
-    
-    // Check for repeated characters
-    if (/^(.)\1{5,}$/.test(password)) {
-      setLoginError('Password cannot be the same character repeated');
-      setLoading(false);
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setLoginError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      const res = await protectedFetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          username: username.trim(), 
-          password, 
-          confirmPassword
-        }),
-      });
-      
-      const data = await res.json();
-      
-      if (!data.success) {
-        // Handle specific server error messages
-        let errorMessage = data.message || 'Registration failed';
-        
-        if (data.message) {
-          // Common server error messages to make more user-friendly
-          const message = data.message.toLowerCase();
-          
-          if (message.includes('email') && message.includes('already')) {
-            errorMessage = 'This email address is already registered';
-          } else if (message.includes('username') && message.includes('already')) {
-            errorMessage = 'This username is already taken';
-          } else if (message.includes('email') && message.includes('invalid')) {
-            errorMessage = 'Please enter a valid email address';
-          } else if (message.includes('username') && message.includes('invalid')) {
-            errorMessage = 'Username contains invalid characters';
-          } else if (message.includes('password') && message.includes('weak')) {
-            errorMessage = 'Password does not meet security requirements';
-          } else if (message.includes('password') && message.includes('match')) {
-            errorMessage = 'Passwords do not match';
-          } else if (message.includes('rate limit')) {
-            errorMessage = 'Too many registration attempts. Please try again later';
-          } else if (message.includes('server') || message.includes('database')) {
-            errorMessage = 'Server error. Please try again in a few moments';
-          } else if (message.includes('validation')) {
-            errorMessage = 'Please check your information and try again';
-          } // else: keep errorMessage as data.message
-        }
-        
-        setLoginError(errorMessage);
-      } else {
-        setUserType('User');
-        router.push('/frontpage');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setLoginError('Network error. Please check your connection and try again');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await protectedFetch('/api/logout', { method: 'POST' });
-      router.push('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      router.push('/');
-    }
-  };
-
-  const resetForm = () => {
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setUsername("");
-    setTwoFactorCode("");
-    setRequires2FA(false);
-    setLoginError(null);
-    setUserType(null);
-    setPasswordBreachStatus({ checked: false, isBreached: false });
-  };
-
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      {/* Help Button */}
-      <button
-        onClick={() => setShowInfoModal(true)}
-        className="fixed top-4 left-4 z-20 w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center hover:bg-gray-800 transition-colors"
-        title="Platform Information"
-      >
-        <FontAwesomeIcon icon={faQuestion} />
-      </button>
-      
-      {/* Logo - Top Right */}
-      <div className="fixed top-4 right-4 z-20">
-        <div className="border-2 border-white rounded-none bg-gray-900 p-3">
-          <Image 
-            src="/images/polstrat-dark.png" 
-            alt="Polmatch" 
-            width={120} 
-            height={45}
-            className="max-w-full h-auto"
-          />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white overflow-x-hidden">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-r from-green-600/10 to-blue-600/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
-      
-      {/* Main Login Container */}
-      <div className="w-full max-w-md">
-        <div className="bg-black border-2 border-white rounded-none p-6">
 
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
-            {/* Registration Fields */}
-            {isRegistering && (
-              <div>
-                <input
-                  type="text"
-                  placeholder="Enter username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            )}
-
-            {/* Email Field */}
-            <div>
-              <input
-                type="email"
-                placeholder="Enter email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
-                disabled={loading}
-                required
+      {/* Header */}
+      <header className="relative z-10 container mx-auto px-6 py-8">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Image 
+                src="/images/polstrat-dark.png" 
+                alt="Polmatch" 
+                width={150} 
+                height={56}
+                className="max-w-full h-auto transition-transform hover:scale-105"
               />
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg blur opacity-0 hover:opacity-100 transition-opacity"></div>
             </div>
+          </div>
+          <div className="space-x-4">
+            <button
+              onClick={() => router.push('/login')}
+              className="px-6 py-2 border-2 border-white bg-transparent text-white hover:bg-white hover:text-black transition-all duration-300 font-medium uppercase tracking-wider transform hover:scale-105"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-6 py-2 bg-white text-black hover:bg-gray-200 transition-all duration-300 font-medium uppercase tracking-wider transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </header>
 
-            {/* Password Field */}
-            <div>
-              <input
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
-                disabled={loading}
-                required
-              />
-              {isRegistering && (
-                <div className="mt-1">
-                  <p className="text-xs text-gray-400">
-                    Must be 6-128 characters with at least 1 number and 1 special character (!@#$%^&*()_+-=[]{};&quot;&apos;:|,.&lt;&gt;/?). Cannot contain username, email, or common patterns.
-                  </p>
-                  {/* Real-time breach checking feedback */}
-                  {password.length >= 6 && (
-                    <div className="mt-2">
-                      {!passwordBreachStatus.checked ? (
-                        <p className="text-xs text-yellow-400">🔍 Checking for security breaches...</p>
-                      ) : passwordBreachStatus.isBreached ? (
-                        <div className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 p-2 rounded">
-                          ⚠️ <strong>Security Warning:</strong> This password has been found in{' '}
-                          {passwordBreachStatus.count && passwordBreachStatus.count > 1 
-                            ? `${passwordBreachStatus.count.toLocaleString()} data breaches` 
-                            : 'a data breach'
-                          }. Please choose a different password.
-                        </div>
-                      ) : (
-                        <p className="text-xs text-green-400">✅ Password not found in known breaches</p>
-                      )}
-                    </div>
-                  )}
+      {/* Hero Section */}
+      <section className="relative z-10 container mx-auto px-6 py-20 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent animate-pulse">
+            Secure Private Messaging
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-300 mb-12 leading-relaxed">
+            Connect safely across <span className="text-blue-400 font-semibold">business</span>, 
+            <span className="text-green-400 font-semibold"> general discussions</span>, and 
+            <span className="text-pink-400 font-semibold"> love</span>
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <button
+              onClick={() => router.push('/login')}
+              className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2 transform hover:scale-105 shadow-xl hover:shadow-2xl"
+            >
+              Start Messaging 
+              <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
+            </button>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-8 py-4 border-2 border-white bg-transparent text-white text-lg font-medium hover:bg-white hover:text-black transition-all duration-300 uppercase tracking-wider transform hover:scale-105"
+            >
+              Learn More
+            </button>
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faShieldAlt} className="text-green-400" />
+              <span>End-to-End Encrypted</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faEye} className="text-blue-400" />
+              <span>Zero Data Collection</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faBolt} className="text-yellow-400" />
+              <span>Lightning Fast</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faInfinity} className="text-purple-400" />
+              <span>Free Forever</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="relative z-10 container mx-auto px-6 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((stat, index) => (
+            <div key={index} className="text-center group">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-full flex items-center justify-center border border-gray-600 group-hover:border-blue-400 transition-colors">
+                <FontAwesomeIcon icon={stat.icon} className="text-2xl text-white group-hover:text-blue-400 transition-colors" />
+              </div>
+              <div className="text-3xl font-bold text-white mb-2">{stat.number}</div>
+              <div className="text-gray-400 text-sm uppercase tracking-wider">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="relative z-10 container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Built for Every Connection
+          </h2>
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Whether you&apos;re closing deals, sharing ideas, or finding love, Polmatch provides the secure platform you need.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-20">
+          {/* Business */}
+          <div className="group bg-gradient-to-b from-gray-800 to-gray-900 p-8 border border-gray-700 hover:border-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
+                <FontAwesomeIcon icon={faBriefcase} className="text-2xl text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 group-hover:text-blue-400 transition-colors">Business</h3>
+              <p className="text-gray-400 mb-6 group-hover:text-gray-300 transition-colors">
+                Secure conversations for professional networking, deal-making, and team collaboration with enterprise-grade encryption.
+              </p>
+              <ul className="text-sm text-gray-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  End-to-end encryption
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Professional profiles
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Group channels
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* General Discussions */}
+          <div className="group bg-gradient-to-b from-gray-800 to-gray-900 p-8 border border-gray-700 hover:border-green-500 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-green-500/50 transition-shadow">
+                <FontAwesomeIcon icon={faUsers} className="text-2xl text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 group-hover:text-green-400 transition-colors">General Discussions</h3>
+              <p className="text-gray-400 mb-6 group-hover:text-gray-300 transition-colors">
+                Connect with like-minded individuals, join communities, and engage in meaningful conversations on topics you care about.
+              </p>
+              <ul className="text-sm text-gray-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Public & private groups
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Topic-based channels
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Community discovery
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Love */}
+          <div className="group bg-gradient-to-b from-gray-800 to-gray-900 p-8 border border-gray-700 hover:border-pink-500 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-pink-600 to-pink-800 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-pink-500/50 transition-shadow">
+                <FontAwesomeIcon icon={faHeart} className="text-2xl text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 group-hover:text-pink-400 transition-colors">Love & Romance</h3>
+              <p className="text-gray-400 mb-6 group-hover:text-gray-300 transition-colors">
+                Find meaningful connections and build lasting relationships in a safe, private environment designed for authentic conversations.
+              </p>
+              <ul className="text-sm text-gray-300 space-y-2">
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Privacy-first matching
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Secure messaging
+                </li>
+                <li className="flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheck} className="text-green-400" />
+                  Authentic profiles
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="relative z-10 bg-gradient-to-r from-gray-900 to-black py-20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Loved by Thousands
+            </h2>
+            <p className="text-xl text-gray-400">
+              See what our users have to say about their Polmatch experience
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 shadow-2xl">
+              <div className="text-center">
+                <FontAwesomeIcon icon={faQuoteLeft} className="text-4xl text-blue-400 mb-6" />
+                <p className="text-xl text-gray-300 mb-8 leading-relaxed italic">
+                  &ldquo;{testimonials[currentTestimonial].text}&rdquo;
+                </p>
+                <div className="flex justify-center mb-4">
+                  {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
+                    <FontAwesomeIcon key={i} icon={faStar} className="text-yellow-400 text-xl mx-1" />
+                  ))}
                 </div>
-              )}
+                <div className="text-white font-semibold text-lg">
+                  {testimonials[currentTestimonial].author}
+                </div>
+                <div className="text-gray-400">
+                  {testimonials[currentTestimonial].role}
+                </div>
+              </div>
+            </div>
+            
+            {/* Testimonial dots */}
+            <div className="flex justify-center mt-8 space-x-3">
+              {testimonials.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentTestimonial(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentTestimonial 
+                      ? 'bg-blue-400 scale-125' 
+                      : 'bg-gray-600 hover:bg-gray-500'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy Comparison Section */}
+      <section className="relative z-10 container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Your Data Stays <span className="text-green-400">Yours</span>
+          </h2>
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-12">
+            Built for people who value <span className="text-green-400 font-semibold">digital sovereignty</span>. 
+            Unlike other messaging platforms, we don&apos;t mine, sell, or store your personal data. 
+            Your conversations are truly private.
+          </p>
+        </div>
+
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-6">
+            {/* Polmatch */}
+            <div className="bg-gradient-to-br from-green-800 to-green-900 p-6 rounded-2xl border-2 border-green-400 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-green-400 text-black px-3 py-1 text-xs font-bold rounded-bl-lg">
+                BEST
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-green-400 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faShieldAlt} className="text-2xl text-black" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-4">Polmatch</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-400 flex-shrink-0" />
+                    <span className="text-green-100">Zero data collection</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-400 flex-shrink-0" />
+                    <span className="text-green-100">No data selling</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-400 flex-shrink-0" />
+                    <span className="text-green-100">No ads or tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-400 flex-shrink-0" />
+                    <span className="text-green-100">Full message encryption</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-400 flex-shrink-0" />
+                    <span className="text-green-100">Anonymous profiles</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Confirm Password Field (Registration Only) */}
-            {isRegistering && (
-              <div>
-                <input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors"
-                  disabled={loading}
-                  required
-                />
+            {/* Discord */}
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-600">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faComments} className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-4">Discord</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Collects user data</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Shares with partners</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Targeted advertising</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Messages not encrypted</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Data retention</span>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
 
-            {/* 2FA Code Field (Login Only, when required) */}
-            {!isRegistering && requires2FA && (
-              <div>
-                <input
-                  type="text"
-                  placeholder="Enter 6-digit code"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full p-3 bg-black text-white border-2 border-white rounded-none focus:outline-none focus:border-gray-400 transition-colors text-center tracking-widest"
-                  disabled={loading}
-                  maxLength={6}
-                  required
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Enter the 6-digit code from your authenticator app
+            {/* Teams */}
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-600">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-600 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faBriefcase} className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-4">Teams</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Microsoft data mining</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Telemetry collection</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">AI training data</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Corporate surveillance</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Data monetization</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Guilded */}
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-600">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-yellow-600 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faUsers} className="text-2xl text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-4">Guilded</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Roblox owned data</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Usage analytics</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Data sharing</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Basic encryption only</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0 flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    <span className="text-red-300">Gaming focus tracking</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <div className="bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-2xl p-6 max-w-4xl mx-auto">
+              <h3 className="text-2xl font-bold text-green-400 mb-4 flex items-center justify-center gap-3">
+                <FontAwesomeIcon icon={faShieldAlt} />
+                Digital Sovereignty Matters
+              </h3>
+              <p className="text-gray-300 text-lg leading-relaxed">
+                Take control of your digital life. Your conversations, relationships, and personal data 
+                should belong to you alone. Polmatch empowers individuals who refuse to compromise 
+                their privacy and want true ownership of their communications.
+              </p>
+              <div className="mt-6 p-4 bg-green-900/20 border border-green-500/30 rounded-xl">
+                <p className="text-green-300 font-semibold">
+                  <FontAwesomeIcon icon={faShieldAlt} className="mr-2" />
+                  Join the movement toward digital independence and privacy sovereignty.
                 </p>
               </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className={`w-full p-3 font-medium uppercase tracking-wider border-2 rounded-none transition-all ${
-                loading 
-                  ? 'bg-gray-600 border-gray-400 text-gray-300 cursor-not-allowed' 
-                  : 'bg-white text-black border-white hover:bg-gray-200 hover:border-gray-200'
-              }`}
-              disabled={loading}
-            >
-              {loading 
-                ? (isRegistering ? 'Creating Account...' : 'Logging In...') 
-                : (isRegistering ? 'Create Account' : 'Login')
-              }
-            </button>
-
-            {/* Toggle Registration/Login */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegistering(!isRegistering);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-white transition-colors"
-                disabled={loading}
-              >
-                {isRegistering ? '← Back to Login' : 'Create New Account →'}
-              </button>
             </div>
-
-            {/* Error Display */}
-            {loginError && (
-              <div className="bg-red-900 border-2 border-red-400 text-red-100 p-3 text-center">
-                <div className="text-sm uppercase tracking-wider mb-1">Error</div>
-                <div className="text-sm">{loginError}</div>
-              </div>
-            )}
-
-            {/* Success Display */}
-            {userType && (
-              <div className="bg-green-900 border-2 border-green-400 text-green-100 p-3 text-center">
-                <div className="text-sm uppercase tracking-wider mb-1">
-                  {isRegistering ? 'Account Created' : 'Login Successful'}
-                </div>
-                <div className="text-sm">
-                  {isRegistering ? 'Welcome to Polmatch' : `Authenticated as: ${userType}`}
-                </div>
-              </div>
-            )}
-          </form>
+          </div>
         </div>
+      </section>
 
-        {/* Logout Button (if logged in) */}
-        {isLoggedIn && (
-          <button
-            className="mt-4 w-full p-3 bg-red-900 text-red-100 border-2 border-red-500 rounded-none hover:bg-red-800 transition-colors uppercase tracking-wider"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        )}
-      </div>
+      {/* Security Section */}
+      <section className="relative z-10 bg-gradient-to-r from-gray-900 to-black py-20">
+        <div className="container mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                Security First
+              </h2>
+              <p className="text-xl text-gray-400 mb-8">
+                Your privacy is our priority. Every message, every connection, every moment is protected by military-grade encryption.
+              </p>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="flex items-center gap-3 group">
+                  <FontAwesomeIcon icon={faShieldAlt} className="text-2xl text-green-400 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium group-hover:text-green-400 transition-colors">End-to-End Encryption</span>
+                </div>
+                <div className="flex items-center gap-3 group">
+                  <FontAwesomeIcon icon={faLock} className="text-2xl text-green-400 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium group-hover:text-green-400 transition-colors">Zero Data Retention</span>
+                </div>
+                <div className="flex items-center gap-3 group">
+                  <FontAwesomeIcon icon={faUserSecret} className="text-2xl text-green-400 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium group-hover:text-green-400 transition-colors">Anonymous Profiles</span>
+                </div>
+                <div className="flex items-center gap-3 group">
+                  <FontAwesomeIcon icon={faGlobe} className="text-2xl text-green-400 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium group-hover:text-green-400 transition-colors">Global Infrastructure</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="w-80 h-80 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-gray-600 animate-pulse">
+                  <FontAwesomeIcon icon={faShieldAlt} className="text-8xl text-white/80" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-blue-400/10 rounded-full animate-ping"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Info Modal */}
-      <InfoModal 
-        isOpen={showInfoModal} 
-        onClose={() => setShowInfoModal(false)} 
-      />
+      {/* Call to Action */}
+      <section className="relative z-10 container mx-auto px-6 py-20 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Ready to Connect Securely?
+          </h2>
+          <p className="text-xl text-gray-400 mb-12">
+            Join thousands of users who trust Polmatch for their most important conversations.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => router.push('/login')}
+              className="group px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 uppercase tracking-wider transform hover:scale-105 shadow-xl hover:shadow-2xl"
+            >
+              Get Started Free
+              <FontAwesomeIcon icon={faArrowRight} className="ml-2 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 mt-6">
+            No credit card required • Free forever • Enterprise options available
+          </p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-gray-800 py-12">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-4 mb-4 md:mb-0">
+              <Image 
+                src="/images/polstrat-dark.png" 
+                alt="Polmatch" 
+                width={120} 
+                height={45}
+                className="max-w-full h-auto"
+              />
+              <span className="text-gray-400">Secure messaging for everyone</span>
+            </div>
+            <div className="text-gray-400 text-sm">
+              © {new Date().getFullYear()} Polmatch. Built with privacy in mind.
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

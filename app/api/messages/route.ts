@@ -459,12 +459,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       profileContext = getProfileContext(sender_profile_type, receiver_profile_type, sortedParticipants, auth.userId);
     }
     
-    // Check if this is a new conversation
-    const conversationQuery: Record<string, unknown> = { participant_ids: sortedParticipants };
-    if (profileContext) {
-      conversationQuery.profile_context = profileContext;
-    }
-    
     // Determine conversation collection based on profile context
     let conversationCollectionName = 'private_conversations';
     if (profileContext) {
@@ -474,10 +468,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
     
-    const existingConversation = await db.collection(conversationCollectionName).findOne(conversationQuery);
-    const isNewConversation = !existingConversation;
+    // Build conversation query
+    const conversationQuery: Record<string, unknown> = { participant_ids: sortedParticipants };
+    if (profileContext) {
+      conversationQuery.profile_context = profileContext;
+    }
     
-    // Find or create private conversation using upsert
+    // Prepare data for conversation creation
     const conversationSetOnInsert: Record<string, unknown> = {
       participant_ids: sortedParticipants, 
       created_at: now 
@@ -488,14 +485,37 @@ export async function POST(request: Request): Promise<NextResponse> {
       conversationSetOnInsert.profile_context = profileContext;
     }
     
-    const conversationResult = await db.collection(conversationCollectionName).findOneAndUpdate(
-      conversationQuery,
-      {
-        $set: { updated_at: now },
-        $setOnInsert: conversationSetOnInsert
-      },
-      { upsert: true, returnDocument: 'after' }
-    );
+    // Find or create private conversation using upsert (handles race conditions)
+    let conversationResult;
+    let isNewConversation = false;
+    
+    try {
+      conversationResult = await db.collection(conversationCollectionName).findOneAndUpdate(
+        conversationQuery,
+        {
+          $set: { updated_at: now },
+          $setOnInsert: conversationSetOnInsert
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+      
+      // Check if this was a new conversation by seeing if it was just created
+      isNewConversation = Boolean(conversationResult && !conversationResult.lastErrorObject?.updatedExisting);
+      
+    } catch (error: unknown) {
+      // Handle race condition: if duplicate key error, try to find the existing conversation
+      if (error && typeof error === 'object' && 'code' in error && (error as { code: number }).code === 11000) {
+        console.log('🔄 Race condition detected, finding existing conversation...');
+        conversationResult = await db.collection(conversationCollectionName).findOneAndUpdate(
+          conversationQuery,
+          { $set: { updated_at: now } },
+          { returnDocument: 'after' }
+        );
+        isNewConversation = false;
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
     
     // Sanitize content before encryption
     const sanitizedContent = sanitizeText(content);

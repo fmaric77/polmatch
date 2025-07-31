@@ -1,10 +1,8 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faUsers,
   faUser,
   faSearch,
-  faUserPlus,
   faBell,
   faHome,
   faEnvelope,
@@ -14,24 +12,25 @@ import {
   faBookmark,
   faBriefcase,
   faCompass,
-  faPlus
+  faComments,
+  faChevronLeft,
+  faChevronRight
 } from '@fortawesome/free-solid-svg-icons';
 import { useCSRFToken } from './hooks/useCSRFToken';
 import { useTheme } from './ThemeProvider';
 
 interface SidebarNavigationProps {
-  selectedCategory: 'direct' | 'groups';
+  selectedCategory: 'direct' | 'groups' | 'unified';
   invitationsCount: number;
   currentUser: { user_id: string; username: string; is_admin?: boolean } | null;
   isMobile: boolean;
   isSidebarVisible: boolean;
   isConversationsSidebarHidden: boolean;
-  activeProfileType: 'basic' | 'love' | 'business';
-  onCategoryChange: (category: 'direct' | 'groups') => void;
-  onNewAction: () => void;
+  isMinimized: boolean;
+  onCategoryChange: (category: 'unified') => void;
   onInvitationsClick: () => void;
-  onProfileTypeChange: (profileType: 'basic' | 'love' | 'business') => void;
   setIsConversationsSidebarHidden: (hidden: boolean) => void;
+  setIsMinimized: (minimized: boolean) => void;
 }
 
 const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
@@ -41,26 +40,27 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   isMobile,
   isSidebarVisible,
   isConversationsSidebarHidden,
+  isMinimized,
   onCategoryChange,
-  onNewAction,
   onInvitationsClick,
-  setIsConversationsSidebarHidden
+  setIsConversationsSidebarHidden,
+  setIsMinimized
 }) => {
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
   
   return (
-    <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} w-20 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-lg flex flex-col h-full transition-transform duration-300 ${
+    <div className={`${isMobile ? 'fixed left-0 top-0 z-50 h-full' : ''} ${isMinimized ? 'w-16' : 'w-20'} ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-lg flex flex-col h-full transition-all duration-300 ${
       isMobile ? (isSidebarVisible ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
-    }`}>
+    } ${isMinimized ? 'overflow-hidden' : ''}`}>
       {/* Header */}
-      <div className={`border-b ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} p-2`}>
+      <div className={`border-b ${theme === 'dark' ? 'border-white bg-black' : 'border-black bg-white'} ${isMinimized ? 'p-1' : 'p-2'} transition-all duration-300`}>
       </div>
       
-      <div className="p-2 space-y-2">
+      <div className={`${isMinimized ? 'p-1 space-y-1' : 'p-2 space-y-2'} transition-all duration-300`}>
         {/* Home Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/';
@@ -73,7 +73,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* Profile Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/profile';
@@ -86,7 +86,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* Search Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/search';
@@ -99,7 +99,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* Catalogue Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/catalogue';
@@ -112,7 +112,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* Jobs Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/jobs';
@@ -125,7 +125,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         
         {/* Discover Groups Navigation */}
         <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={() => {
             if (typeof window !== 'undefined') {
               window.location.href = '/discover-groups';
@@ -139,47 +139,25 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Separator */}
         <div className={`w-8 h-px ${theme === 'dark' ? 'bg-white' : 'bg-black'} mx-auto`}></div>
         
-        {/* Direct Messages Category */}
+        {/* Unified Messages (All Conversations) */}
         <div 
-          className={`w-12 h-12 border ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-            selectedCategory === 'direct' 
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} border ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ${
+            selectedCategory === 'unified' 
               ? theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'
               : theme === 'dark' ? 'bg-black text-white hover:bg-gray-800' : 'bg-white text-black hover:bg-gray-200'
           }`}
-          onClick={() => onCategoryChange('direct')}
-          title="Direct Messages"
+          onClick={() => onCategoryChange('unified')}
+          title="All Messages"
         >
-          <FontAwesomeIcon icon={faEnvelope} />
+          <FontAwesomeIcon icon={faComments} />
         </div>
         
-        {/* Groups Category */}
-        <div 
-          className={`w-12 h-12 border ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-            selectedCategory === 'groups' 
-              ? theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'
-              : theme === 'dark' ? 'bg-black text-white hover:bg-gray-800' : 'bg-white text-black hover:bg-gray-200'
-          }`}
-          onClick={() => onCategoryChange('groups')}
-          title="Groups"
-        >
-          <FontAwesomeIcon icon={faUsers} />
-        </div>
-        
-        {/* Separator */}
-        <div className={`w-8 h-px ${theme === 'dark' ? 'bg-white' : 'bg-black'} mx-auto`}></div>
-        
-        {/* New Action */}
-        <div 
-          className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
-          onClick={onNewAction}
-          title={selectedCategory === 'direct' ? 'New Message' : 'Create Group'}
-        >
-          <FontAwesomeIcon icon={selectedCategory === 'direct' ? faPlus : faUserPlus} className={theme === 'dark' ? 'text-white' : 'text-black'} />
-        </div>
+
+
         
         {/* Invitations */}
         <div 
-          className={`relative w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+          className={`relative ${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
           onClick={onInvitationsClick}
           title="Invitations"
         >
@@ -194,7 +172,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Admin Dashboard */}
         {currentUser?.is_admin && (
           <div 
-            className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+            className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
             onClick={() => {
               if (typeof window !== 'undefined') {
                 window.location.href = '/admindashboard';
@@ -209,7 +187,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         {/* Mobile Chat Sidebar Toggle */}
         {isMobile && (
           <div 
-            className={`w-12 h-12 ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-colors`}
+            className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-black border-white hover:bg-gray-800' : 'bg-white border-black hover:bg-gray-200'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
             onClick={() => setIsConversationsSidebarHidden(!isConversationsSidebarHidden)}
             title={isConversationsSidebarHidden ? "Show Conversations" : "Hide Conversations"}
           >
@@ -221,14 +199,27 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         )}
       </div>
       
-      {/* Bottom Navigation - Logout */}
-      <div className="mt-auto p-2 pb-4">
+      {/* Bottom Navigation - Minimize & Logout */}
+      <div className={`mt-auto ${isMinimized ? 'p-1 pb-2 space-y-1' : 'p-2 pb-4 space-y-2'} transition-all duration-300`}>
+        {/* Minimize Button */}
         <div 
-          className="w-12 h-12 bg-red-900 border border-red-500 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-800 transition-colors"
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} ${theme === 'dark' ? 'bg-gray-800 border-gray-600 hover:bg-gray-700' : 'bg-gray-200 border-gray-400 hover:bg-gray-300'} border rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300`}
+          onClick={() => setIsMinimized(!isMinimized)}
+          title={isMinimized ? "Expand Sidebar" : "Minimize Sidebar"}
+        >
+          <FontAwesomeIcon 
+            icon={isMinimized ? faChevronRight : faChevronLeft} 
+            className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} 
+          />
+        </div>
+        
+        {/* Logout Button */}
+        <div 
+          className={`${isMinimized ? 'w-10 h-10' : 'w-12 h-12'} bg-red-900 border border-red-500 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-800 transition-all duration-300`}
           onClick={async () => {
             await protectedFetch('/api/logout', { method: 'POST' });
             if (typeof window !== 'undefined') {
-              window.location.href = '/';
+              window.location.href = '/login';
             }
           }}
           title="Logout"

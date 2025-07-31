@@ -104,7 +104,7 @@ const Header = () => {
             e.preventDefault();
             await protectedFetch('/api/logout', { method: 'POST' });
             if (typeof window !== 'undefined') {
-              window.location.href = '/';
+              window.location.href = '/login';
             }
           }}
         >
