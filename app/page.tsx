@@ -14,10 +14,7 @@ import {
   faUserSecret,
   faArrowRight,
   faCheck,
-  faStar,
-  faQuoteLeft,
   faInfinity,
-  faRocket,
   faEye,
   faBolt
 } from '@fortawesome/free-solid-svg-icons';
@@ -25,35 +22,6 @@ import {
 export default function LandingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  const testimonials = [
-    {
-      text: "Polmatch transformed how our team communicates. The security features give us peace of mind for sensitive business discussions.",
-      author: "Sarah Chen",
-      role: "CTO, TechStart Inc",
-      rating: 5
-    },
-    {
-      text: "Finally found a platform where I can have genuine conversations without worrying about privacy. Met some amazing people here!",
-      author: "Marcus Rodriguez",
-      role: "Freelance Designer",
-      rating: 5
-    },
-    {
-      text: "The business networking features are incredible. Made connections that led to three new partnerships this quarter.",
-      author: "Emily Watson",
-      role: "Business Development Director",
-      rating: 5
-    }
-  ];
-
-  const stats = [
-    { number: "50K+", label: "Active Users", icon: faUsers },
-    { number: "1M+", label: "Messages Sent", icon: faComments },
-    { number: "99.9%", label: "Uptime", icon: faRocket },
-    { number: "256-bit", label: "Encryption", icon: faShieldAlt }
-  ];
 
   // Check if user is already logged in
   useEffect(() => {
@@ -81,13 +49,6 @@ export default function LandingPage() {
     checkSession();
   }, [router]);
 
-  // Testimonial rotation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [testimonials.length]);
 
   // Show loading while checking session
   if (isLoggedIn === null) {
@@ -195,20 +156,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="relative z-10 container mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-full flex items-center justify-center border border-gray-600 group-hover:border-blue-400 transition-colors">
-                <FontAwesomeIcon icon={stat.icon} className="text-2xl text-white group-hover:text-blue-400 transition-colors" />
-              </div>
-              <div className="text-3xl font-bold text-white mb-2">{stat.number}</div>
-              <div className="text-gray-400 text-sm uppercase tracking-wider">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Features Section */}
       <section className="relative z-10 container mx-auto px-6 py-20">
@@ -305,56 +252,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="relative z-10 bg-gradient-to-r from-gray-900 to-black py-20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Loved by Thousands
-            </h2>
-            <p className="text-xl text-gray-400">
-              See what our users have to say about their Polmatch experience
-            </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 shadow-2xl">
-              <div className="text-center">
-                <FontAwesomeIcon icon={faQuoteLeft} className="text-4xl text-blue-400 mb-6" />
-                <p className="text-xl text-gray-300 mb-8 leading-relaxed italic">
-                  &ldquo;{testimonials[currentTestimonial].text}&rdquo;
-                </p>
-                <div className="flex justify-center mb-4">
-                  {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
-                    <FontAwesomeIcon key={i} icon={faStar} className="text-yellow-400 text-xl mx-1" />
-                  ))}
-                </div>
-                <div className="text-white font-semibold text-lg">
-                  {testimonials[currentTestimonial].author}
-                </div>
-                <div className="text-gray-400">
-                  {testimonials[currentTestimonial].role}
-                </div>
-              </div>
-            </div>
-            
-            {/* Testimonial dots */}
-            <div className="flex justify-center mt-8 space-x-3">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentTestimonial(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === currentTestimonial 
-                      ? 'bg-blue-400 scale-125' 
-                      : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Privacy Comparison Section */}
       <section className="relative z-10 container mx-auto px-6 py-20">
@@ -604,7 +502,7 @@ export default function LandingPage() {
             Ready to Connect Securely?
           </h2>
           <p className="text-xl text-gray-400 mb-12">
-            Join thousands of users who trust Polmatch for their most important conversations.
+            Join Polmatch for secure, private conversations built around your privacy.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
