@@ -10,13 +10,37 @@ interface WebSocketMessage {
   data: unknown;
 }
 
-// WebSocket server instance
+// Do not start listeners during static export/build
+export const dynamic = 'force-dynamic';
+
+// Single global instance across reloads to avoid EADDRINUSE
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = global as any;
+const PHASE = process.env.NEXT_PHASE;
+const isBuildPhase = PHASE === 'phase-production-build';
+
 let wss: WebSocketServer | null = null;
 
-// Initialize WebSocket server
-if (!wss) {
-  wss = new WebSocketServer({ port: 8080 });
+if (!isBuildPhase) {
+  if (g.__POL_WSS__) {
+    wss = g.__POL_WSS__ as WebSocketServer;
+  } else {
+    try {
+      wss = new WebSocketServer({ port: 8080 });
+      g.__POL_WSS__ = wss;
+    } catch (err) {
+      // If port already in use, attempt to reuse existing instance if available
+      console.warn('WebSocketServer init warning:', err);
+      if (g.__POL_WSS__) {
+        wss = g.__POL_WSS__ as WebSocketServer;
+      } else {
+        wss = null;
+      }
+    }
+  }
+}
   
+if (wss) {
   wss.on('connection', async (ws, request) => {
     console.log('New WebSocket connection');
     

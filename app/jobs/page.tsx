@@ -193,7 +193,8 @@ export default function JobsPage(): JSX.Element {
   };
 
   const handleDeleteJob = async (job: JobPosting): Promise<void> => {
-    if (!currentUser || job.posted_by !== currentUser.user_id) return;
+  // Allow delete if current user is the owner OR an administrator
+  if (!currentUser || (job.posted_by !== currentUser.user_id && !currentUser.is_admin)) return;
 
     const confirmDelete = window.confirm(
       `Are you sure you want to delete the job posting for "${job.title}" at ${job.company}? This action cannot be undone.`
@@ -477,8 +478,22 @@ export default function JobsPage(): JSX.Element {
                           </div>
 
                           <div className={`flex justify-end gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'}`}>
-                            {job.posted_by === currentUser?.user_id ? (
-                              // Show delete button for own postings
+                            {/* Apply button visible when viewing others' postings */}
+                            {currentUser && job.posted_by !== currentUser.user_id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApplyToJob(job);
+                                }}
+                                className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center"
+                              >
+                                <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
+                                Apply Now
+                              </button>
+                            )}
+
+                            {/* Delete button visible for owners and admins */}
+                            {currentUser && (job.posted_by === currentUser.user_id || currentUser.is_admin) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -488,19 +503,6 @@ export default function JobsPage(): JSX.Element {
                               >
                                 <FontAwesomeIcon icon={faTrash} className="mr-2" />
                                 Delete Posting
-                              </button>
-                            ) : (
-                              // Show apply button for other's postings
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleApplyToJob(job);
-                                }}
-                                className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all shadow-lg flex items-center"
-                                disabled={!currentUser}
-                              >
-                                <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
-                                Apply Now
                               </button>
                             )}
                           </div>

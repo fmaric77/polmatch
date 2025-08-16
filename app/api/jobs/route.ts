@@ -5,11 +5,16 @@ import MONGODB_URI from '../mongo-uri';
 
 const client = new MongoClient(MONGODB_URI);
 
+interface DBUser {
+  user_id: string;
+  is_admin?: boolean;
+}
+
 export async function GET(): Promise<NextResponse> {
   try {
     await client.connect();
     const db = client.db('polmatch');
-    const jobsCollection = db.collection('job_postings');
+  const jobsCollection = db.collection('job_postings');
     
     // Fetch all active job postings with poster details
     const jobs = await jobsCollection.aggregate([
@@ -103,7 +108,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
     const jobsCollection = db.collection('job_postings');
     
-    // Find the job posting to verify ownership
+  // Find the job posting to verify ownership
     const job = await jobsCollection.findOne({ job_id: job_id });
     if (!job) {
       return NextResponse.json({
@@ -112,8 +117,13 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       }, { status: 404 });
     }
 
-    // Verify the user owns this job posting
-    if (job.posted_by !== session.user_id) {
+  // Fetch user to determine admin status
+  const usersCollection = db.collection<DBUser>('users');
+  const user = await usersCollection.findOne({ user_id: session.user_id });
+
+  // Verify the user owns this job posting OR is an admin
+  const isAdmin = Boolean(user?.is_admin);
+  if (!isAdmin && job.posted_by !== session.user_id) {
       return NextResponse.json({
         success: false,
         message: 'You can only delete your own job postings'

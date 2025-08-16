@@ -149,6 +149,8 @@ const UnifiedMessages: React.FC = () => {
   const [selectedConversationType, setSelectedConversationType] = useState<'direct' | 'group'>('direct');
   const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  // Display names cache for direct messages (user_id -> display name)
+  const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
 
   // Auto-select state (for URL parameters)
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
@@ -862,7 +864,32 @@ const UnifiedMessages: React.FC = () => {
         if (targetConversation) {
           selectConversation(targetConversation);
           setHasAutoSelected(true); // Mark as auto-selected
+          // Ensure groups and invites are loaded immediately
+          conversations.fetchConversations();
+          groupManagement.fetchInvitations();
+          groupManagement.fetchInvitationSummary();
+          profileConversations.fetchConversations();
         }
+        // If no existing conversation found yet, select a placeholder to force-open DM
+        else {
+          setSelectedCategory('unified');
+          selectConversation({ id: dmUserId, name: 'Direct Message', type: 'direct' });
+          setHasAutoSelected(true);
+          // Still load groups/invites in the background
+          conversations.fetchConversations();
+          groupManagement.fetchInvitations();
+          groupManagement.fetchInvitationSummary();
+          profileConversations.fetchConversations();
+        }
+      } else {
+        // No conversations loaded yet; still select a placeholder to open DM immediately
+        setSelectedCategory('unified');
+        selectConversation({ id: dmUserId, name: 'Direct Message', type: 'direct' });
+        setHasAutoSelected(true);
+        conversations.fetchConversations();
+        groupManagement.fetchInvitations();
+        groupManagement.fetchInvitationSummary();
+        profileConversations.fetchConversations();
       }
     }
   }, [searchParams, conversations.conversations, profileConversations.conversations, hasAutoSelected]); // Added hasAutoSelected to dependencies
@@ -884,14 +911,17 @@ const UnifiedMessages: React.FC = () => {
       );
       
       if (targetConversation) {
-        // Set category to direct to use profile conversations
-        setSelectedCategory('direct');
+        // Keep unified view; just select the conversation and refresh lists
         selectConversation({
           id: targetConversation.other_user.user_id,
           name: targetConversation.other_user.display_name || targetConversation.other_user.username,
           type: 'direct'
         });
         setHasAutoSelected(true); // Mark as auto-selected
+        conversations.fetchConversations();
+        groupManagement.fetchInvitations();
+        groupManagement.fetchInvitationSummary();
+        profileConversations.fetchConversations();
       }
     }
   }, [profileConversations.conversations, activeProfileType, selectedConversation, searchParams, hasAutoSelected]);
@@ -928,6 +958,62 @@ const UnifiedMessages: React.FC = () => {
       messages.fetchChannelMessages(selectedConversation, selectedChannel);
     }
   }, [selectedChannel, selectedConversation, selectedConversationType, activeProfileType]); // Added activeProfileType dependency
+
+  // Ensure we have a display name for the selected direct user; if not, fetch it and add temp conversation entry
+  useEffect(() => {
+    const ensureDisplayName = async (): Promise<void> => {
+      if (!selectedConversation) return;
+      if (selectedConversationType !== 'direct') return;
+
+      // If already known via conversations or profileConversations, no need to fetch
+      const existingProfileConv = profileConversations.conversations.find(pc => pc.other_user.user_id === selectedConversation);
+      const existingConv = conversations.conversations.find(c => c.type === 'direct' && c.id === selectedConversation);
+      const knownName = existingProfileConv?.other_user.display_name || existingConv?.name || displayNames[selectedConversation];
+      if (knownName && knownName !== 'Unknown Contact') {
+        // Optionally ensure it's present in displayNames cache
+        if (!displayNames[selectedConversation]) {
+          setDisplayNames(prev => ({ ...prev, [selectedConversation]: knownName }));
+        }
+        return;
+      }
+
+      try {
+        const res = await protectedFetch('/api/users/display-names', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: [selectedConversation] })
+        });
+        const data: { success: boolean; displayNames?: Record<string, string> } = await res.json();
+        if (data.success && data.displayNames && data.displayNames[selectedConversation]) {
+          const name = data.displayNames[selectedConversation];
+          setDisplayNames(prev => ({ ...prev, [selectedConversation]: name }));
+
+          // If it's not in conversations list yet, inject a temporary direct conversation so the list shows it
+          if (!existingConv) {
+            conversations.setConversations(prev => {
+              // Avoid duplicates
+              if (prev.some(c => c.type === 'direct' && c.id === selectedConversation)) return prev;
+              return [
+                ...prev,
+                {
+                  id: selectedConversation,
+                  name,
+                  type: 'direct' as const,
+                  user_id: selectedConversation,
+                  last_activity: new Date().toISOString(),
+                  unread_count: 0
+                }
+              ];
+            });
+          }
+        }
+      } catch {
+        // best-effort; ignore
+      }
+    };
+
+    void ensureDisplayName();
+  }, [selectedConversation, selectedConversationType, profileConversations.conversations, conversations.conversations, protectedFetch, displayNames]);
 
   // Parse and handle /poll command
   const parsePollCommand = useCallback((message: string): { question: string; options: string[] } | null => {
@@ -1062,6 +1148,58 @@ const UnifiedMessages: React.FC = () => {
     if (success) {
       setNewMessage('');
       setReplyTo(null); // Clear reply after sending
+
+      // Ensure a conversation entry exists immediately for newly started DMs
+      if (selectedConversationType === 'direct' && selectedConversation) {
+  // Ensure unified category so groups and invites remain visible
+  setSelectedCategory('unified');
+        const name = (profileConversations.conversations.find(pc => pc.other_user.user_id === selectedConversation)?.other_user.display_name)
+          || displayNames[selectedConversation]
+          || 'Direct Message';
+        conversations.setConversations(prev => {
+          const exists = prev.some(c => c.type === 'direct' && c.id === selectedConversation);
+          const updated = exists
+            ? prev.map(c => c.type === 'direct' && c.id === selectedConversation
+                ? { ...c, name, last_message: newMessage, last_activity: new Date().toISOString() }
+                : c)
+            : [
+                ...prev,
+                {
+                  id: selectedConversation,
+                  name,
+                  type: 'direct' as const,
+                  user_id: selectedConversation,
+                  last_message: newMessage,
+                  last_activity: new Date().toISOString(),
+                  unread_count: 0
+                }
+              ];
+          return updated;
+        });
+
+        // Also ensure profileConversations includes this DM immediately
+        if (!profileConversations.conversations.some(pc => pc.other_user.user_id === selectedConversation)) {
+          profileConversations.setConversations(prev => ([
+            ...prev,
+            {
+              id: `temp-${selectedConversation}`,
+              participant_ids: [currentUser?.user_id || 'me', selectedConversation],
+              other_user: {
+                user_id: selectedConversation,
+                username: name,
+                display_name: name
+              },
+              created_at: new Date(),
+              updated_at: new Date(),
+              latest_message: { content: newMessage, timestamp: new Date().toISOString(), sender_id: currentUser?.user_id || 'me' },
+              profile_type: activeProfileType
+            }
+          ]));
+        }
+
+        // Optionally refresh groups to ensure unified list remains complete
+        conversations.fetchConversations();
+      }
     }
   }, [selectedConversationType, selectedCategory, activeProfileType, profileMessages, messages, newMessage, replyTo, selectedConversation, parsePollCommand, handlePollCommand]);
 
@@ -1144,14 +1282,26 @@ const UnifiedMessages: React.FC = () => {
       if (profileConversation) {
         return {
           id: selectedConversation,
-          name: profileConversation.other_user.display_name || 'Unknown Contact',
+          name: profileConversation.other_user.display_name || displayNames[selectedConversation] || 'Unknown Contact',
           type: 'direct' as const,
           user_id: selectedConversation
         };
       }
+      // Fallback: if we have a fetched display name but no profile conversation yet, build a temporary entry
+      if (selectedConversation) {
+        const tempName = displayNames[selectedConversation];
+        if (tempName) {
+          return {
+            id: selectedConversation,
+            name: tempName,
+            type: 'direct' as const,
+            user_id: selectedConversation
+          };
+        }
+      }
     }
     return conversations.conversations.find(c => c.id === selectedConversation);
-  }, [selectedCategory, selectedConversation, profileConversations.conversations, conversations.conversations]);
+  }, [selectedCategory, selectedConversation, profileConversations.conversations, conversations.conversations, displayNames]);
     
   // Compute if the current user can manage members in the selected group
   const canManageMembers: boolean = selectedConversationType === 'group'

@@ -257,12 +257,20 @@ export default function Friends() {
                             </button>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => removeFriend(friendId)} 
-                          className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors rounded"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`/messages?user=${friendId}&profile=${activeProfileType}`}
+                            className="px-3 py-1 bg-black dark:bg-white text-white dark:text-black font-mono text-xs border border-black dark:border-white hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors rounded"
+                          >
+                            Message
+                          </a>
+                          <button 
+                            onClick={() => removeFriend(friendId)} 
+                            className="px-3 py-1 bg-red-900 text-white font-mono text-xs border border-red-700 hover:bg-red-800 transition-colors rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
