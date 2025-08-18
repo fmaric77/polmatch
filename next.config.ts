@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              // Allow embedding YouTube iframes
+              "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com",
+              // Fallback for old user agents that rely on child-src
+              "child-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com",
               "frame-ancestors 'none'",
               "upgrade-insecure-requests",
               // Comprehensive Agora.io domains for voice calling

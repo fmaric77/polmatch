@@ -136,6 +136,12 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   const directConversations = filteredConversations.filter(c => c.type === 'direct');
   const groupConversations = filteredConversations.filter(c => c.type === 'group');
 
+  // Compute pending invitations (>0 only)
+  const pendingInviteEntries = invitationSummary 
+    ? Object.entries(invitationSummary).filter(([, count]) => count > 0) 
+    : [] as Array<[string, number]>;
+  const hasPendingInvites = pendingInviteEntries.length > 0;
+
   if (!isConversationsSidebarHidden) {
     return (
       <div className={`w-80 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-r h-full flex flex-col overflow-hidden`}>
@@ -207,13 +213,13 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
           />
         </div>
 
-        {/* Invitations Summary - Show for groups or unified */}
-        {(selectedCategory === 'groups' || selectedCategory === 'unified') && invitationSummary && Object.keys(invitationSummary).length > 0 && (
+        {/* Invitations Summary - Show for groups or unified, only when there are pending invites */}
+        {(selectedCategory === 'groups' || selectedCategory === 'unified') && hasPendingInvites && (
           <div className={`p-3 border-b ${theme === 'dark' ? 'border-white bg-gray-900' : 'border-black bg-gray-100'}`}>
             <div className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
               Pending Invitations
             </div>
-            {Object.entries(invitationSummary).map(([groupId, count]) => (
+            {pendingInviteEntries.map(([groupId, count]) => (
               <div key={groupId} className={`text-xs ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-1`}>
                 {count} invitation{count > 1 ? 's' : ''} to group
               </div>

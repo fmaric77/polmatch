@@ -1,7 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 import InfoModal from "../../components/modals/InfoModal";
@@ -339,19 +338,6 @@ export default function Login() {
         <FontAwesomeIcon icon={faQuestion} />
       </button>
       
-      {/* Logo - Top Right */}
-      <div className="fixed top-4 right-4 z-20">
-        <div className="border-2 border-white rounded-none bg-gray-900 p-3">
-          <Image 
-            src="/images/polstrat-dark.png" 
-            alt="Polmatch" 
-            width={120} 
-            height={45}
-            className="max-w-full h-auto"
-          />
-        </div>
-      </div>
-      
       {/* Main Login Container */}
       <div className="w-full max-w-md">
         <div className="bg-black border-2 border-white rounded-none p-6">
@@ -528,4 +514,4 @@ export default function Login() {
       />
     </div>
   );
-} 
+}

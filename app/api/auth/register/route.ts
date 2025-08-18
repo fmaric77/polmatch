@@ -10,7 +10,8 @@ import {
   createValidationErrorResponse
 } from '../../../../lib/validation';
 import { createSession } from '../../../../lib/auth';
-//dd
+import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
+
 // Helper function to get IP address
 function getClientIP(request: Request): string {
   let ip_address = request.headers.get('x-forwarded-for') || 
@@ -23,6 +24,17 @@ function getClientIP(request: Request): string {
   }
   
   return ip_address;
+}
+
+// Generate a readable random codename using a library, e.g. "Brave-Tiger-482"
+function generateDisplayName(): string {
+  const baseName: string = uniqueNamesGenerator({
+    dictionaries: [adjectives, animals],
+    separator: '-',
+    style: 'capital'
+  });
+  const num: number = Math.floor(100 + Math.random() * 900); // 100-999
+  return `${baseName}-${num}`;
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -136,6 +148,48 @@ export async function POST(request: Request): Promise<NextResponse> {
         { success: false, message: 'Failed to create user account' },
         { status: 500 }
       );
+    }
+
+    // Auto-create a default BASIC profile for the new user
+    try {
+      const basicProfileDoc = {
+        profile_id: uuidv4(),
+        user_id: userId,
+        display_name: generateDisplayName(),
+        bio: '',
+        profile_picture_url: '',
+        visibility: 'public',
+        ai_excluded: false,
+        last_updated: new Date().toISOString(),
+        assigned_questionnaires: {},
+        completed_questionnaires: {}
+      } as const;
+
+      await db.collection('basicprofiles').updateOne(
+        { user_id: userId },
+        { $setOnInsert: basicProfileDoc },
+        { upsert: true }
+      );
+
+      // Log basic profile creation
+      await db.collection('security_logs').insertOne({
+        user_id: userId,
+        action: 'auto_create_basic_profile',
+        timestamp: new Date(),
+        ip_address,
+        user_agent,
+        details: { display_name: basicProfileDoc.display_name }
+      });
+    } catch (e) {
+      // Do not fail registration if profile creation fails; log the error
+      await db.collection('security_logs').insertOne({
+        user_id: userId,
+        action: 'auto_create_basic_profile_failed',
+        timestamp: new Date(),
+        ip_address,
+        user_agent,
+        details: { error: String(e) }
+      });
     }
 
     // Create session for automatic login
