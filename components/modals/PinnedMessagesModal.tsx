@@ -56,6 +56,29 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<Array<{ user_id: string; username: string; display_name?: string }>>([]);
+
+  // Fetch group members for mention validation (since this is for pinned group messages)
+  useEffect(() => {
+    if (!groupId) {
+      setUsers([]);
+      return;
+    }
+
+    fetch(`/api/groups/${groupId}/members`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.members) {
+          setUsers(data.members);
+        } else {
+          setUsers([]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch group members for mentions:', err);
+        setUsers([]);
+      });
+  }, [groupId]);
 
   const fetchPinnedMessages = async () => {
     if (!groupId) return;
@@ -198,7 +221,12 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
                       />
                     ) : (
                       <div className="break-words text-white">
-                        <MessageContent content={message.content} />
+                        <MessageContent 
+                          content={message.content} 
+                          isOwnMessage={currentUser?.user_id === message.sender_id}
+                          users={users}
+                          currentUser={currentUser}
+                        />
                       </div>
                     )}
                   </div>

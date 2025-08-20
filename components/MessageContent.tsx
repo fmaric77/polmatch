@@ -156,22 +156,73 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
 // Enhanced message content renderer
 interface MessageContentProps {
   content: string;
+  isOwnMessage?: boolean; // To determine mention color
+  users?: Array<{ user_id: string; username: string; display_name?: string }>; // Available users to validate mentions
+  currentUser?: { user_id: string; username: string; is_admin?: boolean } | null; // Current user to check if they're mentioned
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
+const MessageContent: React.FC<MessageContentProps> = ({ content, isOwnMessage = false, users = [], currentUser = null }) => {
   const youtubeVideoId = detectYouTubeURL(content);
   const imageUrl = detectImageURL(content);
   
+  // Function to render text with mentions highlighted
+  const renderTextWithMentions = (text: string) => {
+    // Split by @mentions but keep the @ symbol
+    const parts = text.split(/(@\w+)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        // Extract username (remove @ symbol)
+        const username = part.slice(1);
+        
+        // Check if this username actually exists in the users list
+        const isValidUser = users.some(user => user.username === username);
+        
+        if (isValidUser) {
+          // Check if the current user is the one being mentioned
+          const isCurrentUserMentioned = currentUser && currentUser.username === username;
+          
+          // This is a valid mention - color it based on who is being mentioned
+          return (
+            <span
+              key={index}
+              className={`inline-block font-mono px-1 py-0.5 rounded ${
+                isCurrentUserMentioned
+                  ? 'bg-yellow-300 text-black' // Yellow if current user is mentioned
+                  : 'bg-blue-700 text-white' // Blue for other mentions
+              }`}
+            >
+              {part}
+            </span>
+          );
+        }
+        // Not a valid user, render as normal text
+        return <span key={index}>{part}</span>;
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+  
   // Prioritize YouTube if both are detected (in case someone shares a YouTube link with image in description)
   if (youtubeVideoId) {
-    return <YouTubeEmbed videoId={youtubeVideoId} content={content} />;
+    return (
+      <div className="space-y-2">
+        <div className="leading-relaxed">{renderTextWithMentions(content)}</div>
+        <YouTubeEmbed videoId={youtubeVideoId} content="" />
+      </div>
+    );
   }
   
   if (imageUrl) {
-    return <ImageEmbed imageUrl={imageUrl} content={content} />;
+    return (
+      <div className="space-y-2">
+        <div className="leading-relaxed">{renderTextWithMentions(content)}</div>
+        <ImageEmbed imageUrl={imageUrl} content="" />
+      </div>
+    );
   }
   
-  return <p className="leading-relaxed">{content}</p>;
+  return <div className="leading-relaxed">{renderTextWithMentions(content)}</div>;
 };
 
 export default MessageContent;

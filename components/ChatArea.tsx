@@ -201,7 +201,229 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const [newPollExpiryHours, setNewPollExpiryHours] = useState<number>(0);
 
+  // Mention suggestion state
+  interface MentionUser { user_id: string; username: string; display_name?: string; }
+  const [users, setUsers] = useState<MentionUser[]>([]);
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionUser[]>([]);
+  const [mentionQuery, setMentionQuery] = useState('');
+  
+  // Reference for the textarea to handle cursor position
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+
+  // Function to detect and show mention suggestions
+  const handleMention = (text: string, cursorPos: number) => {
+    console.log('handleMention called:', { text, cursorPos, users: users.length });
+    const uptoCursor = text.slice(0, cursorPos);
+    const atIndex = uptoCursor.lastIndexOf('@');
+    console.log('atIndex:', atIndex, 'uptoCursor:', uptoCursor);
+    
+    if (atIndex >= 0) {
+      const query = uptoCursor.slice(atIndex + 1);
+      console.log('mention query:', query);
+      // Allow letters, numbers, and underscores for usernames
+      if (/^\w*$/.test(query)) {
+        setMentionQuery(query);
+        // Show all users when just '@', otherwise filter by query
+        const matches = query === ''
+          ? users
+          : users.filter(u =>
+              u.username.toLowerCase().startsWith(query.toLowerCase()) ||
+              (u.display_name && u.display_name.toLowerCase().startsWith(query.toLowerCase()))
+            );
+        console.log('mention matches found:', matches.length, matches);
+        setMentionSuggestions(matches);
+        setShowMentionSuggestions(matches.length > 0);
+        setSelectedMentionIndex(0); // Reset selection to first item
+        return;
+      } else {
+        console.log('query failed regex test:', query);
+      }
+    }
+    setShowMentionSuggestions(false);
+  };
+
+  // Function to handle keyboard navigation in mention dropdown
+  const handleMentionKeyDown = (e: React.KeyboardEvent) => {
+    if (!showMentionSuggestions) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < mentionSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : mentionSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        if (mentionSuggestions[selectedMentionIndex]) {
+          insertMention(mentionSuggestions[selectedMentionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowMentionSuggestions(false);
+        break;
+    }
+  };
+
+  // Function to insert mention into textarea
+  const insertMention = (user: MentionUser) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const text = newMessage;
+    const uptoCursor = text.slice(0, cursorPos);
+    const atIndex = uptoCursor.lastIndexOf('@');
+    
+    if (atIndex >= 0) {
+      const before = text.slice(0, atIndex);
+      const after = text.slice(cursorPos);
+      const mention = `@${user.username} `;
+      const newText = before + mention + after;
+      
+      setNewMessage(newText);
+      setShowMentionSuggestions(false);
+      
+      // Set cursor position after the mention
+      setTimeout(() => {
+        const newCursorPos = atIndex + mention.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+    }
+  };
   // Poll functions - removed fetchPolls since polls are now only displayed as messages
+
+  // Fetch users for mention suggestions based on conversation type
+  useEffect(() => {
+    console.log('🔍 Fetching users for mentions:', { 
+      selectedConversation, 
+      selectedConversationType, 
+      user_id: selectedConversationData?.user_id 
+    });
+    
+    if (!selectedConversation || !selectedConversationType) {
+      setUsers([]);
+      return;
+    }
+
+    if (selectedConversationType === 'direct') {
+      // For direct messages, only allow mentioning the other person
+      if (selectedConversationData?.user_id) {
+        console.log('📞 Fetching direct message partner:', selectedConversationData.user_id);
+        // First try to fetch the specific user
+        fetch(`/api/users/${selectedConversationData.user_id}`)
+          .then(res => {
+            console.log('👤 User fetch response:', res.status, res.ok);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}`);
+            }
+            return res.json();
+          })
+          .then(data => {
+            console.log('👤 User fetch data:', data);
+            if (data.success && data.user) {
+              console.log('✅ Fetched direct message partner for mentions:', data.user);
+              setUsers([data.user]);
+            } else {
+              console.log('⚠️ User fetch unsuccessful, falling back to users list');
+              throw new Error('User not found in specific endpoint');
+            }
+          })
+          .catch(err => {
+            console.log('💥 User fetch failed, trying fallback:', err.message);
+            // Fallback: fetch all users and filter for the conversation partner
+            return fetch(`/api/users/list?profile_type=${activeProfileType}`)
+              .then(res => {
+                console.log('📋 Users list response:', res.status, res.ok);
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}`);
+                }
+                return res.json();
+              })
+              .then(data => {
+                console.log('📋 Users list data:', data);
+                if (data && data.success) {
+                  const otherUser = data.users.find((user: any) => 
+                    user.user_id === selectedConversationData.user_id
+                  );
+                  if (otherUser) {
+                    console.log('✅ Found conversation partner in users list:', otherUser);
+                    setUsers([otherUser]);
+                  } else {
+                    console.log('❌ Could not find user in users list');
+                    setUsers([]);
+                  }
+                } else {
+                  console.log('❌ Users list fetch unsuccessful');
+                  setUsers([]);
+                }
+              })
+              .catch(fallbackErr => {
+                console.error('💥 Both user fetch methods failed:', fallbackErr);
+                setUsers([]);
+              });
+          });
+      } else {
+        setUsers([]);
+      }
+    } else if (selectedConversationType === 'group') {
+      // For group messages, fetch group members
+      fetch(`/api/groups/${selectedConversation}/members`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (data.success && data.members) {
+            console.log('Fetched group members for mentions:', data.members);
+            // Filter out current user from mentions (can't mention yourself)
+            const otherMembers = data.members.filter((member: any) => 
+              member.user_id !== currentUser?.user_id
+            );
+            setUsers(otherMembers);
+          } else {
+            // Fallback: fetch all users (not ideal but better than nothing)
+            console.log('Falling back to all users list for group');
+            return fetch(`/api/users/list?profile_type=${activeProfileType}`)
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}`);
+                }
+                return res.json();
+              })
+              .then(data => {
+                if (data && data.success) {
+                  // Filter out current user
+                  const otherUsers = data.users.filter((user: any) => 
+                    user.user_id !== currentUser?.user_id
+                  );
+                  console.log('Using all users as fallback for group mentions:', otherUsers.length);
+                  setUsers(otherUsers);
+                } else {
+                  setUsers([]);
+                }
+              });
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch group members:', err);
+          setUsers([]);
+        });
+    }
+  }, [selectedConversation, selectedConversationType, selectedConversationData?.user_id, currentUser?.user_id]);
 
   const handleCreatePoll = useCallback(async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -805,7 +1027,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       } else {
                         return (
                           <div className="break-words">
-                            <MessageContent content={groupMessage.content} />
+                            <MessageContent 
+                              content={groupMessage.content} 
+                              isOwnMessage={isCurrentUser}
+                              users={users}
+                              currentUser={currentUser}
+                            />
                           </div>
                         );
                       }
@@ -884,19 +1111,65 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </button>
           </div>
         )}
-        <div className="flex space-x-3">
-          <textarea
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              onTyping(); // Emit typing indicator when user types
-            }}
-            onKeyPress={handleKeyPress}
-            placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
-            className={`flex-1 ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
-            rows={1}
-            style={{ minHeight: '48px', maxHeight: '120px' }}
-          />
+        <div className="flex space-x-3 relative">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={newMessage}
+              onChange={(e) => {
+                const val = e.target.value;
+                setNewMessage(val);
+                onTyping(); // Emit typing indicator when user types
+                handleMention(val, e.target.selectionStart || val.length);
+              }}
+              onKeyDown={(e) => {
+                handleMentionKeyDown(e);
+                // Don't interfere with existing key handlers if no mentions shown
+                if (!showMentionSuggestions) {
+                  handleKeyPress(e as any);
+                }
+              }}
+              placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
+              rows={1}
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            
+            {/* Mention suggestions dropdown */}
+            {showMentionSuggestions && (
+              <div className={`absolute bottom-full left-0 mb-2 w-full max-h-40 overflow-auto ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none shadow-lg z-50 font-mono`}>
+                {mentionSuggestions.map((user, index) => (
+                  <div
+                    key={user.user_id}
+                    className={`px-3 py-2 cursor-pointer transition-colors border-b border-gray-600 last:border-b-0 ${
+                      index === selectedMentionIndex
+                        ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-200 text-black')
+                        : (theme === 'dark' ? 'hover:bg-white/20 text-white' : 'hover:bg-black/20 text-black')
+                    }`}
+                    onMouseEnter={() => setSelectedMentionIndex(index)}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent textarea blur
+                      insertMention(user);
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ProfileAvatar userId={user.user_id} size={20} />
+                      <span className="font-bold">@{user.username}</span>
+                      {user.display_name && (
+                        <span className={`text-sm ${
+                          index === selectedMentionIndex
+                            ? (theme === 'dark' ? 'text-gray-200' : 'text-gray-800')
+                            : (theme === 'dark' ? 'text-gray-400' : 'text-gray-600')
+                        }`}>
+                          ({user.display_name})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={onSendMessage}
             disabled={!newMessage.trim() || sending}
