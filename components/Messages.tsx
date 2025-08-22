@@ -41,10 +41,17 @@ interface Conversation {
 }
 
 const Messages = () => {
+  console.log('=== MESSAGES COMPONENT STARTING ===');
+  console.error('=== MESSAGES COMPONENT ERROR LOG TEST ===');
+  alert('Messages component is rendering!');
   const { protectedFetch } = useCSRFToken();
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [newMessage, setNewMessage] = useState('');
+  // Mention suggestion state
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
+  const [mentionQuery, setMentionQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [refresh, setRefresh] = useState(0);
   // currentUser is now provided by SSEProvider
@@ -194,12 +201,42 @@ const Messages = () => {
       });
   }, [currentUser, refresh]);
 
-  // Fetch messages with selected user
+  // Debug: log fetched users for mentions
+  useEffect(() => {
+    console.log('Mention users loaded:', users);
+  }, [users]);
+
+  // Function to detect and show mention suggestions
+  const handleMention = (text: string, cursorPos: number) => {
+    console.log('handleMention called with:', text, 'cursor:', cursorPos);
+    const uptoCursor = text.slice(0, cursorPos);
+    const atIndex = uptoCursor.lastIndexOf('@');
+    console.log('uptoCursor:', uptoCursor, 'atIndex:', atIndex);
+    if (atIndex >= 0) {
+      const query = uptoCursor.slice(atIndex + 1);
+      console.log('handleMention query:', query);
+      if (/^\w*$/.test(query)) {
+        setMentionQuery(query);
+        // Show all users when just '@', otherwise filter by query
+        const matches = query === ''
+          ? users
+          : users.filter(u =>
+              u.username.toLowerCase().startsWith(query.toLowerCase()) ||
+              (u.display_name && u.display_name.toLowerCase().startsWith(query.toLowerCase()))
+            );
+      console.log('mention matches:', matches);
+        setMentionSuggestions(matches);
+        setShowMentionSuggestions(matches.length > 0);
+        return;
+      }
+    }
+    setShowMentionSuggestions(false);
+  };
   const fetchMessages = () => {
     if (!selectedUser || !currentUser) return;
     fetch(`/api/messages?user_id=${selectedUser}`)
       .then(res => res.json())
-      .then(data => {
+      .then((data: { success: boolean; pms: Message[] }) => {
         if (data.success) {
           // Only show messages between currentUser and selectedUser
           const filtered = data.pms.filter((msg: Message) =>
@@ -512,7 +549,20 @@ const Messages = () => {
                     <div
                       className={`max-w-sm px-4 py-2 rounded-lg shadow text-sm mb-1 relative break-words ${msg.sender_id === currentUser?.user_id ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
                     >
-                      <div className="break-words">{msg.content}</div>
+                      <div className="break-words">
+                        {msg.content.split(/(@\w*)/g).map((part, idx) =>
+                          part.startsWith('@') ? (
+                            <span
+                              key={idx}
+                              className={`inline-block font-mono px-1 py-0.5 rounded ${msg.sender_id === currentUser?.user_id ? 'bg-blue-700 text-white' : 'bg-yellow-300 text-black'}`}
+                            >
+                              {part}
+                            </span>
+                          ) : (
+                            <span key={idx}>{part}</span>
+                          )
+                        )}
+                      </div>
                       <div className="text-xs text-right text-gray-300 mt-1 flex items-center gap-2">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {msg.sender_id === currentUser?.user_id && (
@@ -546,17 +596,51 @@ const Messages = () => {
         {/* Message input */}
         {selectedUser && (
           <form onSubmit={handleSend} className="flex gap-2 p-4 border-t border-white bg-black/80">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={e => {
-                setNewMessage(e.target.value);
-                typingIndicator.emitTyping(); // Emit typing indicator when user types
-              }}
-              className="flex-1 p-2 bg-black text-white border border-white rounded focus:outline-none"
-              placeholder="Type your message..."
-              required
-            />
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={e => {
+              console.log('onChange triggered - e.target.value:', e.target.value);
+              const val = e.target.value;
+              console.log('Input changed:', val, 'cursor:', e.target.selectionStart);
+              setNewMessage(val);
+              typingIndicator.emitTyping(); // Emit typing indicator when user types
+              handleMention(val, e.target.selectionStart || val.length);
+            }}
+            onInput={e => {
+              console.log('onInput triggered - value:', (e.target as HTMLInputElement).value);
+            }}
+            onKeyDown={e => {
+              console.log('onKeyDown triggered - key:', e.key, 'value:', (e.target as HTMLInputElement).value);
+            }}
+            className="w-full p-2 bg-black text-white border border-white rounded focus:outline-none"
+            placeholder="Type your message..."
+            required
+          />
+          {showMentionSuggestions && (
+            <ul className="absolute left-0 top-full mt-1 w-full max-h-40 overflow-auto bg-black border border-white rounded shadow-lg z-50">
+              {mentionSuggestions.map(user => (
+                <li
+                  key={user.user_id}
+                  className="px-2 py-1 hover:bg-white/20 cursor-pointer"
+                  onMouseDown={e => {
+                    // Insert mention and hide suggestions
+                    e.preventDefault();
+                    const insertText = `@${user.username} `;
+                    const before = newMessage.slice(0, newMessage.lastIndexOf(`@${mentionQuery}`));
+                    const after = newMessage.slice((newMessage.lastIndexOf(`@${mentionQuery}`) || 0) + mentionQuery.length + 1);
+                    const updated = before + insertText + after;
+                    setNewMessage(updated);
+                    setShowMentionSuggestions(false);
+                  }}
+                >
+                  {user.display_name || user.username}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
             <button type="submit" className="p-2 bg-white text-black rounded hover:bg-gray-200">Send</button>
           </form>
         )}

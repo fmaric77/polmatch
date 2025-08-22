@@ -99,6 +99,7 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
               className="relative cursor-pointer rounded overflow-hidden"
               onClick={() => setShowFullSize(true)}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imageUrl}
                 alt="Shared image"
@@ -122,6 +123,7 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
               onClick={() => setShowFullSize(false)}
             >
               <div className="relative max-w-full max-h-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt="Shared image - full size"
@@ -156,22 +158,83 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
 // Enhanced message content renderer
 interface MessageContentProps {
   content: string;
+  isOwnMessage?: boolean; // To determine mention color
+  users?: Array<{ user_id: string; username: string; display_name?: string }>; // Available users to validate mentions
+  currentUser?: { user_id: string; username: string; is_admin?: boolean } | null; // Current user to check if they're mentioned
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({ content }) => {
+const MessageContent: React.FC<MessageContentProps> = ({ content, users = [], currentUser = null }) => {
   const youtubeVideoId = detectYouTubeURL(content);
   const imageUrl = detectImageURL(content);
   
+  // Function to render text with mentions highlighted
+  const renderTextWithMentions = (text: string) => {
+    // Split by @mentions but keep the @ symbol
+    const parts = text.split(/(@\w+)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        // Extract username (remove @ symbol)
+        const username = part.slice(1);
+
+        // Case-insensitive comparisons for reliability
+        const usernameLc = username.toLowerCase();
+        const currentUserLc = currentUser?.username ? currentUser.username.toLowerCase() : null;
+
+        // Current user mention should always be highlighted yellow, even if not in users list
+        const isCurrentUserMentioned = !!currentUserLc && currentUserLc === usernameLc;
+
+        if (isCurrentUserMentioned) {
+          return (
+            <span
+              key={index}
+              className="inline-block font-mono px-1 py-0.5 rounded bg-yellow-300 text-black"
+            >
+              {part}
+            </span>
+          );
+        }
+
+        // Otherwise, highlight blue only if the mention matches someone in the provided users list
+        const matchesKnownUser = users.some(user => user.username.toLowerCase() === usernameLc);
+        if (matchesKnownUser) {
+          return (
+            <span
+              key={index}
+              className="inline-block font-mono px-1 py-0.5 rounded bg-blue-700 text-white"
+            >
+              {part}
+            </span>
+          );
+        }
+
+        // Not a valid/known user mention, render as normal text
+        return <span key={index}>{part}</span>;
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+  
   // Prioritize YouTube if both are detected (in case someone shares a YouTube link with image in description)
   if (youtubeVideoId) {
-    return <YouTubeEmbed videoId={youtubeVideoId} content={content} />;
+    return (
+      <div className="space-y-2">
+        <div className="leading-relaxed">{renderTextWithMentions(content)}</div>
+        <YouTubeEmbed videoId={youtubeVideoId} content="" />
+      </div>
+    );
   }
   
   if (imageUrl) {
-    return <ImageEmbed imageUrl={imageUrl} content={content} />;
+    return (
+      <div className="space-y-2">
+        <div className="leading-relaxed">{renderTextWithMentions(content)}</div>
+        <ImageEmbed imageUrl={imageUrl} content="" />
+      </div>
+    );
   }
   
-  return <p className="leading-relaxed">{content}</p>;
+  return <div className="leading-relaxed">{renderTextWithMentions(content)}</div>;
 };
 
 export default MessageContent;

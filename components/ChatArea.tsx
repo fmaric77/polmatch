@@ -193,7 +193,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
+  const [unreadMentionsCount, setUnreadMentionsCount] = useState<number>(0);
 
   // Poll state
   const [showPollModal, setShowPollModal] = useState(false);
@@ -201,7 +203,260 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const [newPollExpiryHours, setNewPollExpiryHours] = useState<number>(0);
 
+  // Mention suggestion state
+  interface MentionUser { user_id: string; username: string; display_name?: string; }
+  interface GroupMember { user_id: string; username: string; display_name?: string; }
+  interface UserListResponse { success: boolean; user?: MentionUser; users?: MentionUser[]; }
+  interface GroupMembersResponse { success: boolean; members?: GroupMember[]; }
+  
+  const [users, setUsers] = useState<MentionUser[]>([]);
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionUser[]>([]);
+  
+  // Reference for the textarea to handle cursor position
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+
+  // Helpers for mention notifications
+  const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const isUserMentioned = (content: string, username: string): boolean => {
+    if (!username) return false;
+    const re = new RegExp(`@${escapeRegExp(username)}(\\b|$)`, 'i');
+    return re.test(content);
+  };
+  const getMentionsSeenKey = (): string => {
+    const parts = [
+      'mentionsSeen',
+      activeProfileType,
+      selectedConversationType,
+      selectedConversation || 'none',
+    ];
+    // Scope by channel for groups
+    if (selectedConversationType === 'group' && selectedChannel) parts.push(selectedChannel);
+    return parts.join(':');
+  };
+  const markMentionsSeen = (): void => {
+    if (typeof window === 'undefined') return;
+    const key = getMentionsSeenKey();
+    try {
+      window.localStorage.setItem(key, `${Date.now()}`);
+    } catch {
+      // ignore storage errors
+    }
+    setUnreadMentionsCount(0);
+  };
+
+  // Function to detect and show mention suggestions
+  const handleMention = (text: string, cursorPos: number) => {
+    console.log('handleMention called:', { text, cursorPos, users: users.length });
+    const uptoCursor = text.slice(0, cursorPos);
+    const atIndex = uptoCursor.lastIndexOf('@');
+    console.log('atIndex:', atIndex, 'uptoCursor:', uptoCursor);
+    
+    if (atIndex >= 0) {
+      const query = uptoCursor.slice(atIndex + 1);
+      console.log('mention query:', query);
+      // Allow letters, numbers, and underscores for usernames
+      if (/^\w*$/.test(query)) {
+        // Show all users when just '@', otherwise filter by query
+        const matches = query === ''
+          ? users
+          : users.filter(u =>
+              u.username.toLowerCase().startsWith(query.toLowerCase()) ||
+              (u.display_name && u.display_name.toLowerCase().startsWith(query.toLowerCase()))
+            );
+        console.log('mention matches found:', matches.length, matches);
+        setMentionSuggestions(matches);
+        setShowMentionSuggestions(matches.length > 0);
+        setSelectedMentionIndex(0); // Reset selection to first item
+        return;
+      } else {
+        console.log('query failed regex test:', query);
+      }
+    }
+    setShowMentionSuggestions(false);
+  };
+
+  // Function to handle keyboard navigation in mention dropdown
+  const handleMentionKeyDown = (e: React.KeyboardEvent) => {
+    if (!showMentionSuggestions) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < mentionSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : mentionSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        if (mentionSuggestions[selectedMentionIndex]) {
+          insertMention(mentionSuggestions[selectedMentionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowMentionSuggestions(false);
+        break;
+    }
+  };
+
+  // Function to insert mention into textarea
+  const insertMention = (user: MentionUser) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const text = newMessage;
+    const uptoCursor = text.slice(0, cursorPos);
+    const atIndex = uptoCursor.lastIndexOf('@');
+    
+    if (atIndex >= 0) {
+      const before = text.slice(0, atIndex);
+      const after = text.slice(cursorPos);
+      const mention = `@${user.username} `;
+      const newText = before + mention + after;
+      
+      setNewMessage(newText);
+      setShowMentionSuggestions(false);
+      
+      // Set cursor position after the mention
+      setTimeout(() => {
+        const newCursorPos = atIndex + mention.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+    }
+  };
   // Poll functions - removed fetchPolls since polls are now only displayed as messages
+
+  // Fetch users for mention suggestions based on conversation type
+  useEffect(() => {
+    console.log('🔍 Fetching users for mentions:', { 
+      selectedConversation, 
+      selectedConversationType, 
+      user_id: selectedConversationData?.user_id 
+    });
+    
+    if (!selectedConversation || !selectedConversationType) {
+      setUsers([]);
+      return;
+    }
+
+    if (selectedConversationType === 'direct') {
+      // For direct messages, only allow mentioning the other person
+      if (selectedConversationData?.user_id) {
+        console.log('📞 Fetching direct message partner:', selectedConversationData.user_id);
+        // First try to fetch the specific user
+        fetch(`/api/users/${selectedConversationData.user_id}`)
+          .then(res => {
+            console.log('👤 User fetch response:', res.status, res.ok);
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}`);
+            }
+            return res.json();
+          })
+          .then(data => {
+            console.log('👤 User fetch data:', data);
+            if (data.success && data.user) {
+              console.log('✅ Fetched direct message partner for mentions:', data.user);
+              setUsers([data.user]);
+            } else {
+              console.log('⚠️ User fetch unsuccessful, falling back to users list');
+              throw new Error('User not found in specific endpoint');
+            }
+          })
+          .catch(err => {
+            console.log('💥 User fetch failed, trying fallback:', err.message);
+            // Fallback: fetch all users and filter for the conversation partner
+            return fetch(`/api/users/list?profile_type=${activeProfileType}`)
+              .then(res => {
+                console.log('📋 Users list response:', res.status, res.ok);
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}`);
+                }
+                return res.json();
+              })
+              .then((data: UserListResponse) => {
+                console.log('📋 Users list data:', data);
+                if (data && data.success && data.users) {
+                  const otherUser = data.users.find((user: MentionUser) => 
+                    user.user_id === selectedConversationData.user_id
+                  );
+                  if (otherUser) {
+                    console.log('✅ Found conversation partner in users list:', otherUser);
+                    setUsers([otherUser]);
+                  } else {
+                    console.log('❌ Could not find user in users list');
+                    setUsers([]);
+                  }
+                } else {
+                  console.log('❌ Users list fetch unsuccessful');
+                  setUsers([]);
+                }
+              })
+              .catch(fallbackErr => {
+                console.error('💥 Both user fetch methods failed:', fallbackErr);
+                setUsers([]);
+              });
+          });
+      } else {
+        setUsers([]);
+      }
+    } else if (selectedConversationType === 'group') {
+      // For group messages, fetch group members
+      fetch(`/api/groups/${selectedConversation}/members`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        })
+        .then((data: GroupMembersResponse) => {
+          if (data.success && data.members) {
+            console.log('Fetched group members for mentions:', data.members);
+            // Filter out current user from mentions (can't mention yourself)
+            const otherMembers = data.members.filter((member: GroupMember) => 
+              member.user_id !== currentUser?.user_id
+            );
+            setUsers(otherMembers);
+          } else {
+            // Fallback: fetch all users (not ideal but better than nothing)
+            console.log('Falling back to all users list for group');
+            return fetch(`/api/users/list?profile_type=${activeProfileType}`)
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}`);
+                }
+                return res.json();
+              })
+              .then((data: UserListResponse) => {
+                if (data && data.success && data.users) {
+                  // Filter out current user
+                  const otherUsers = data.users.filter((user: MentionUser) => 
+                    user.user_id !== currentUser?.user_id
+                  );
+                  console.log('Using all users as fallback for group mentions:', otherUsers.length);
+                  setUsers(otherUsers);
+                } else {
+                  setUsers([]);
+                }
+              });
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch group members:', err);
+          setUsers([]);
+        });
+    }
+  }, [selectedConversation, selectedConversationType, selectedConversationData?.user_id, currentUser?.user_id, activeProfileType]);
 
   const handleCreatePoll = useCallback(async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -287,6 +542,30 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         .catch(err => console.warn('Error prefetching message sender profile pictures:', err));
     }
   }, [messages]);
+
+  // Compute unread mentions count for this conversation based on last seen timestamp
+  useEffect(() => {
+    if (typeof window === 'undefined' || !currentUser || !currentUser.username) {
+      setUnreadMentionsCount(0);
+      return;
+    }
+    const key = getMentionsSeenKey();
+    let lastSeen = 0;
+    try {
+      const v = window.localStorage.getItem(key);
+      lastSeen = v ? parseInt(v, 10) : 0;
+    } catch {
+      lastSeen = 0;
+    }
+    const count = messages.reduce((acc, m) => {
+      const ts = new Date(m.timestamp).getTime();
+      if (Number.isNaN(ts) || ts <= lastSeen) return acc;
+      const content = (m as PrivateMessage | GroupMessage).content as string | undefined;
+      if (!content) return acc;
+      return isUserMentioned(content, currentUser.username) ? acc + 1 : acc;
+    }, 0);
+    setUnreadMentionsCount(count);
+  }, [messages, selectedConversation, selectedConversationType, selectedChannel, activeProfileType, currentUser?.username, getMentionsSeenKey, isUserMentioned]);
 
   useEffect(() => {
     scrollToBottom();
@@ -679,7 +958,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* FBI Messages Area */}
-      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}
+        onScroll={() => {
+          // Optional: clear when the user interacts/scrolls this conversation
+          if (unreadMentionsCount > 0) {
+            markMentionsSeen();
+          }
+        }}
+      >
         {channelLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className={`${theme === 'dark' ? 'bg-black border-yellow-400' : 'bg-white border-yellow-600'} border-2 rounded-none p-4 shadow-2xl`}>
@@ -805,7 +1091,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       } else {
                         return (
                           <div className="break-words">
-                            <MessageContent content={groupMessage.content} />
+                            <MessageContent 
+                              content={groupMessage.content} 
+                              isOwnMessage={isCurrentUser}
+                              users={users}
+                              currentUser={currentUser}
+                            />
                           </div>
                         );
                       }
@@ -864,6 +1155,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* FBI Message Input */}
       <div className="p-4 border-t-2 border-white bg-black shadow-inner">
+        {/* Mention badge like Discord */}
+        {unreadMentionsCount > 0 && (
+          <div className="flex items-center justify-end mb-2">
+            <div className="bg-red-600 text-white text-xs font-mono rounded-full w-6 h-6 flex items-center justify-center shadow-lg border border-white">
+              {unreadMentionsCount}
+            </div>
+          </div>
+        )}
         {/* Reply indicator */}
         {replyTo && (
           <div className="mb-3 p-3 bg-gray-800 border-l-4 border-blue-400 rounded-r flex items-center justify-between">
@@ -884,19 +1183,68 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </button>
           </div>
         )}
-        <div className="flex space-x-3">
-          <textarea
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              onTyping(); // Emit typing indicator when user types
-            }}
-            onKeyPress={handleKeyPress}
-            placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
-            className={`flex-1 ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
-            rows={1}
-            style={{ minHeight: '48px', maxHeight: '120px' }}
-          />
+        <div className="flex space-x-3 relative">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={newMessage}
+              onChange={(e) => {
+                const val = e.target.value;
+                setNewMessage(val);
+                onTyping(); // Emit typing indicator when user types
+                handleMention(val, e.target.selectionStart || val.length);
+              }}
+              onFocus={() => {
+                if (unreadMentionsCount > 0) markMentionsSeen();
+              }}
+              onKeyDown={(e) => {
+                handleMentionKeyDown(e);
+                // Don't interfere with existing key handlers if no mentions shown
+                if (!showMentionSuggestions) {
+                  handleKeyPress(e);
+                }
+              }}
+              placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
+              className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
+              rows={1}
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            
+            {/* Mention suggestions dropdown */}
+            {showMentionSuggestions && (
+              <div className={`absolute bottom-full left-0 mb-2 w-full max-h-40 overflow-auto ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none shadow-lg z-50 font-mono`}>
+                {mentionSuggestions.map((user, index) => (
+                  <div
+                    key={user.user_id}
+                    className={`px-3 py-2 cursor-pointer transition-colors border-b border-gray-600 last:border-b-0 ${
+                      index === selectedMentionIndex
+                        ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-200 text-black')
+                        : (theme === 'dark' ? 'hover:bg-white/20 text-white' : 'hover:bg-black/20 text-black')
+                    }`}
+                    onMouseEnter={() => setSelectedMentionIndex(index)}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent textarea blur
+                      insertMention(user);
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ProfileAvatar userId={user.user_id} size={20} />
+                      <span className="font-bold">@{user.username}</span>
+                      {user.display_name && (
+                        <span className={`text-sm ${
+                          index === selectedMentionIndex
+                            ? (theme === 'dark' ? 'text-gray-200' : 'text-gray-800')
+                            : (theme === 'dark' ? 'text-gray-400' : 'text-gray-600')
+                        }`}>
+                          ({user.display_name})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={onSendMessage}
             disabled={!newMessage.trim() || sending}
