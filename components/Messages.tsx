@@ -236,7 +236,7 @@ const Messages = () => {
     if (!selectedUser || !currentUser) return;
     fetch(`/api/messages?user_id=${selectedUser}`)
       .then(res => res.json())
-      .then((data: any) => {
+      .then((data: { success: boolean; pms: Message[] }) => {
         if (data.success) {
           // Only show messages between currentUser and selectedUser
           const filtered = data.pms.filter((msg: Message) =>

@@ -99,6 +99,7 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
               className="relative cursor-pointer rounded overflow-hidden"
               onClick={() => setShowFullSize(true)}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imageUrl}
                 alt="Shared image"
@@ -122,6 +123,7 @@ const ImageEmbed: React.FC<ImageEmbedProps> = ({ imageUrl, content }) => {
               onClick={() => setShowFullSize(false)}
             >
               <div className="relative max-w-full max-h-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt="Shared image - full size"
@@ -161,7 +163,7 @@ interface MessageContentProps {
   currentUser?: { user_id: string; username: string; is_admin?: boolean } | null; // Current user to check if they're mentioned
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({ content, isOwnMessage = false, users = [], currentUser = null }) => {
+const MessageContent: React.FC<MessageContentProps> = ({ content, users = [], currentUser = null }) => {
   const youtubeVideoId = detectYouTubeURL(content);
   const imageUrl = detectImageURL(content);
   
@@ -174,29 +176,39 @@ const MessageContent: React.FC<MessageContentProps> = ({ content, isOwnMessage =
       if (part.startsWith('@')) {
         // Extract username (remove @ symbol)
         const username = part.slice(1);
-        
-        // Check if this username actually exists in the users list
-        const isValidUser = users.some(user => user.username === username);
-        
-        if (isValidUser) {
-          // Check if the current user is the one being mentioned
-          const isCurrentUserMentioned = currentUser && currentUser.username === username;
-          
-          // This is a valid mention - color it based on who is being mentioned
+
+        // Case-insensitive comparisons for reliability
+        const usernameLc = username.toLowerCase();
+        const currentUserLc = currentUser?.username ? currentUser.username.toLowerCase() : null;
+
+        // Current user mention should always be highlighted yellow, even if not in users list
+        const isCurrentUserMentioned = !!currentUserLc && currentUserLc === usernameLc;
+
+        if (isCurrentUserMentioned) {
           return (
             <span
               key={index}
-              className={`inline-block font-mono px-1 py-0.5 rounded ${
-                isCurrentUserMentioned
-                  ? 'bg-yellow-300 text-black' // Yellow if current user is mentioned
-                  : 'bg-blue-700 text-white' // Blue for other mentions
-              }`}
+              className="inline-block font-mono px-1 py-0.5 rounded bg-yellow-300 text-black"
             >
               {part}
             </span>
           );
         }
-        // Not a valid user, render as normal text
+
+        // Otherwise, highlight blue only if the mention matches someone in the provided users list
+        const matchesKnownUser = users.some(user => user.username.toLowerCase() === usernameLc);
+        if (matchesKnownUser) {
+          return (
+            <span
+              key={index}
+              className="inline-block font-mono px-1 py-0.5 rounded bg-blue-700 text-white"
+            >
+              {part}
+            </span>
+          );
+        }
+
+        // Not a valid/known user mention, render as normal text
         return <span key={index}>{part}</span>;
       }
       return <span key={index}>{part}</span>;

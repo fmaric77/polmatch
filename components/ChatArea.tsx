@@ -193,7 +193,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
+  const [unreadMentionsCount, setUnreadMentionsCount] = useState<number>(0);
 
   // Poll state
   const [showPollModal, setShowPollModal] = useState(false);
@@ -203,14 +205,46 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   // Mention suggestion state
   interface MentionUser { user_id: string; username: string; display_name?: string; }
+  interface GroupMember { user_id: string; username: string; display_name?: string; }
+  interface UserListResponse { success: boolean; user?: MentionUser; users?: MentionUser[]; }
+  interface GroupMembersResponse { success: boolean; members?: GroupMember[]; }
+  
   const [users, setUsers] = useState<MentionUser[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionUser[]>([]);
-  const [mentionQuery, setMentionQuery] = useState('');
   
   // Reference for the textarea to handle cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+
+  // Helpers for mention notifications
+  const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const isUserMentioned = (content: string, username: string): boolean => {
+    if (!username) return false;
+    const re = new RegExp(`@${escapeRegExp(username)}(\\b|$)`, 'i');
+    return re.test(content);
+  };
+  const getMentionsSeenKey = (): string => {
+    const parts = [
+      'mentionsSeen',
+      activeProfileType,
+      selectedConversationType,
+      selectedConversation || 'none',
+    ];
+    // Scope by channel for groups
+    if (selectedConversationType === 'group' && selectedChannel) parts.push(selectedChannel);
+    return parts.join(':');
+  };
+  const markMentionsSeen = (): void => {
+    if (typeof window === 'undefined') return;
+    const key = getMentionsSeenKey();
+    try {
+      window.localStorage.setItem(key, `${Date.now()}`);
+    } catch {
+      // ignore storage errors
+    }
+    setUnreadMentionsCount(0);
+  };
 
   // Function to detect and show mention suggestions
   const handleMention = (text: string, cursorPos: number) => {
@@ -224,7 +258,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       console.log('mention query:', query);
       // Allow letters, numbers, and underscores for usernames
       if (/^\w*$/.test(query)) {
-        setMentionQuery(query);
         // Show all users when just '@', otherwise filter by query
         const matches = query === ''
           ? users
@@ -351,10 +384,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 }
                 return res.json();
               })
-              .then(data => {
+              .then((data: UserListResponse) => {
                 console.log('📋 Users list data:', data);
-                if (data && data.success) {
-                  const otherUser = data.users.find((user: any) => 
+                if (data && data.success && data.users) {
+                  const otherUser = data.users.find((user: MentionUser) => 
                     user.user_id === selectedConversationData.user_id
                   );
                   if (otherUser) {
@@ -386,11 +419,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           }
           return res.json();
         })
-        .then(data => {
+        .then((data: GroupMembersResponse) => {
           if (data.success && data.members) {
             console.log('Fetched group members for mentions:', data.members);
             // Filter out current user from mentions (can't mention yourself)
-            const otherMembers = data.members.filter((member: any) => 
+            const otherMembers = data.members.filter((member: GroupMember) => 
               member.user_id !== currentUser?.user_id
             );
             setUsers(otherMembers);
@@ -404,10 +437,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 }
                 return res.json();
               })
-              .then(data => {
-                if (data && data.success) {
+              .then((data: UserListResponse) => {
+                if (data && data.success && data.users) {
                   // Filter out current user
-                  const otherUsers = data.users.filter((user: any) => 
+                  const otherUsers = data.users.filter((user: MentionUser) => 
                     user.user_id !== currentUser?.user_id
                   );
                   console.log('Using all users as fallback for group mentions:', otherUsers.length);
@@ -423,7 +456,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           setUsers([]);
         });
     }
-  }, [selectedConversation, selectedConversationType, selectedConversationData?.user_id, currentUser?.user_id]);
+  }, [selectedConversation, selectedConversationType, selectedConversationData?.user_id, currentUser?.user_id, activeProfileType]);
 
   const handleCreatePoll = useCallback(async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -509,6 +542,30 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         .catch(err => console.warn('Error prefetching message sender profile pictures:', err));
     }
   }, [messages]);
+
+  // Compute unread mentions count for this conversation based on last seen timestamp
+  useEffect(() => {
+    if (typeof window === 'undefined' || !currentUser || !currentUser.username) {
+      setUnreadMentionsCount(0);
+      return;
+    }
+    const key = getMentionsSeenKey();
+    let lastSeen = 0;
+    try {
+      const v = window.localStorage.getItem(key);
+      lastSeen = v ? parseInt(v, 10) : 0;
+    } catch {
+      lastSeen = 0;
+    }
+    const count = messages.reduce((acc, m) => {
+      const ts = new Date(m.timestamp).getTime();
+      if (Number.isNaN(ts) || ts <= lastSeen) return acc;
+      const content = (m as PrivateMessage | GroupMessage).content as string | undefined;
+      if (!content) return acc;
+      return isUserMentioned(content, currentUser.username) ? acc + 1 : acc;
+    }, 0);
+    setUnreadMentionsCount(count);
+  }, [messages, selectedConversation, selectedConversationType, selectedChannel, activeProfileType, currentUser?.username, getMentionsSeenKey, isUserMentioned]);
 
   useEffect(() => {
     scrollToBottom();
@@ -901,7 +958,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* FBI Messages Area */}
-      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}
+        onScroll={() => {
+          // Optional: clear when the user interacts/scrolls this conversation
+          if (unreadMentionsCount > 0) {
+            markMentionsSeen();
+          }
+        }}
+      >
         {channelLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className={`${theme === 'dark' ? 'bg-black border-yellow-400' : 'bg-white border-yellow-600'} border-2 rounded-none p-4 shadow-2xl`}>
@@ -1091,6 +1155,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* FBI Message Input */}
       <div className="p-4 border-t-2 border-white bg-black shadow-inner">
+        {/* Mention badge like Discord */}
+        {unreadMentionsCount > 0 && (
+          <div className="flex items-center justify-end mb-2">
+            <div className="bg-red-600 text-white text-xs font-mono rounded-full w-6 h-6 flex items-center justify-center shadow-lg border border-white">
+              {unreadMentionsCount}
+            </div>
+          </div>
+        )}
         {/* Reply indicator */}
         {replyTo && (
           <div className="mb-3 p-3 bg-gray-800 border-l-4 border-blue-400 rounded-r flex items-center justify-between">
@@ -1122,11 +1194,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 onTyping(); // Emit typing indicator when user types
                 handleMention(val, e.target.selectionStart || val.length);
               }}
+              onFocus={() => {
+                if (unreadMentionsCount > 0) markMentionsSeen();
+              }}
               onKeyDown={(e) => {
                 handleMentionKeyDown(e);
                 // Don't interfere with existing key handlers if no mentions shown
                 if (!showMentionSuggestions) {
-                  handleKeyPress(e as any);
+                  handleKeyPress(e);
                 }
               }}
               placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import ProfileAvatar from './ProfileAvatar';
 
 interface User {
@@ -32,7 +32,6 @@ const MentionInput: React.FC<MentionInputProps> = ({
 }) => {
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,7 +44,6 @@ const MentionInput: React.FC<MentionInputProps> = ({
       const query = uptoCursor.slice(atIndex + 1);
       // Allow letters, numbers, and underscores for usernames
       if (/^\w*$/.test(query)) {
-        setMentionQuery(query);
         // Show all users when just '@', otherwise filter by query
         const matches = query === ''
           ? users
