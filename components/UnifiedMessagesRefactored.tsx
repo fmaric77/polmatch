@@ -26,6 +26,7 @@ import CreateChannelModal from './modals/CreateChannelModal';
 import PinnedMessagesModal from './modals/PinnedMessagesModal';
 import ContextMenu from './modals/ContextMenu';
 import { useCSRFToken } from './hooks/useCSRFToken';
+import e2ee from '../lib/e2ee';
 
 // Dynamically import VoiceCall to prevent SSR issues
 const VoiceCall = dynamic(() => import('./VoiceCall'), {
@@ -476,6 +477,41 @@ const UnifiedMessagesInner: React.FC = () => {
     setMessageHandler((data: NewMessageData) => {
   console.log('Received new message via SSE:', data);
 
+      // Global E2EE disable-broadcast handling for direct messages
+      try {
+        const isGroup = (data as unknown as { group_id?: string }).group_id != null;
+        if (!isGroup && currentUser && typeof data.content === 'string' && e2ee.isDisableMessage && e2ee.isDisableMessage(data.content)) {
+          const otherId = data.sender_id === currentUser.user_id ? (data.receiver_id || '') : data.sender_id;
+          if (otherId) {
+            const keyId = e2ee.getKeyId(activeProfileType, currentUser.user_id, otherId);
+            e2ee.setEnabled(keyId, false);
+            e2ee.deleteKey(keyId);
+            // If this DM is currently open in profile view, add a small local notice
+            const dmIsOpen = selectedConversationType === 'direct' && selectedConversation === otherId && (selectedCategory === 'direct' || selectedCategory === 'unified');
+            if (dmIsOpen) {
+              const note: ProfileMessage = {
+                _id: data.message_id,
+                sender_id: data.sender_id,
+                receiver_id: data.receiver_id,
+                content: 'Encryption disabled by other user.',
+                timestamp: data.timestamp,
+                read: false,
+                attachments: [],
+                profile_type: activeProfileType,
+              };
+              profileMessages.setMessages(prev => {
+                const exists = prev.some(m => m._id === note._id);
+                if (exists) return prev;
+                const updated = [...prev, note];
+                return updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+              });
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       // General notifications for DMs not currently viewed
       try {
         const isGroup = (data as unknown as { group_id?: string }).group_id != null;
@@ -543,11 +579,18 @@ const UnifiedMessagesInner: React.FC = () => {
         // Always use profile messages for direct messages (both direct and unified views)
         if (selectedCategory === 'direct' || selectedCategory === 'unified') {
           // Add the message directly to profile messages state for instant display
+          // Attempt to decrypt envelope immediately for display purposes
+          let sseContent = data.content;
+          if (selectedConversationType === 'direct' && currentUser && selectedConversation) {
+            const keyId = e2ee.getKeyId(activeProfileType, currentUser.user_id, selectedConversation);
+            const dec = e2ee.decryptIfEnvelope(keyId, sseContent);
+            if (dec.ok) sseContent = dec.text;
+          }
           const newProfileMessage: ProfileMessage = {
             _id: data.message_id,
             sender_id: data.sender_id,
             receiver_id: data.receiver_id,
-            content: data.content,
+            content: sseContent,
             timestamp: data.timestamp,
             read: false,
             attachments: (data as { attachments?: string[] }).attachments || [],
@@ -1298,14 +1341,15 @@ const UnifiedMessagesInner: React.FC = () => {
   }, [selectedConversation, selectedConversationType, activeProfileType, protectedFetch]);
 
   // Send message handler
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = useCallback(async (overrideContent?: string) => {
     // Prevent empty messages or rapid double-clicks
-    if (!newMessage.trim() || profileMessages.sending || messages.sending) {
+    const candidate = (overrideContent ?? newMessage).trim();
+    if (!candidate || profileMessages.sending || messages.sending) {
       return;
     }
     
     // Check for /poll command first
-    if (selectedConversationType === 'group') {
+    if (!overrideContent && selectedConversationType === 'group') {
       const pollCommand = parsePollCommand(newMessage);
       if (pollCommand) {
         const success = await handlePollCommand(pollCommand.question, pollCommand.options);
@@ -1320,32 +1364,44 @@ const UnifiedMessagesInner: React.FC = () => {
     }
 
     let success = false;
+    // Prepare content, optionally E2EE-wrap for direct messages (but never wrap key-share messages)
+    const raw = overrideContent ?? newMessage;
+    let contentToSend = raw;
+    const isShare = e2ee.isShareMessage(raw);
+    const isDisable = e2ee.isDisableMessage ? e2ee.isDisableMessage(raw) : false;
+    const isInfo = e2ee.isInfoMessage ? e2ee.isInfoMessage(raw) : false;
+    if (!isShare && !isDisable && !isInfo && selectedConversationType === 'direct' && currentUser && selectedConversation) {
+      const keyId = e2ee.getKeyId(activeProfileType, currentUser.user_id, selectedConversation);
+      contentToSend = e2ee.encryptIfEnabled(keyId, raw);
+    }
     
     console.log('🚀 SEND MESSAGE DEBUG:', {
-      selectedConversationType,
-      selectedCategory,
-      activeProfileType,
-      condition: selectedConversationType === 'direct' && selectedCategory === 'direct',
-      newMessage,
-      replyTo,
-      selectedConversation
+  selectedConversationType,
+  selectedCategory,
+  activeProfileType,
+  condition: selectedConversationType === 'direct' && selectedCategory === 'direct',
+  payload: raw,
+  replyTo,
+  selectedConversation
     });
     
     // Use profile messages for direct conversations, regular messages for groups
     if (selectedConversationType === 'direct') {
       console.log('📨 Using profileMessages.sendMessage for direct message');
-      success = await profileMessages.sendMessage(selectedConversation, newMessage, replyTo || undefined);
+      success = await profileMessages.sendMessage(selectedConversation, contentToSend, overrideContent ? undefined : (replyTo || undefined));
     } else if (selectedConversationType === 'group') {
       console.log('📨 Using messages.sendMessage for group message');
-      success = await messages.sendMessage(newMessage, replyTo || undefined);
+      success = await messages.sendMessage(raw, overrideContent ? undefined : (replyTo || undefined));
     } else {
       console.log('📨 Fallback to messages.sendMessage');
-      success = await messages.sendMessage(newMessage, replyTo || undefined);
+      success = await messages.sendMessage(raw, overrideContent ? undefined : (replyTo || undefined));
     }
     
     if (success) {
-      setNewMessage('');
-      setReplyTo(null); // Clear reply after sending
+      if (!overrideContent) {
+        setNewMessage('');
+        setReplyTo(null); // Clear reply after sending
+      }
 
       // Ensure a conversation entry exists immediately for newly started DMs
       if (selectedConversationType === 'direct' && selectedConversation) {
@@ -1358,7 +1414,7 @@ const UnifiedMessagesInner: React.FC = () => {
           const exists = prev.some(c => c.type === 'direct' && c.id === selectedConversation);
           const updated = exists
             ? prev.map(c => c.type === 'direct' && c.id === selectedConversation
-                ? { ...c, name, last_message: newMessage, last_activity: new Date().toISOString() }
+                ? { ...c, name, last_message: raw, last_activity: new Date().toISOString() }
                 : c)
             : [
                 ...prev,
@@ -1367,7 +1423,7 @@ const UnifiedMessagesInner: React.FC = () => {
                   name,
                   type: 'direct' as const,
                   user_id: selectedConversation,
-                  last_message: newMessage,
+                  last_message: raw,
                   last_activity: new Date().toISOString(),
                   unread_count: 0
                 }
@@ -1389,7 +1445,7 @@ const UnifiedMessagesInner: React.FC = () => {
               },
               created_at: new Date(),
               updated_at: new Date(),
-              latest_message: { content: newMessage, timestamp: new Date().toISOString(), sender_id: currentUser?.user_id || 'me' },
+              latest_message: { content: raw, timestamp: new Date().toISOString(), sender_id: currentUser?.user_id || 'me' },
               profile_type: activeProfileType
             }
           ]));

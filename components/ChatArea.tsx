@@ -16,7 +16,9 @@ import {
   faSpinner,
   faBell,
   faCog,
-  faEllipsisVertical
+  faEllipsisVertical,
+  faLock,
+  faLockOpen
 } from '@fortawesome/free-solid-svg-icons';
 import ProfileAvatar from './ProfileAvatar';
 import StatusIndicator from './StatusIndicator';
@@ -28,6 +30,7 @@ import { profilePictureCache } from '../lib/profilePictureCache';
 import { useCSRFToken } from './hooks/useCSRFToken';
 import { UserStatus } from './hooks/useUserStatus';
 import { useTheme } from './ThemeProvider';
+import e2ee from '../lib/e2ee';
 
 interface PrivateMessage {
   _id?: string;
@@ -123,7 +126,7 @@ interface ChatAreaProps {
   messages: (PrivateMessage | GroupMessage)[];
   newMessage: string;
   setNewMessage: (message: string) => void;
-  onSendMessage: () => void;
+  onSendMessage: (overrideContent?: string) => void;
   onMessageContextMenu: (e: React.MouseEvent, message: PrivateMessage | GroupMessage) => void;
   replyTo?: { id: string; content: string; sender_name: string } | null;
   setReplyTo?: (reply: { id: string; content: string; sender_name: string } | null) => void;
@@ -197,6 +200,45 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 }) => {
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
+  // Conversation E2EE key context helpers
+  const dmKeyId = (() => {
+    if (selectedConversationType !== 'direct' || !currentUser || !selectedConversation) return null;
+    return e2ee.getKeyId(activeProfileType, currentUser.user_id, selectedConversation);
+  })();
+  // Keep E2EE flags in state so UI reacts immediately to localStorage changes
+  const [e2eeEnabled, setE2eeEnabled] = useState<boolean>(() => (dmKeyId ? e2ee.isEnabled(dmKeyId) : false));
+  const [hasDmKey, setHasDmKey] = useState<boolean>(() => (dmKeyId ? e2ee.hasKey(dmKeyId) : false));
+
+  const refreshE2eeFlags = useCallback((): void => {
+    if (!dmKeyId) {
+      setE2eeEnabled(false);
+      setHasDmKey(false);
+      return;
+    }
+    setE2eeEnabled(e2ee.isEnabled(dmKeyId));
+    setHasDmKey(e2ee.hasKey(dmKeyId));
+  }, [dmKeyId]);
+
+  // Refresh on conversation switches and storage updates
+  useEffect(() => {
+    refreshE2eeFlags();
+  }, [refreshE2eeFlags]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !dmKeyId) return;
+    const handleStorage = (ev: StorageEvent): void => {
+      if (!ev.key) return;
+      if (ev.key.endsWith(dmKeyId)) {
+        refreshE2eeFlags();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [dmKeyId, refreshE2eeFlags]);
+
+  // On first opening a DM, if E2EE enabled locally and no key exists on other side yet, embed a one-time key share
+  // We implement this by intercepting the first inbound share message and storing the key; generation and send is triggered by UI toggle.
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showChannelDropdown, setShowChannelDropdown] = useState(false);
@@ -208,6 +250,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const [newPollExpiryHours, setNewPollExpiryHours] = useState<number>(0);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
+  const [showKeyMenu, setShowKeyMenu] = useState<boolean>(false);
+  const [keyNotice, setKeyNotice] = useState<string>('');
 
   // Mention suggestion state
   interface MentionUser { user_id: string; username: string; display_name?: string; }
@@ -218,6 +262,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [users, setUsers] = useState<MentionUser[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionUser[]>([]);
+  // Track last processed special E2EE control messages to avoid repeated side-effects
+  const lastProcessedDisableRef = useRef<string | null>(null);
+  const lastProcessedShareRef = useRef<string | null>(null);
   
   // Reference for the textarea to handle cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -548,6 +595,85 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     });
   };
 
+  // E2EE actions only for DMs
+  const e2eeActions = {
+    enabled(): boolean {
+      return !!dmKeyId && e2ee.isEnabled(dmKeyId);
+    },
+    toggle(): void {
+      if (!dmKeyId) return;
+      const next = !e2ee.isEnabled(dmKeyId);
+      e2ee.setEnabled(dmKeyId, next);
+      if (next) {
+        // Ensure key and share once
+        let key = e2ee.getKey(dmKeyId);
+        if (!key) {
+          key = e2ee.generateKey();
+          e2ee.saveKey(dmKeyId, key);
+        }
+  const shareContent = e2ee.buildShareMessage(key!);
+  // Auto-send share and an info message without changing input box
+  onSendMessage(shareContent);
+  onSendMessage(e2ee.buildInfoMessage('enabled'));
+        setKeyNotice('Encryption enabled and key shared.');
+        refreshE2eeFlags();
+      } else {
+        // Build and send a disable broadcast so the peer auto-disables too
+  const disableContent = e2ee.buildDisableMessage();
+  onSendMessage(disableContent);
+  onSendMessage(e2ee.buildInfoMessage('disabled'));
+        // Locally clear key and flag
+        e2ee.deleteKey(dmKeyId);
+        refreshE2eeFlags();
+        setKeyNotice('Encryption disabled for this conversation.');
+      }
+      setTimeout(() => setKeyNotice(''), 3000);
+    },
+    async share(): Promise<void> {
+      if (!dmKeyId || selectedConversationType !== 'direct' || !currentUser) return;
+      let key = e2ee.getKey(dmKeyId);
+      if (!key) {
+        key = e2ee.generateKey();
+        e2ee.saveKey(dmKeyId, key);
+        e2ee.setEnabled(dmKeyId, true);
+      }
+      // Send as a one-time share message (plaintext, but special prefix)
+      const shareContent = e2ee.buildShareMessage(key);
+      onSendMessage(shareContent);
+      setKeyNotice('Shared encryption key. It will be stored on recipient when they open the chat.');
+      setTimeout(() => setKeyNotice(''), 4000);
+    },
+    export(): void {
+      if (!dmKeyId || !currentUser || !selectedConversation) return;
+      const data = e2ee.exportKey(activeProfileType, currentUser.user_id, selectedConversation);
+      if (!data) { setKeyNotice('No key to export.'); setTimeout(() => setKeyNotice(''), 3000); return; }
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `polmatch-e2ee-${data.profileType}-${data.participants[0]}-${data.participants[1]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    },
+    import(file: File): void {
+      if (!currentUser || !selectedConversation) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const json = JSON.parse(String(reader.result));
+          const ok = e2ee.importKey(json, activeProfileType, currentUser.user_id, selectedConversation);
+          setKeyNotice(ok ? 'Imported encryption key.' : 'Invalid key file for this conversation.');
+        } catch {
+          setKeyNotice('Failed to read key file.');
+        }
+        setTimeout(() => setKeyNotice(''), 3000);
+      };
+      reader.readAsText(file);
+    }
+  };
+
   // Prefetch profile pictures for all message senders to reduce API spam
   useEffect(() => {
     const senderIds = messages
@@ -593,6 +719,51 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     adjustTextareaHeight();
   }, [newMessage, adjustTextareaHeight]);
+
+  // Process incoming E2EE DISABLE messages once per message (side-effects outside render)
+  useEffect(() => {
+    if (selectedConversationType !== 'direct' || !dmKeyId) return;
+    // Find the most recent disable control message in this DM
+    const latest = [...messages].reverse().find(m => e2ee.isDisableMessage && e2ee.isDisableMessage((m as PrivateMessage).content));
+    if (!latest) return;
+    const id = ('_id' in latest && (latest as PrivateMessage)._id) || `${latest.sender_id}:${latest.timestamp}:disable`;
+    if (lastProcessedDisableRef.current === id) return;
+    // Apply disable locally and refresh UI flags
+    e2ee.setEnabled(dmKeyId, false);
+    e2ee.deleteKey(dmKeyId);
+    refreshE2eeFlags();
+    lastProcessedDisableRef.current = id;
+  }, [messages, dmKeyId, selectedConversationType, refreshE2eeFlags]);
+
+  // After receiving a SHARE message, store key and enable only if there's no later disable
+  useEffect(() => {
+    if (selectedConversationType !== 'direct' || !dmKeyId) return;
+    const msgs = [...messages];
+    const latestShare = msgs.reverse().find(m => m.sender_id !== currentUser?.user_id && e2ee.isShareMessage((m as PrivateMessage).content));
+    if (!latestShare) return;
+    const shareId = ('_id' in latestShare && (latestShare as PrivateMessage)._id) || `${latestShare.sender_id}:${latestShare.timestamp}:share`;
+    if (lastProcessedShareRef.current === shareId) return;
+    // Guard: if there's a later disable message than this share, do not auto-enable
+    const shareTs = new Date(latestShare.timestamp).getTime();
+    const latestDisableTs = messages
+      .filter(m => e2ee.isDisableMessage && e2ee.isDisableMessage((m as PrivateMessage).content))
+      .reduce((max, m) => Math.max(max, new Date(m.timestamp).getTime()), 0);
+    if (latestDisableTs && latestDisableTs >= shareTs) {
+      lastProcessedShareRef.current = shareId; // mark processed to avoid loops
+      return;
+    }
+    // Parse key and store+enable if needed
+    const key = e2ee.parseShareMessage((latestShare as PrivateMessage).content);
+    if (key) {
+      const existing = e2ee.getKey(dmKeyId);
+      if (!existing || existing !== key) {
+        e2ee.saveKey(dmKeyId, key);
+      }
+      e2ee.setEnabled(dmKeyId, true);
+      refreshE2eeFlags();
+    }
+    lastProcessedShareRef.current = shareId;
+  }, [messages, dmKeyId, selectedConversationType, currentUser?.user_id, refreshE2eeFlags]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -797,8 +968,63 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-mono uppercase tracking-wider">
+              <h2 className="text-lg font-mono uppercase tracking-wider flex items-center gap-2">
                 {selectedConversationData?.name || 'Unknown Contact'}
+                {selectedConversationType === 'direct' && (
+                  <div className="relative inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setShowKeyMenu(v => !v)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded-none shadow ${e2eeEnabled ? (theme === 'dark' ? 'border-green-400 text-green-400' : 'border-green-600 text-green-600') : (theme === 'dark' ? 'border-yellow-400 text-yellow-400' : 'border-yellow-600 text-yellow-600')} cursor-pointer`}
+                      title={e2eeEnabled ? 'End-to-end encryption is ON for this DM' : 'Encryption is OFF for this DM'}
+                      aria-haspopup="menu"
+                      aria-expanded={showKeyMenu}
+                    >
+                      <FontAwesomeIcon icon={e2eeEnabled ? faLock : faLockOpen} />
+                    </button>
+                    {showKeyMenu && (
+                      <div
+                        className={`absolute left-0 top-full mt-2 z-50 w-64 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl p-2`}
+                        onMouseLeave={() => setShowKeyMenu(false)}
+                      >
+                        <button
+                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          onClick={() => { e2eeActions.toggle(); setShowKeyMenu(false); }}
+                        >
+                          {e2eeActions.enabled() ? 'Disable encryption' : 'Enable encryption'}
+                        </button>
+                        <button
+                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          onClick={() => { void e2eeActions.share(); setShowKeyMenu(false); }}
+                        >
+                          Share key (one-time)
+                        </button>
+                        <button
+                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          onClick={() => { e2eeActions.export(); setShowKeyMenu(false); }}
+                        >
+                          Export key
+                        </button>
+                        <label
+                          className={`block w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'} cursor-pointer`}
+                          title="Import key JSON"
+                        >
+                          Import key
+                          <input
+                            type="file"
+                            accept="application/json"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files && e.target.files[0];
+                              if (f) e2eeActions.import(f);
+                              setShowKeyMenu(false);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
                   <>
                     <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mx-2`}>/</span>
@@ -830,7 +1056,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* Right-side actions: per-conversation and global */}
-        <div className="flex items-center space-x-3 relative">
+  <div className="flex items-center space-x-3 relative">
           {/* Group Actions */}
           {selectedConversationType === 'group' && (
             <>
@@ -960,13 +1186,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
           {/* Direct Message Actions */}
           {selectedConversationType === 'direct' && selectedConversationData?.user_id && (
-            <button
-              onClick={startVoiceCall}
-              className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-              title="Start Voice Call"
-            >
-              <FontAwesomeIcon icon={faPhone} />
-            </button>
+            <>
+              {/* Voice call */}
+              <button
+                onClick={startVoiceCall}
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                title="Start Voice Call"
+              >
+                <FontAwesomeIcon icon={faPhone} />
+              </button>
+            </>
           )}
 
           {/* Global: Invitations (hidden on mobile in group chats; available via kebab) */}
@@ -994,6 +1223,20 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Small transient notice area for key operations */}
+      {keyNotice && (
+        <div className={`px-4 py-2 text-center text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>{keyNotice}</div>
+      )}
+
+      {/* Encryption OFF warning for DMs when a key exists but is disabled */}
+      {selectedConversationType === 'direct' && hasDmKey && !e2eeEnabled && (
+        <div className={`mx-4 mt-2 mb-0 border-2 ${theme === 'dark' ? 'border-yellow-400 bg-black' : 'border-yellow-600 bg-white'} rounded-none p-2 shadow-lg`}> 
+          <div className={`${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} text-xs font-mono uppercase tracking-widest flex items-center gap-2`}>
+            <FontAwesomeIcon icon={faLockOpen} /> Encryption is OFF for this conversation. Messages will send in plaintext.
+          </div>
+        </div>
+      )}
 
       {/* Group Channels Navigation */}
       {selectedConversationType === 'group' && groupChannels.length > 0 && (
@@ -1233,6 +1476,61 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     {/* Message Content - Poll Artifact or Regular Content */}
                     {(() => {
                       const groupMessage = message as GroupMessage;
+                      // E2EE: if DM and content is an encrypted envelope, attempt local decrypt for display
+                      if (selectedConversationType === 'direct' && dmKeyId) {
+                        // One-time key share handling
+                        const shared = e2ee.isShareMessage((message as PrivateMessage).content);
+                        if (shared && !isCurrentUser) {
+                          return (
+                            <div className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                              Encryption key received and saved.
+                            </div>
+                          );
+                        }
+                        // Handle disable broadcast from peer
+                        if (!isCurrentUser && e2ee.isDisableMessage((message as PrivateMessage).content)) {
+                          return (
+                            <div className={`text-xs ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                              Encryption disabled by other user.
+                            </div>
+                          );
+                        }
+                        // If sender is current user and this is a share payload, avoid showing raw share text
+                        if (shared && isCurrentUser) {
+                          return (
+                            <div className={`text-xs ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>
+                              Encryption key shared.
+                            </div>
+                          );
+                        }
+                        // If sender is current user and this is a disable payload, show a local notice
+                        if (isCurrentUser && e2ee.isDisableMessage((message as PrivateMessage).content)) {
+                          return (
+                            <div className={`text-xs ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                              Encryption disabled.
+                            </div>
+                          );
+                        }
+                        // Handle E2EE info messages (enabled/disabled)
+                        const info = e2ee.isInfoMessage((message as PrivateMessage).content)
+                          ? e2ee.parseInfoMessage((message as PrivateMessage).content)
+                          : null;
+                        if (info) {
+                          return (
+                            <div className={`text-xs ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>
+                              {info === 'enabled' ? 'Encryption enabled.' : 'Encryption disabled.'}
+                            </div>
+                          );
+                        }
+                        // Regular encrypted content
+                        const dec = e2ee.decryptIfEnvelope(dmKeyId, (message as PrivateMessage).content);
+                        if (!dec.ok) {
+                          return (
+                            <div className={`italic ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{dec.text}</div>
+                          );
+                        }
+                        groupMessage.content = dec.text as string;
+                      }
                       
                       if (groupMessage.message_type === 'poll' && groupMessage.poll_data) {
                         return (
@@ -1245,14 +1543,24 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           />
                         );
                       } else {
-                        return (
+        return (
                           <div className="break-words">
-                            <MessageContent 
-                              content={groupMessage.content} 
-                              isOwnMessage={isCurrentUser}
-                              users={users}
-                              currentUser={currentUser}
-                            />
+                            <div className="flex items-start gap-2">
+                              {/* Lock badge per-message when decrypted and encryption enabled */}
+          {selectedConversationType === 'direct' && e2eeEnabled && e2ee.isEnvelope((message as PrivateMessage).content) && (
+                                <span className={`mt-0.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 border rounded-none ${theme === 'dark' ? 'border-green-400 text-green-400' : 'border-green-600 text-green-600'}`} title="Decrypted locally">
+                                  <FontAwesomeIcon icon={faLock} />
+                                </span>
+                              )}
+                              <div className="flex-1">
+                                <MessageContent 
+                                  content={groupMessage.content} 
+                                  isOwnMessage={isCurrentUser}
+                                  users={users}
+                                  currentUser={currentUser}
+                                />
+                              </div>
+                            </div>
                           </div>
                         );
                       }
@@ -1405,7 +1713,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             )}
           </div>
           <button
-            onClick={onSendMessage}
+            onClick={() => onSendMessage()}
             disabled={!newMessage.trim() || sending}
             className={`${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black disabled:border-gray-600 disabled:text-gray-600' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white disabled:border-gray-400 disabled:text-gray-400'} border-2 px-6 py-3 rounded-none disabled:cursor-not-allowed transition-all shadow-lg font-mono uppercase tracking-wider`}
           >
