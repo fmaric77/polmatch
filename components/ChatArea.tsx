@@ -223,6 +223,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
+  // Auto-resize textarea (Discord-like): grow with content up to a max height
+  const adjustTextareaHeight = useCallback((): void => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const min = 48; // px
+    const max = 240; // px, cap like Discord
+    el.style.height = 'auto';
+    const next = Math.min(Math.max(el.scrollHeight, min), max);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
+  }, []);
+
   // Helpers for mention notifications
   const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const isUserMentioned = (content: string, username: string): boolean => {
@@ -576,6 +588,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Adjust textarea height whenever value changes (including clear after send)
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [newMessage, adjustTextareaHeight]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1332,6 +1349,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 setNewMessage(val);
                 onTyping(); // Emit typing indicator when user types
                 handleMention(val, e.target.selectionStart || val.length);
+                // Auto-resize as the user types
+                adjustTextareaHeight();
               }}
               onFocus={() => {
                 if (unreadMentionsCount > 0) markMentionsSeen();
@@ -1346,7 +1365,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               placeholder={`Message ${selectedConversationData?.name || 'Unknown'}...`}
               className={`w-full ${theme === 'dark' ? 'bg-black text-white border-white focus:border-blue-400' : 'bg-white text-black border-black focus:border-blue-600'} border-2 rounded-none p-3 resize-none focus:outline-none font-mono shadow-lg`}
               rows={1}
-              style={{ minHeight: '48px', maxHeight: '120px' }}
+              aria-multiline="true"
+              style={{ minHeight: '48px', maxHeight: '240px' }}
             />
             
             {/* Mention suggestions dropdown */}
