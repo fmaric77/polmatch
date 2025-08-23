@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faHome, faUser, faSearch, faSignOutAlt, faBars, faTimes, faUserFriends } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faGlobe, faUser, faSearch, faSignOutAlt, faBars, faTimes, faUserFriends } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -61,7 +61,7 @@ const Header = () => {
             </li>
             <li>
               <Link href="/" className="flex items-center p-2 rounded-lg hover:bg-gray-800/80 transition-colors group">
-                <FontAwesomeIcon icon={faHome} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-green-400 group-hover:text-green-200 transition-colors" />
+                <FontAwesomeIcon icon={faGlobe} size="lg" style={{ width: '1.25em', height: '1.25em', minWidth: '1.25em', minHeight: '1.25em' }} className="mr-3 text-green-400 group-hover:text-green-200 transition-colors" />
                 <span className="font-medium">Home Page</span>
               </Link>
             </li>

@@ -69,7 +69,7 @@ export default function Login() {
             if (data.user?.force_2fa_enabled && !data.user?.two_factor_enabled && !data.user?.is_admin) {
               router.push('/setup-2fa');
             } else {
-              router.push('/frontpage');
+              router.push('/chat');
             }
             return;
           }
@@ -130,7 +130,7 @@ export default function Login() {
         if (data.user.force_2fa_enabled && !data.user.two_factor_enabled && !data.user.is_admin) {
           router.push('/setup-2fa');
         } else {
-          router.push('/frontpage');
+          router.push('/chat');
         }
       }
     } catch {
@@ -294,8 +294,8 @@ export default function Login() {
         
         setLoginError(errorMessage);
       } else {
-        setUserType('User');
-        router.push('/frontpage');
+  setUserType('User');
+  router.push('/chat');
       }
     } catch (error) {
       console.error('Registration error:', error);

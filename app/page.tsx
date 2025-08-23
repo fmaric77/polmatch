@@ -35,8 +35,8 @@ export default function LandingPage() {
           const data = await res.json();
           if (data.valid) {
             setIsLoggedIn(true);
-            // If logged in, redirect to frontpage
-            router.push('/frontpage');
+            // If logged in, redirect to chat
+            router.push('/chat');
             return;
           }
         }

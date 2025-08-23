@@ -1,11 +1,8 @@
-import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
-import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson'; // Import GeoJSON types
+import { useEffect, useState, useMemo } from 'react';
+import { Feature, FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
+import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { useTheme } from './ThemeProvider';
 import { useRouter } from 'next/navigation';
-
-// Dynamically import react-globe.gl to avoid SSR issues
-const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
 
 interface CountryStat {
   country: string;
@@ -20,25 +17,15 @@ interface CountryStatsResponse {
   lastUpdated: string;
 }
 
-export default function WorldMap() {
+export default function WorldMap(): JSX.Element {
   const { theme } = useTheme();
   const router = useRouter();
-  const [continents, setContinents] = useState<Feature<Geometry, GeoJsonProperties>[]>([]);
+  const [continents, setContinents] = useState<FeatureCollection<Geometry, GeoJsonProperties> | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countryStats, setCountryStats] = useState<{ [country: string]: CountryStat }>({});
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
-  const [webglSupported, setWebglSupported] = useState<boolean>(true);
-
-  useEffect(() => {
-    // Detect WebGL support
-    if (typeof window !== 'undefined') {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      setWebglSupported(Boolean(gl));
-    }
-  }, []);
 
   useEffect(() => {
     console.log("WorldMap: Attempting to fetch continents-geo.json");
@@ -58,10 +45,10 @@ export default function WorldMap() {
             const geo = topojson.feature(data, data.objects.continents) as FeatureCollection<Geometry, GeoJsonProperties> | Feature<Geometry, GeoJsonProperties>;
             if (geo.type === 'FeatureCollection') {
               console.log("WorldMap: TopoJSON converted to GeoJSON FeatureCollection:", geo.features);
-              setContinents(geo.features);
+              setContinents(geo);
             } else if (geo.type === 'Feature') {
               console.log("WorldMap: TopoJSON converted to a single GeoJSON Feature:", [geo]);
-              setContinents([geo]); // Wrap single feature in an array
+              setContinents({ type: 'FeatureCollection', features: [geo] });
             } else {
               console.warn("WorldMap: Converted TopoJSON is not a Feature or FeatureCollection.");
               setError("Invalid converted continent data format.");
@@ -72,7 +59,7 @@ export default function WorldMap() {
           });
         } else if (data.type === 'FeatureCollection' && data.features) {
           console.log("WorldMap: Detected GeoJSON features:", data.features);
-          setContinents(data.features);
+          setContinents(data as FeatureCollection<Geometry, GeoJsonProperties>);
         } else {
           console.warn("WorldMap: continents-geo.json is not in expected TopoJSON or GeoJSON format.");
           setError("Invalid continent data format.");
@@ -118,126 +105,86 @@ export default function WorldMap() {
     console.log("WorldMap: Continents state updated:", continents);
   }, [continents]);
 
-  // Responsive width/height fallback
-  const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  const height = typeof window !== 'undefined' ? window.innerHeight : 800;
-
-  // If WebGL is not available, show a friendly message
-  if (!webglSupported) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-white dark:bg-black text-red-600 dark:text-red-400 text-base sm:text-lg p-4">
-        WebGL is not supported or is disabled in your browser. Please enable WebGL to view the world map.
-      </div>
-    );
-  }
+  const geographySource = useMemo(() => continents, [continents]);
 
   if (error) {
     return <div className="w-full h-full flex items-center justify-center bg-white dark:bg-black text-red-600 dark:text-red-500 text-xl">{error}</div>;
   }
 
   return (
-    <div className="w-full h-full bg-white dark:bg-black">
-      <Globe
-        globeImageUrl={null}
-        backgroundColor={theme === 'dark' ? "#000000" : "#ffffff"}
-        width={width}
-        height={height}
-        polygonsData={continents}
-        polygonAltitude={0.01}
-        polygonCapColor={(polygon) => {
-          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
-          let currentPolygonName: string | null = null;
-          if (feature && feature.properties) {
-            const props = feature.properties;
-            currentPolygonName = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
-          }
+    <div className="w-full h-full bg-white dark:bg-black relative">
+      {geographySource ? (
+        <ComposableMap
+          projection="geoEqualEarth"
+          className="w-full h-full"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <Geographies geography={geographySource}>
+            {({ geographies }: { geographies: Array<Feature<Geometry, GeoJsonProperties> & { rsmKey: string }> }) => (
+              <>
+                {geographies.map((geo) => {
+                  const props = geo.properties as GeoJsonProperties & { [key: string]: unknown };
+                  const actualName = (props.ADMIN as string) || (props.name as string) || (props.COUNTRY as string) || (props.CONTINENT as string) || (props.continent as string) || '';
+                  const displayName = (actualName === 'Kosovo' || actualName === 'Serbia') ? 'Serbia' : actualName;
+                  const userCount = displayName && countryStats[displayName] ? countryStats[displayName].count : 0;
 
-          const HOVER_COLOR = '#FFD700'; // Gold for hover
-          
-          // Get user count for this country
-          const userCount = currentPolygonName && countryStats[currentPolygonName] 
-            ? countryStats[currentPolygonName].count 
-            : 0;
-          
-          // Color based on user density - adjust for theme
-          let baseColor = theme === 'dark' ? '#444444' : '#cccccc'; // Default gray for no users
-          if (userCount > 0) {
-            if (userCount >= 10) {
-              baseColor = '#FF4444'; // Bright red for high user count
-            } else if (userCount >= 5) {
-              baseColor = '#FF8844'; // Orange for medium-high user count
-            } else if (userCount >= 2) {
-              baseColor = '#FFAA44'; // Yellow-orange for medium user count
-            } else {
-              baseColor = '#FFDD44'; // Light yellow for low user count
-            }
-          }
+                  const hoverColor = '#FFD700';
+                  let baseColor = theme === 'dark' ? '#444444' : '#cccccc';
+                  if (userCount > 0) {
+                    if (userCount >= 10) baseColor = '#FF4444';
+                    else if (userCount >= 5) baseColor = '#FF8844';
+                    else if (userCount >= 2) baseColor = '#FFAA44';
+                    else baseColor = '#FFDD44';
+                  }
 
-          // Special handling for Kosovo/Serbia
-          if (currentPolygonName === 'Kosovo') {
-            if (hovered === 'Serbia') {
-              return HOVER_COLOR; // Highlight Kosovo if Serbia is hovered
-            }
-            // Use user count color for Kosovo
-            const kosovoCount = countryStats['Serbia'] ? countryStats['Serbia'].count : 0;
-            if (kosovoCount >= 10) return '#FF4444';
-            if (kosovoCount >= 5) return '#FF8844';
-            if (kosovoCount >= 2) return '#FFAA44';
-            if (kosovoCount >= 1) return '#FFDD44';
-            return theme === 'dark' ? '#444444' : '#cccccc';
-          }
+                  const isHovered = hovered === displayName;
+                  const fill = isHovered ? hoverColor : baseColor;
 
-          if (currentPolygonName === 'Serbia') {
-            if (hovered === 'Serbia') {
-              return HOVER_COLOR; // Highlight Serbia if it's directly hovered
-            }
-            // Use base color for Serbia based on user count
-          }
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      onMouseEnter={() => setHovered(displayName || null)}
+                      onMouseLeave={() => setHovered(null)}
+                      onClick={() => {
+                        if (actualName) {
+                          router.push(`/search?country=${encodeURIComponent(actualName)}`);
+                          console.log('WorldMap: Navigating to search for country:', actualName);
+                        }
+                      }}
+                      style={{
+                        default: {
+                          fill,
+                          stroke: theme === 'dark' ? '#ffffff' : '#000000',
+                          strokeWidth: 0.5,
+                          outline: 'none'
+                        },
+                        hover: {
+                          fill: hoverColor,
+                          stroke: theme === 'dark' ? '#ffffff' : '#000000',
+                          strokeWidth: 0.8,
+                          outline: 'none'
+                        },
+                        pressed: {
+                          fill: hoverColor,
+                          stroke: theme === 'dark' ? '#ffffff' : '#000000',
+                          strokeWidth: 1,
+                          outline: 'none'
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </>
+            )}
+          </Geographies>
+        </ComposableMap>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-600 dark:text-gray-300">
+          Loading map...
+        </div>
+      )}
 
-          // Standard hover for other polygons
-          if (hovered === currentPolygonName) {
-            return HOVER_COLOR;
-          }
-          
-          return baseColor;
-        }}
-        polygonSideColor={() => theme === 'dark' ? '#222' : '#ddd'}
-        polygonStrokeColor={() => theme === 'dark' ? '#fff' : '#000'}
-        onPolygonHover={(polygon) => {
-          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
-          let nameForHover: string | null = null;
-          if (feature && feature.properties) {
-            const props = feature.properties;
-            const actualName = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
-
-            if (actualName === 'Kosovo' || actualName === 'Serbia') {
-              nameForHover = 'Serbia';
-            } else {
-              nameForHover = actualName;
-            }
-          }
-          setHovered(nameForHover);
-        }}
-        onPolygonClick={(polygon) => {
-          const feature = polygon as Feature<Geometry, GeoJsonProperties>;
-          let name: string | null = null;
-          if (feature && feature.properties) {
-            const props = feature.properties;
-            name = props.ADMIN || props.name || props.COUNTRY || props.CONTINENT || props.continent;
-          }
-          if (name) {
-            // Navigate to search page with country filter applied
-            // Open '/profile' listing filtered by country (aliasing to search page)
-            router.push(`/search?country=${encodeURIComponent(name)}`);
-            console.log("WorldMap: Navigating to search for country:", name);
-          }
-        }}
-        polygonsTransitionDuration={300}
-        showGlobe={true}
-        showGraticules={true}
-        atmosphereColor={theme === 'dark' ? "#000000" : "#ffffff"}
-        atmosphereAltitude={0.15}
-      />
       {hovered && (
         <div className="fixed left-1/2 top-8 -translate-x-1/2 px-6 py-3 bg-white/90 dark:bg-black/90 text-black dark:text-white rounded-lg border border-black dark:border-white text-lg pointer-events-none z-50 shadow-lg min-w-[200px]">
           <div className="font-bold text-xl mb-1">{hovered}</div>

@@ -3,6 +3,8 @@ import ProfileAvatar from './ProfileAvatar';
 import { getAnonymousDisplayName } from '../lib/anonymization';
 import { useCSRFToken } from './hooks/useCSRFToken';
 import { useTheme } from './ThemeProvider';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars } from '@fortawesome/free-solid-svg-icons';
 
 type ProfileType = 'basic' | 'love' | 'business';
 
@@ -106,6 +108,7 @@ const Groups = () => {
   const [newPollOptions, setNewPollOptions] = useState<string[]>(['', '']);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
 
   // Fetch current user info
   useEffect(() => {
@@ -675,37 +678,92 @@ const Groups = () => {
               <div className="font-bold text-lg text-white">
                 {groups.find(g => g.group_id === selectedGroup)?.name || 'Group Chat'}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative">
+                {/* Desktop/Tablet actions */}
+                <div className="hidden md:flex items-center gap-2">
+                  <button
+                    className="p-2 rounded bg-gray-800 text-white hover:bg-gray-700 text-sm"
+                    onClick={() => {
+                      setShowMembersModal(true);
+                      fetchMembers();
+                    }}
+                    title="View Members"
+                  >
+                    👥 Members ({members.length})
+                  </button>
+                  <button
+                    className="p-2 rounded bg-purple-600 text-white hover:bg-purple-500 text-sm"
+                    onClick={() => {
+                      setShowPollModal(true);
+                      fetchPolls();
+                    }}
+                    title="View and Create Polls"
+                  >
+                    📊 Polls
+                  </button>
+                  <button
+                    className="p-2 rounded bg-green-600 text-white hover:bg-green-500 text-sm"
+                    onClick={() => {
+                      fetchAvailableUsers();
+                      setShowInviteModal(true);
+                    }}
+                    title="Invite Users to Group"
+                  >
+                    ➕ Invite
+                  </button>
+                </div>
+
+                {/* Mobile overflow menu */}
                 <button
-                  className="p-2 rounded bg-gray-800 text-white hover:bg-gray-700 text-sm"
-                  onClick={() => {
-                    setShowMembersModal(true);
-                    fetchMembers();
-                  }}
-                  title="View Members"
+                  type="button"
+                  aria-label="Menu"
+                  className="md:hidden p-2 rounded bg-gray-800 text-white hover:bg-gray-700"
+                  onClick={() => setIsActionsMenuOpen(v => !v)}
                 >
-                  👥 Members ({members.length})
+                  <FontAwesomeIcon icon={faBars} className="w-5 h-5 shrink-0" />
                 </button>
-                <button
-                  className="p-2 rounded bg-purple-600 text-white hover:bg-purple-500 text-sm"
-                  onClick={() => {
-                    setShowPollModal(true);
-                    fetchPolls();
-                  }}
-                  title="View and Create Polls"
-                >
-                  📊 Polls
-                </button>
-                <button
-                  className="p-2 rounded bg-green-600 text-white hover:bg-green-500 text-sm"
-                  onClick={() => {
-                    fetchAvailableUsers();
-                    setShowInviteModal(true);
-                  }}
-                  title="Invite Users to Group"
-                >
-                  ➕ Invite
-                </button>
+
+                {isActionsMenuOpen && (
+                  <>
+                    {/* Click-away overlay */}
+                    <div
+                      className="fixed inset-0 z-40 md:hidden"
+                      onClick={() => setIsActionsMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-10 z-50 md:hidden bg-black border border-white rounded shadow-lg w-48">
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
+                        onClick={() => {
+                          setShowMembersModal(true);
+                          fetchMembers();
+                          setIsActionsMenuOpen(false);
+                        }}
+                      >
+                        👥 Members ({members.length})
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
+                        onClick={() => {
+                          setShowPollModal(true);
+                          fetchPolls();
+                          setIsActionsMenuOpen(false);
+                        }}
+                      >
+                        📊 Polls
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-white/10 text-white"
+                        onClick={() => {
+                          fetchAvailableUsers();
+                          setShowInviteModal(true);
+                          setIsActionsMenuOpen(false);
+                        }}
+                      >
+                        ➕ Invite
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

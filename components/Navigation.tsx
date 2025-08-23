@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faHome, 
+  faGlobe, 
   faUser, 
   faSearch, 
   faEnvelope, 
@@ -65,7 +65,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/frontpage'}
           title="Home"
         >
-          <FontAwesomeIcon icon={faHome} />
+          <FontAwesomeIcon icon={faGlobe} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Profile Navigation */}
@@ -76,7 +76,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/profile'}
           title="Profile"
         >
-          <FontAwesomeIcon icon={faUser} />
+          <FontAwesomeIcon icon={faUser} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Search Navigation */}
@@ -87,7 +87,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/search'}
           title="Search Users"
         >
-          <FontAwesomeIcon icon={faSearch} />
+          <FontAwesomeIcon icon={faSearch} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Catalogue Navigation */}
@@ -98,7 +98,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/catalogue'}
           title="Catalogue"
         >
-          <FontAwesomeIcon icon={faBookmark} />
+          <FontAwesomeIcon icon={faBookmark} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Jobs Navigation */}
@@ -109,7 +109,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/jobs'}
           title="Jobs"
         >
-          <FontAwesomeIcon icon={faBriefcase} />
+          <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Separator */}
@@ -123,7 +123,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/chat'}
           title="Chat"
         >
-          <FontAwesomeIcon icon={faEnvelope} />
+          <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5 shrink-0" />
         </div>
 
         {/* Discover Groups Navigation */}
@@ -134,7 +134,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
           onClick={() => window.location.href = '/discover-groups'}
           title="Discover Groups"
         >
-          <FontAwesomeIcon icon={faCompass} />
+          <FontAwesomeIcon icon={faCompass} className="w-5 h-5 shrink-0" />
         </div>
 
         {/* Admin Dashboard */}
@@ -146,7 +146,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage }) => {
             onClick={() => window.location.href = '/admindashboard'}
             title="Admin Dashboard"
           >
-            <FontAwesomeIcon icon={faKey} />
+            <FontAwesomeIcon icon={faKey} className="w-5 h-5 shrink-0" />
           </div>
         )}
       </div>
