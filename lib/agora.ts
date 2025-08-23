@@ -1,5 +1,6 @@
 // Agora voice calling utilities
-import AgoraRTC, { IAgoraRTCClient, IAgoraRTCRemoteUser, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { IAgoraRTCClient, IAgoraRTCRemoteUser, IMicrophoneAudioTrack, ILocalVideoTrack, ILocalAudioTrack, IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
+import { csrfFetch } from './csrf-client';
 
 export interface AgoraConfig {
   appId: string;
@@ -22,6 +23,10 @@ export interface VoiceCallSession {
 class AgoraVoiceCall {
   private client: IAgoraRTCClient | null = null;
   private localAudioTrack: IMicrophoneAudioTrack | null = null;
+  private localScreenVideoTrack: ILocalVideoTrack | null = null;
+  private localScreenAudioTrack: ILocalAudioTrack | null = null;
+  private remoteScreenHandler: ((userId: string, track: IRemoteVideoTrack | null) => void) | null = null;
+  private volumeIndicatorHandler: ((updates: Array<{ uid: string; level: number }>) => void) | null = null;
   private appId: string;
   private currentChannel: string | null = null;
   private isConnected: boolean = false;
@@ -51,23 +56,139 @@ class AgoraVoiceCall {
   private setupEventHandlers(): void {
     if (!this.client) return;
 
+    // Enable SDK volume indicator (default interval ~200ms)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (AgoraRTC as any).enableAudioVolumeIndicator?.();
+    } catch {}
+
     this.client.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
+      if (!this.client) return;
+      console.log('[Agora] user-published', { uid: user.uid, mediaType });
+      await this.client.subscribe(user, mediaType).catch(err => {
+        console.warn('[Agora] subscribe failed', err);
+      });
       if (mediaType === 'audio') {
-        await this.client!.subscribe(user, mediaType);
         const audioTrack = user.audioTrack;
         if (audioTrack) {
           audioTrack.play();
         }
+      } else if (mediaType === 'video') {
+        const videoTrack = user.videoTrack;
+        if (videoTrack) {
+          console.log('[Agora] received remote video track, invoking handler');
+          if (this.remoteScreenHandler) {
+            this.remoteScreenHandler(String(user.uid), videoTrack as IRemoteVideoTrack);
+          }
+        } else {
+          console.log('[Agora] video mediaType but no videoTrack present');
+        }
       }
     });
 
-    this.client.on('user-unpublished', (user: IAgoraRTCRemoteUser) => {
-      console.log('User left call:', user.uid);
+    this.client.on('user-unpublished', (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
+      console.log('[Agora] user-unpublished', { uid: user.uid, mediaType });
+      if (mediaType === 'video') {
+        if (this.remoteScreenHandler) {
+          this.remoteScreenHandler(String(user.uid), null);
+        }
+      }
+    });
+
+    // Audio volume indicators for speaking detection
+    this.client.on('volume-indicator', (volumes: Array<{ uid: string | number; level: number }>) => {
+      if (this.volumeIndicatorHandler) {
+        const updates = volumes.map(v => ({ uid: String(v.uid), level: v.level }));
+        this.volumeIndicatorHandler(updates);
+      }
     });
 
     this.client.on('user-left', (user: IAgoraRTCRemoteUser) => {
       console.log('User disconnected:', user.uid);
     });
+  }
+
+  setRemoteScreenHandler(handler: ((userId: string, track: IRemoteVideoTrack | null) => void) | null): void {
+    this.remoteScreenHandler = handler;
+    // If a handler is set and a remote video track already exists, notify immediately
+    if (handler && this.client) {
+      try {
+        const users = this.client.remoteUsers || [];
+        for (const u of users) {
+          // If the user already has a video track, surface it now
+          const vt = (u as IAgoraRTCRemoteUser).videoTrack as IRemoteVideoTrack | null | undefined;
+          if (vt) {
+            handler(String(u.uid), vt);
+            break;
+          }
+        }
+      } catch (e) {
+        console.log('[Agora] error scanning existing remote users for video track', e);
+      }
+    }
+  }
+
+  setVolumeIndicatorHandler(handler: ((updates: Array<{ uid: string; level: number }>) => void) | null): void {
+    this.volumeIndicatorHandler = handler;
+  }
+
+  async startScreenShare(withSystemAudio: boolean = false): Promise<boolean> {
+    if (!this.client) throw new Error('Agora client not initialized');
+    if (!this.isConnected || this.client.connectionState !== 'CONNECTED') {
+      console.warn('[Agora] startScreenShare requested while not connected');
+      throw new Error('Not connected to a channel');
+    }
+    if (this.localScreenVideoTrack) {
+      console.log('Screen share already active');
+      return true;
+    }
+
+    try {
+      console.log('🔳 Creating screen video track...');
+  const result = await AgoraRTC.createScreenVideoTrack({ encoderConfig: '720p' as const }, withSystemAudio ? 'auto' : 'disable');
+      let videoTrack: ILocalVideoTrack;
+      let audioTrack: ILocalAudioTrack | null = null;
+
+      if (Array.isArray(result)) {
+        // [videoTrack, audioTrack]
+        videoTrack = result[0];
+        audioTrack = result[1] || null;
+      } else {
+        videoTrack = result;
+      }
+
+  console.log('[Agora] Publishing screen share tracks', { withAudio: !!audioTrack });
+  await this.client.publish(audioTrack ? [videoTrack, audioTrack] : [videoTrack]);
+      this.localScreenVideoTrack = videoTrack;
+      this.localScreenAudioTrack = audioTrack;
+      console.log('✅ Screen share published');
+      return true;
+    } catch (err) {
+      const error = err as Error;
+      console.error('Failed to start screen share:', error);
+      return false;
+    }
+  }
+
+  async stopScreenShare(): Promise<void> {
+    if (!this.client) return;
+    const tracks: Array<ILocalVideoTrack | ILocalAudioTrack> = [];
+    if (this.localScreenVideoTrack) tracks.push(this.localScreenVideoTrack);
+    if (this.localScreenAudioTrack) tracks.push(this.localScreenAudioTrack);
+    if (tracks.length > 0) {
+      try {
+        await this.client.unpublish(tracks);
+      } catch (unpubErr) {
+        console.warn('Error unpublishing screen share tracks:', unpubErr);
+      }
+    }
+    try {
+      if (this.localScreenVideoTrack) this.localScreenVideoTrack.close();
+      if (this.localScreenAudioTrack) this.localScreenAudioTrack.close();
+    } catch {}
+    this.localScreenVideoTrack = null;
+    this.localScreenAudioTrack = null;
+    console.log('🛑 Screen share stopped');
   }
 
   async startCall(channelName: string, userId: string, token?: string): Promise<boolean> {
@@ -151,11 +272,10 @@ class AgoraVoiceCall {
         try {
           // Try to fetch token from server
           console.log('No token provided, attempting to fetch from server...');
-          const response = await fetch('/api/agora/token', {
+          const response = await csrfFetch('/api/agora/token', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'credentials': 'include', // Important: Send cookies for authentication
             },
             body: JSON.stringify({
               channelName,
@@ -326,6 +446,11 @@ class AgoraVoiceCall {
           console.log('Error closing audio track (likely already closed):', trackError);
         }
         this.localAudioTrack = null;
+      }
+
+      // Stop screen share tracks if active
+      if (this.localScreenVideoTrack || this.localScreenAudioTrack) {
+        await this.stopScreenShare().catch(() => {});
       }
 
       // Leave the channel if client exists
