@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -6,13 +7,14 @@ import {
   faSearch,
   faUserPlus,
   faBell,
-  faHome,
+  faGlobe,
   faEnvelope,
   faSignOutAlt,
   faKey,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { useCSRFToken } from './hooks/useCSRFToken';
+import { usePathname } from 'next/navigation';
 
 interface NavigationSidebarProps {
   isMobile: boolean;
@@ -42,6 +44,8 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onToggleConversationsSidebar
 }) => {
   const { protectedFetch } = useCSRFToken();
+  const pathname = usePathname() ?? '';
+  const isOnChat = pathname.startsWith('/chat');
   
   const handleLogout = async () => {
     await protectedFetch('/api/logout', { method: 'POST' });
@@ -56,10 +60,10 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         {/* Home Navigation */}
         <div 
           className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
-          onClick={() => window.location.href = '/'}
+          onClick={() => window.location.href = '/frontpage'}
           title="Home"
         >
-          <FontAwesomeIcon icon={faHome} />
+          <FontAwesomeIcon icon={faGlobe} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Profile Navigation */}
@@ -68,7 +72,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           onClick={() => window.location.href = '/profile'}
           title="Profile"
         >
-          <FontAwesomeIcon icon={faUser} />
+          <FontAwesomeIcon icon={faUser} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Search Navigation */}
@@ -77,7 +81,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           onClick={() => window.location.href = '/search'}
           title="Search Users"
         >
-          <FontAwesomeIcon icon={faSearch} />
+          <FontAwesomeIcon icon={faSearch} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* First Separator */}
@@ -86,23 +90,23 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         {/* Direct Messages Category */}
         <div 
           className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
-            selectedCategory === 'direct' ? 'bg-white text-black' : ''
+            selectedCategory === 'direct' && isOnChat ? 'bg-white text-black' : ''
           }`}
           onClick={() => onCategoryChange('direct')}
           title="Direct Messages"
         >
-          <FontAwesomeIcon icon={faEnvelope} />
+          <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Groups Category */}
         <div 
           className={`w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors ${
-            selectedCategory === 'groups' ? 'bg-white text-black' : ''
+            selectedCategory === 'groups' && isOnChat ? 'bg-white text-black' : ''
           }`}
           onClick={() => onCategoryChange('groups')}
           title="Groups"
         >
-          <FontAwesomeIcon icon={faUsers} />
+          <FontAwesomeIcon icon={faUsers} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Second Separator */}
@@ -114,7 +118,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           onClick={() => selectedCategory === 'direct' ? onShowNewDMModal() : onShowCreateGroupModal()}
           title={selectedCategory === 'direct' ? 'New Direct Message' : 'Create Group'}
         >
-          <FontAwesomeIcon icon={faUserPlus} />
+          <FontAwesomeIcon icon={faUserPlus} className="w-5 h-5 shrink-0" />
         </div>
         
         {/* Invitations */}
@@ -123,7 +127,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           onClick={onShowInvitationsModal}
           title="Invitations"
         >
-          <FontAwesomeIcon icon={faBell} />
+          <FontAwesomeIcon icon={faBell} className="w-5 h-5 shrink-0" />
           {invitationsCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
               {invitationsCount}
@@ -131,14 +135,14 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           )}
         </div>
 
-        {/* Admin Dashboard */}
-        {currentUser?.is_admin && (
+  {/* Admin Dashboard (hidden on /chat) */}
+  {currentUser?.is_admin && !isOnChat && (
           <div 
             className="w-12 h-12 bg-black border border-white rounded-none flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
             onClick={() => window.location.href = '/admindashboard'}
             title="Admin Dashboard"
           >
-            <FontAwesomeIcon icon={faKey} />
+            <FontAwesomeIcon icon={faKey} className="w-5 h-5 shrink-0" />
           </div>
         )}
         
@@ -151,7 +155,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           >
             <FontAwesomeIcon 
               icon={isConversationsSidebarHidden ? faEnvelope : faTimes} 
-              className={isConversationsSidebarHidden ? "text-white" : "text-red-400"}
+              className={`w-5 h-5 shrink-0 ${isConversationsSidebarHidden ? "text-white" : "text-red-400"}`}
             />
           </div>
         )}
@@ -164,7 +168,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           onClick={handleLogout}
           title="Logout"
         >
-          <FontAwesomeIcon icon={faSignOutAlt} className="text-red-300" />
+          <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5 shrink-0 text-red-300" />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useLayoutEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -24,19 +24,25 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored) {
-      setTheme(stored);
+  // Initialize from localStorage immediately to avoid mismatch
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('theme') as Theme | null;
+      if (stored === 'light' || stored === 'dark') return stored;
     }
-  }, []);
+    return 'dark';
+  });
 
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('theme', theme);
+  // Apply theme classes before paint where possible
+  useLayoutEffect(() => {
+    try {
+      const e = document.documentElement;
+      e.classList.remove('light', 'dark');
+      e.classList.add(theme);
+      localStorage.setItem('theme', theme);
+    } catch {
+      // noop
+    }
   }, [theme]);
 
   const toggleTheme = () => {

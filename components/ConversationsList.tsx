@@ -29,6 +29,7 @@ interface Conversation {
   user_role?: string;
   status?: UserStatus;
   custom_message?: string;
+  has_mention?: boolean;
 }
 
 interface ConversationsListProps {
@@ -375,18 +376,8 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
     );
   }
 
-  // Mobile collapsed view
-  return (
-    <div className={`${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-r-4 h-full flex flex-col items-center py-4`}>
-      <button
-        onClick={() => setIsConversationsSidebarHidden(false)}
-        className={`p-3 ${theme === 'dark' ? 'text-white hover:bg-gray-800' : 'text-black hover:bg-gray-200'} rounded transition-colors`}
-        title="Show Conversations"
-      >
-        <FontAwesomeIcon icon={faEnvelope} size="lg" />
-      </button>
-    </div>
-  );
+  // When hidden, don't render a side lane/button; ChatArea provides the toggle.
+  return null;
 };
 
 // ConversationItem component for cleaner code
@@ -423,6 +414,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           {conversation.type === 'direct' && conversation.user_id ? (
             <>
               <ProfileAvatar userId={conversation.user_id} size={40} />
+              {/* Unread red dot for direct messages */}
+              {conversation.unread_count && conversation.unread_count > 0 && (
+                <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-600 border-2 border-black" />
+              )}
               {getUserStatus && (() => {
                 const userStatus = getUserStatus(conversation.user_id);
                 return userStatus ? (
@@ -438,11 +433,15 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
               })()}
             </>
           ) : (
-            <div className={`w-10 h-10 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} rounded-full flex items-center justify-center`}>
+            <div className={`w-10 h-10 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} rounded-full flex items-center justify-center relative`}>
               <FontAwesomeIcon 
                 icon={conversation.type === 'group' ? faUsers : faEnvelope} 
                 className={`${theme === 'dark' ? 'text-white' : 'text-gray-600'} text-sm`}
               />
+              {/* Red dot for group mentions */}
+              {conversation.type === 'group' && conversation.has_mention && (
+                <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-600 border-2 border-black" />
+              )}
             </div>
           )}
         </div>

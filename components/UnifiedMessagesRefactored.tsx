@@ -13,7 +13,7 @@ import type { NewMessageData, NewConversationData } from './hooks/useWebSocket';
 import { useTypingIndicator, TypingData } from './hooks/useTypingIndicator';
 import { useSSE } from './providers/SSEProvider';
 import { useTheme } from './ThemeProvider';
-import SidebarNavigation from './SidebarNavigation';
+import { NotificationsProvider, useNotifications } from './providers/NotificationsProvider';
 import ConversationsList from './ConversationsList';
 import ChatArea from './ChatArea';
 import CreateGroupModal from './modals/CreateGroupModal';
@@ -133,7 +133,8 @@ interface Channel {
   position: number;
 }
 
-const UnifiedMessages: React.FC = () => {
+// Internal component to access notifications hook and main logic
+const UnifiedMessagesInner: React.FC = () => {
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
   
@@ -157,12 +158,15 @@ const UnifiedMessages: React.FC = () => {
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isConversationsSidebarHidden, setIsConversationsSidebarHidden] = useState(false);
-  const [isMainSidebarMinimized, setIsMainSidebarMinimized] = useState(false);
 
   // Message input state
   const [newMessage, setNewMessage] = useState('');
+  // Local unread counters
+  const [unreadDMCounts, setUnreadDMCounts] = useState<Record<string, number>>({});
+  const [unreadGroupCounts, setUnreadGroupCounts] = useState<Record<string, number>>({});
+  // Track unread @mention counts per group for red dot indicator
+  const [unreadGroupMentions, setUnreadGroupMentions] = useState<Record<string, number>>({});
 
   // Reply state
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; sender_name: string } | null>(null);
@@ -251,6 +255,9 @@ const UnifiedMessages: React.FC = () => {
   useEffect(() => {
     console.log('🔧 Session token changed:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'null');
   }, [sessionToken]);
+
+  // Notifications
+  const { notify, playBeep } = useNotifications();
 
   // Register SSE handlers when component mounts
   useEffect(() => {
@@ -386,7 +393,66 @@ const UnifiedMessages: React.FC = () => {
   useEffect(() => {
     // Register message handler
     setMessageHandler((data: NewMessageData) => {
-      console.log('Received new message via SSE:', data);
+  console.log('Received new message via SSE:', data);
+
+      // General notifications for DMs not currently viewed
+      try {
+        const isGroup = (data as unknown as { group_id?: string }).group_id != null;
+        if (!isGroup && currentUser) {
+          const isOwn = data.sender_id === currentUser.user_id;
+          const otherId = data.sender_id === currentUser.user_id ? (data.receiver_id || '') : data.sender_id;
+          const viewingDM = selectedConversationType === 'direct' && selectedConversation === otherId;
+          if (!isOwn && otherId && !viewingDM) {
+            setUnreadDMCounts(prev => ({ ...prev, [otherId]: (prev[otherId] || 0) + 1 }));
+            const display = displayNames[data.sender_id] || 'New Direct Message';
+            notify({
+              title: display,
+              message: data.content,
+              type: 'info',
+              onClick: () => {
+                setSelectedCategory('unified');
+                setSelectedConversation(otherId);
+                setSelectedConversationType('direct');
+              }
+            });
+            playBeep();
+          }
+        } else if (isGroup && currentUser) {
+          const groupData = data as unknown as GroupMessageSSE;
+          // If we're not currently viewing this group/channel, consider notifying/incrementing
+          const weAreViewing = selectedConversationType === 'group' && selectedConversation === groupData.group_id &&
+            (!selectedChannel || groupData.channel_id === selectedChannel);
+          if (!weAreViewing) {
+            // Always increment unread for unseen group traffic
+            setUnreadGroupCounts(prev => ({ ...prev, [groupData.group_id]: (prev[groupData.group_id] || 0) + 1 }));
+            // Only notify/beep when the current user is @mentioned and it's not our own message
+            if (groupData.sender_id !== currentUser.user_id) {
+              const uname = currentUser.username || '';
+              const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const isMentioned = uname ? new RegExp(`@${escapeRegExp(uname)}(\\b|$)`, 'i').test(groupData.content || '') : false;
+              if (isMentioned) {
+                setUnreadGroupMentions(prev => ({ ...prev, [groupData.group_id]: (prev[groupData.group_id] || 0) + 1 }));
+                const group = conversations.conversations.find(c => c.type === 'group' && c.id === groupData.group_id);
+                const groupName = group?.name || 'New Group Message';
+                notify({
+                  title: groupName,
+                  message: groupData.content,
+                  type: 'info',
+                  onClick: () => {
+                    setSelectedCategory('unified');
+                    setSelectedConversation(groupData.group_id);
+                    setSelectedConversationType('group');
+                    if (groupData.channel_id) setSelectedChannel(groupData.channel_id);
+                  }
+                });
+                playBeep();
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
       
       // Handle direct messages - check if we're in profile mode
       if (selectedConversation && selectedConversationType === 'direct' && 
@@ -467,6 +533,8 @@ const UnifiedMessages: React.FC = () => {
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             );
           });
+
+          // Notification for DMs is handled by the general-case handler above to avoid duplicates.
         }
       }
       
@@ -516,6 +584,36 @@ const UnifiedMessages: React.FC = () => {
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
             );
           });
+
+          // In-app notification for group messages if not currently in the same group/channel
+          const weAreViewing = selectedConversationType === 'group' && selectedConversation === groupData.group_id &&
+            (!selectedChannel || groupData.channel_id === selectedChannel);
+      if (!weAreViewing) {
+            const group = conversations.conversations.find(c => c.type === 'group' && c.id === groupData.group_id);
+            const groupName = group?.name || 'New Group Message';
+            // Only notify/beep if the current user is @mentioned in the message
+            const uname = currentUser?.username || '';
+            const isMentioned = uname
+              ? new RegExp(`(^|\\s|[^\\w])@${uname.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}(\\b|[^\\w])`, 'i').test(groupData.content || '')
+              : false;
+            if (isMentioned) {
+              notify({
+                title: groupName,
+                message: groupData.content,
+                type: 'info',
+                onClick: () => {
+                  setSelectedCategory('unified');
+                  setSelectedConversation(groupData.group_id);
+                  setSelectedConversationType('group');
+                  if (groupData.channel_id) setSelectedChannel(groupData.channel_id);
+                }
+              });
+              playBeep();
+        setUnreadGroupMentions(prev => ({ ...prev, [groupData.group_id]: (prev[groupData.group_id] || 0) + 1 }));
+            }
+            // Always increment unread when not viewing, regardless of mention
+            setUnreadGroupCounts(prev => ({ ...prev, [groupData.group_id]: (prev[groupData.group_id] || 0) + 1 }));
+          }
         }
       }
       
@@ -803,6 +901,12 @@ const UnifiedMessages: React.FC = () => {
     setSelectedConversation(conversation.id);
     setSelectedConversationType(conversation.type);
     setReplyTo(null); // Clear any active reply when switching conversations
+    // Reset unread count for opened conversation
+    if (conversation.type === 'direct') {
+      setUnreadDMCounts(prev => ({ ...prev, [conversation.id]: 0 }));
+    } else {
+      setUnreadGroupCounts(prev => ({ ...prev, [conversation.id]: 0 }));
+    }
     
     if (conversation.type === 'group') {
       groupManagement.fetchGroupMembers(conversation.id);
@@ -949,8 +1053,16 @@ const UnifiedMessages: React.FC = () => {
     if (hasAutoSelected && dmUserId && conversation.id !== dmUserId) {
       setHasAutoSelected(false);
     }
+    // Reset unread mention counters when opening a group
+    if (conversation.type === 'group') {
+      setUnreadGroupMentions(prev => ({ ...prev, [conversation.id]: 0 }));
+    }
     selectConversation(conversation);
-  }, [selectConversation, hasAutoSelected, searchParams]);
+    // On mobile, hide the conversations list after selecting a convo
+    if (isMobile) {
+      setIsConversationsSidebarHidden(true);
+    }
+  }, [selectConversation, hasAutoSelected, searchParams, isMobile]);
 
   // Fetch messages when channel changes
   useEffect(() => {
@@ -1256,7 +1368,6 @@ const UnifiedMessages: React.FC = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       if (!mobile) {
-        setIsSidebarVisible(false);
         setIsConversationsSidebarHidden(false);
       }
     };
@@ -1277,8 +1388,11 @@ const UnifiedMessages: React.FC = () => {
 
   // Use appropriate conversation data based on the selected category
   const selectedConversationData = useMemo(() => {
-    if (selectedCategory === 'direct') {
-      const profileConversation = profileConversations.conversations.find(pc => pc.other_user.user_id === selectedConversation);
+    // Always use profile data for direct conversations to ensure profile-specific display names
+    if (selectedConversationType === 'direct') {
+      const profileConversation = profileConversations.conversations.find(
+        pc => pc.other_user.user_id === selectedConversation
+      );
       if (profileConversation) {
         return {
           id: selectedConversation,
@@ -1301,7 +1415,7 @@ const UnifiedMessages: React.FC = () => {
       }
     }
     return conversations.conversations.find(c => c.id === selectedConversation);
-  }, [selectedCategory, selectedConversation, profileConversations.conversations, conversations.conversations, displayNames]);
+  }, [selectedConversationType, selectedConversation, profileConversations.conversations, conversations.conversations, displayNames]);
     
   // Compute if the current user can manage members in the selected group
   const canManageMembers: boolean = selectedConversationType === 'group'
@@ -1437,33 +1551,155 @@ const UnifiedMessages: React.FC = () => {
   return (
     <div className={`flex h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}>
       {/* Mobile overlay */}
-      {isMobile && isSidebarVisible && (
+      {isMobile && !isConversationsSidebarHidden && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsSidebarVisible(false)}
+          onClick={() => setIsConversationsSidebarHidden(true)}
         />
       )}
 
       {/* Main Content Container */}
       <div className={`flex-1 flex ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'} h-full overflow-hidden relative`}>
 
-      {/* Main navigation sidebar */}
-      <SidebarNavigation
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        invitationsCount={groupManagement.invitations?.length ?? 0}
-        currentUser={currentUser}
-        isMobile={isMobile}
-        isSidebarVisible={isSidebarVisible}
-        isConversationsSidebarHidden={isConversationsSidebarHidden}
-        isMinimized={isMainSidebarMinimized}
-        setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
-        setIsMinimized={setIsMainSidebarMinimized}
-        onInvitationsClick={() => modals.openModal('showInvitationsModal')}
-      />
+  {/* Main navigation sidebar - hidden on /chat per requirement */}
+  {/* Sidebar removed on /chat */}
 
       {/* Conversations list */}
-      <ConversationsList
+      {isMobile ? (
+        !isConversationsSidebarHidden && (
+          <div className="fixed top-0 left-0 h-full z-50">
+            <ConversationsList
+              conversations={
+                selectedCategory === 'unified' 
+                  ? (() => {
+                      // Get direct conversations from profile conversations
+                      const directConversations = profileConversations.conversations.map(pc => ({
+                        id: pc.other_user.user_id,
+                        name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
+                        type: 'direct' as const,
+                        last_message: pc.latest_message?.content,
+                        last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
+                        unread_count: unreadDMCounts[pc.other_user.user_id] || 0,
+                        user_id: pc.other_user.user_id,
+                      }));
+                      const groupConversations = conversations.conversations
+                        .filter(c => c.type === 'group')
+                        .map(c => ({ ...c, unread_count: unreadGroupCounts[c.id] ?? c.unread_count ?? 0, has_mention: (unreadGroupMentions[c.id] ?? 0) > 0 }));
+                      const combined = [...directConversations, ...groupConversations];
+                      if (combined.length === 0) return combined;
+                      const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+                      const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+                        const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+                        const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+                        if (aUnread !== bUnread) return bUnread - aUnread;
+                        const at = toTime(a);
+                        const bt = toTime(b);
+                        if (at !== bt) return bt - at;
+                        return (a.name || '').localeCompare(b.name || '');
+                      };
+                      let latestIdx = 0;
+                      let latestTime = toTime(combined[0]);
+                      for (let i = 1; i < combined.length; i++) {
+                        const t = toTime(combined[i]);
+                        if (t > latestTime) { latestTime = t; latestIdx = i; }
+                      }
+                      const pinned = combined[latestIdx];
+                      const rest = combined.filter((_, i) => i !== latestIdx).sort(cmp);
+                      return [pinned, ...rest];
+                    })()
+                  : selectedCategory === 'direct' 
+            ? (() => {
+                  const list = profileConversations.conversations
+                    .map(pc => ({
+                      id: pc.other_user.user_id,
+                      name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
+                      type: 'direct' as const,
+                      last_message: pc.latest_message?.content,
+                      last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
+                      unread_count: unreadDMCounts[pc.other_user.user_id] || 0,
+                      user_id: pc.other_user.user_id,
+                    }));
+                  if (list.length === 0) return list;
+                  const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+                  const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+                    const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+                    const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+                    if (aUnread !== bUnread) return bUnread - aUnread;
+                    const at = toTime(a);
+                    const bt = toTime(b);
+                    if (at !== bt) return bt - at;
+                    return (a.name || '').localeCompare(b.name || '');
+                  };
+                  let latestIdx = 0;
+                  let latestTime = toTime(list[0]);
+                  for (let i = 1; i < list.length; i++) {
+                    const t = toTime(list[i]);
+                    if (t > latestTime) { latestTime = t; latestIdx = i; }
+                  }
+                  const pinned = list[latestIdx];
+                  const rest = list.filter((_, i) => i !== latestIdx).sort(cmp);
+                  return [pinned, ...rest];
+                })()
+            : (() => {
+                const list = conversations.conversations
+                  .filter(c => c.type === 'group')
+                  .map(c => ({
+                    ...c,
+                    unread_count: unreadGroupCounts[c.id] ?? c.unread_count ?? 0,
+                    has_mention: (unreadGroupMentions[c.id] ?? 0) > 0
+                  }));
+                if (list.length === 0) return list;
+                const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+                const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+                  const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+                  const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+                  if (aUnread !== bUnread) return bUnread - aUnread;
+                  const at = toTime(a);
+                  const bt = toTime(b);
+                  if (at !== bt) return bt - at;
+                  return (a.name || '').localeCompare(b.name || '');
+                };
+                let latestIdx = 0;
+                let latestTime = toTime(list[0]);
+                for (let i = 1; i < list.length; i++) {
+                  const t = toTime(list[i]);
+                  if (t > latestTime) { latestTime = t; latestIdx = i; }
+                }
+                const pinned = list[latestIdx];
+                const rest = list.filter((_, i) => i !== latestIdx).sort(cmp);
+                return [pinned, ...rest];
+              })()
+              }
+              selectedCategory={selectedCategory}
+              selectedConversation={selectedConversation}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSelectConversation={selectConversationWithReset}
+              onConversationContextMenu={handleConversationContextMenu}
+              isConversationsSidebarHidden={isConversationsSidebarHidden}
+              setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
+              isConnected={isConnected}
+              connectionError={connectionError}
+              sessionToken={sessionToken}
+              onReconnect={refreshConnection}
+              currentUser={currentUser}
+              activeProfileType={activeProfileType}
+              setActiveProfileType={setActiveProfileType}
+              invitationSummary={groupManagement.invitationSummary}
+              getUserStatus={userStatus.getUserStatus}
+              onStatusChange={async (userId: string, status: UserStatus, customMessage?: string) => {
+                if (userId === currentUser?.user_id) {
+                  return await userStatus.updateStatus(status, customMessage);
+                }
+                return false;
+              }}
+              onCreateGroup={() => modals.openModal('showCreateGroupModal')}
+              onNewMessage={() => modals.openModal('showNewDMModal')}
+            />
+          </div>
+        )
+      ) : (
+        <ConversationsList
         conversations={
           selectedCategory === 'unified' 
             ? (() => {
@@ -1474,29 +1710,101 @@ const UnifiedMessages: React.FC = () => {
                   type: 'direct' as const,
                   last_message: pc.latest_message?.content,
                   last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
-                  unread_count: 0,
+                  unread_count: unreadDMCounts[pc.other_user.user_id] || 0,
                   user_id: pc.other_user.user_id,
                 }));
                 
                 // Get group conversations (filter out any direct conversations to avoid duplicates)
-                const groupConversations = conversations.conversations.filter(c => c.type === 'group');
+                const groupConversations = conversations.conversations
+                  .filter(c => c.type === 'group')
+                  .map(c => ({ ...c, unread_count: unreadGroupCounts[c.id] ?? c.unread_count ?? 0, has_mention: (unreadGroupMentions[c.id] ?? 0) > 0 }));
                 
-                // Combine and sort by activity
-                return [...directConversations, ...groupConversations].sort((a, b) => 
-                  new Date(b.last_activity || 0).getTime() - new Date(a.last_activity || 0).getTime()
-                );
+                // Combine
+                const combined = [...directConversations, ...groupConversations];
+                if (combined.length === 0) return combined;
+                const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+                const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+                  const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+                  const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+                  if (aUnread !== bUnread) return bUnread - aUnread;
+                  const at = toTime(a);
+                  const bt = toTime(b);
+                  if (at !== bt) return bt - at;
+                  return (a.name || '').localeCompare(b.name || '');
+                };
+                // Pin most recent conversation at top regardless of unread status
+                let latestIdx = 0;
+                let latestTime = toTime(combined[0]);
+                for (let i = 1; i < combined.length; i++) {
+                  const t = toTime(combined[i]);
+                  if (t > latestTime) { latestTime = t; latestIdx = i; }
+                }
+                const pinned = combined[latestIdx];
+                const rest = combined.filter((_, i) => i !== latestIdx).sort(cmp);
+                return [pinned, ...rest];
               })()
             : selectedCategory === 'direct' 
-              ? profileConversations.conversations.map(pc => ({
+        ? (() => {
+              const list = profileConversations.conversations
+                .map(pc => ({
                   id: pc.other_user.user_id,
                   name: createConversationNameWithSymbol(pc.other_user.display_name || pc.other_user.username, activeProfileType),
                   type: 'direct' as const,
                   last_message: pc.latest_message?.content,
                   last_activity: pc.latest_message?.timestamp || pc.created_at.toString(),
-                  unread_count: 0,
+                  unread_count: unreadDMCounts[pc.other_user.user_id] || 0,
                   user_id: pc.other_user.user_id,
-                }))
-              : conversations.conversations.filter(c => c.type === 'group')
+                }));
+              if (list.length === 0) return list;
+              const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+              const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+                const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+                const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+                if (aUnread !== bUnread) return bUnread - aUnread;
+                const at = toTime(a);
+                const bt = toTime(b);
+                if (at !== bt) return bt - at;
+                return (a.name || '').localeCompare(b.name || '');
+              };
+              let latestIdx = 0;
+              let latestTime = toTime(list[0]);
+              for (let i = 1; i < list.length; i++) {
+                const t = toTime(list[i]);
+                if (t > latestTime) { latestTime = t; latestIdx = i; }
+              }
+              const pinned = list[latestIdx];
+              const rest = list.filter((_, i) => i !== latestIdx).sort(cmp);
+              return [pinned, ...rest];
+            })()
+        : (() => {
+            const list = conversations.conversations
+              .filter(c => c.type === 'group')
+              .map(c => ({
+                ...c,
+                unread_count: unreadGroupCounts[c.id] ?? c.unread_count ?? 0,
+                has_mention: (unreadGroupMentions[c.id] ?? 0) > 0
+              }));
+            if (list.length === 0) return list;
+            const toTime = (x: { last_activity?: string | number | Date }): number => new Date(x.last_activity || 0).getTime();
+            const cmp = (a: { unread_count?: number; last_activity?: string | number | Date; name?: string }, b: { unread_count?: number; last_activity?: string | number | Date; name?: string }): number => {
+              const aUnread = (a.unread_count ?? 0) > 0 ? 1 : 0;
+              const bUnread = (b.unread_count ?? 0) > 0 ? 1 : 0;
+              if (aUnread !== bUnread) return bUnread - aUnread;
+              const at = toTime(a);
+              const bt = toTime(b);
+              if (at !== bt) return bt - at;
+              return (a.name || '').localeCompare(b.name || '');
+            };
+            let latestIdx = 0;
+            let latestTime = toTime(list[0]);
+            for (let i = 1; i < list.length; i++) {
+              const t = toTime(list[i]);
+              if (t > latestTime) { latestTime = t; latestIdx = i; }
+            }
+            const pinned = list[latestIdx];
+            const rest = list.filter((_, i) => i !== latestIdx).sort(cmp);
+            return [pinned, ...rest];
+          })()
         }
         selectedCategory={selectedCategory}
         selectedConversation={selectedConversation}
@@ -1529,7 +1837,8 @@ const UnifiedMessages: React.FC = () => {
         // Action props
         onCreateGroup={() => modals.openModal('showCreateGroupModal')}
         onNewMessage={() => modals.openModal('showNewDMModal')}
-      />
+  />
+  )}
 
       {/* Chat area */}
       <ChatArea
@@ -1559,7 +1868,6 @@ const UnifiedMessages: React.FC = () => {
         isMobile={isMobile}
         isConversationsSidebarHidden={isConversationsSidebarHidden}
         setIsConversationsSidebarHidden={setIsConversationsSidebarHidden}
-        setIsSidebarVisible={setIsSidebarVisible}
         onMembersClick={() => modals.openModal('showMembersModal')}
         onInviteClick={() => modals.openModal('showInviteModal')}
         onBannedUsersClick={() => {
@@ -1595,6 +1903,8 @@ const UnifiedMessages: React.FC = () => {
         }}
         // Status props
         getUserStatus={userStatus.getUserStatus}
+  invitationsCount={groupManagement.invitations?.length ?? 0}
+  onInvitationsClick={() => modals.openModal('showInvitationsModal')}
       />
 
       {/* Context Menu */}
@@ -1880,5 +2190,12 @@ const UnifiedMessages: React.FC = () => {
     </div>
   );
 };
+
+// Exported component wraps inner logic with NotificationsProvider
+const UnifiedMessages: React.FC = () => (
+  <NotificationsProvider>
+    <UnifiedMessagesInner />
+  </NotificationsProvider>
+);
 
 export default UnifiedMessages;
