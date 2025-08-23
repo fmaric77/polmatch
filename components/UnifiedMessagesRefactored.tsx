@@ -232,6 +232,13 @@ const UnifiedMessagesInner: React.FC = () => {
   const voiceCallRef = useRef<VoiceCallRef>(null);
   const callSoundRef = useRef<HTMLAudioElement | null>(null);
   const isCallSoundPlayingRef = useRef<boolean>(false);
+  // Audio autoplay policy handling
+  const audioUnlockedRef = useRef<boolean>(false);
+  const pendingRingtoneRef = useRef<boolean>(false);
+  // Track outgoing call active state in a ref to avoid stale closures in SSE handlers
+  const outgoingCallIsActiveRef = useRef<boolean>(false);
+  // Latch acceptance if it arrives before the VoiceCall ref is ready
+  const pendingOutgoingAcceptRef = useRef<boolean>(false);
   const [outgoingCall, setOutgoingCall] = useState<{
     isActive: boolean;
     otherUser: { user_id: string; username: string; display_name?: string } | null;
@@ -250,6 +257,30 @@ const UnifiedMessagesInner: React.FC = () => {
     selectedChannel,
     sessionToken
   });
+
+  // Keep the ref in sync with state so SSE handlers always see latest value
+  useEffect(() => {
+    outgoingCallIsActiveRef.current = outgoingCall.isActive;
+  }, [outgoingCall.isActive]);
+
+  // If acceptance arrived before the outgoing VoiceCall ref was ready, retry until it's mounted then join
+  useEffect(() => {
+    if (outgoingCall.isActive && pendingOutgoingAcceptRef.current) {
+      let attempts = 0;
+      const timer = setInterval(() => {
+        attempts += 1;
+        if (voiceCallRef.current && pendingOutgoingAcceptRef.current) {
+          console.log('ℹ️ Consuming deferred call acceptance after modal mount');
+          voiceCallRef.current.handleCallAccepted();
+          pendingOutgoingAcceptRef.current = false;
+          clearInterval(timer);
+        } else if (attempts > 20) {
+          clearInterval(timer);
+        }
+      }, 150);
+      return () => clearInterval(timer);
+    }
+  }, [outgoingCall.isActive]);
 
   // Debug session token changes
   useEffect(() => {
@@ -320,7 +351,7 @@ const UnifiedMessagesInner: React.FC = () => {
       }
     };
 
-    const initiateCall = (otherUser: { user_id: string; username: string; display_name?: string }): void => {
+  const initiateCall = (otherUser: { user_id: string; username: string; display_name?: string }): void => {
       // Prevent starting multiple calls
       if (outgoingCall.isActive) {
         console.log('❌ Cannot initiate call - already have an active outgoing call');
@@ -361,8 +392,58 @@ const UnifiedMessagesInner: React.FC = () => {
     };
   }, []);
 
+  // Unlock audio on first user interaction to comply with autoplay policies
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let removed = false;
+    const tryUnlock = async (): Promise<void> => {
+      if (audioUnlockedRef.current) return;
+      try {
+        if (callSoundRef.current) {
+          // Attempt a muted play to unlock
+          callSoundRef.current.muted = true;
+          await callSoundRef.current.play().catch(() => {});
+          callSoundRef.current.pause();
+          callSoundRef.current.currentTime = 0;
+          callSoundRef.current.muted = false;
+        }
+        audioUnlockedRef.current = true;
+        // If a ringtone was pending, play it now
+        if (pendingRingtoneRef.current) {
+          pendingRingtoneRef.current = false;
+          setTimeout(() => {
+            // best-effort; ignore errors here
+            playCallSound();
+          }, 0);
+        }
+        // Remove listeners after unlock
+        window.removeEventListener('click', tryUnlock);
+        window.removeEventListener('touchstart', tryUnlock);
+        window.removeEventListener('keydown', tryUnlock);
+        removed = true;
+      } catch {
+        // ignore; will retry on next interaction
+      }
+    };
+    window.addEventListener('click', tryUnlock, { once: false });
+    window.addEventListener('touchstart', tryUnlock, { once: false });
+    window.addEventListener('keydown', tryUnlock, { once: false });
+    return () => {
+      if (!removed) {
+        window.removeEventListener('click', tryUnlock);
+        window.removeEventListener('touchstart', tryUnlock);
+        window.removeEventListener('keydown', tryUnlock);
+      }
+    };
+  }, []);
+
   // Function to play call sound
   const playCallSound = useCallback(() => {
+    if (!audioUnlockedRef.current) {
+      // Defer until the user interacts and we unlock audio
+      pendingRingtoneRef.current = true;
+      return;
+    }
     if (callSoundRef.current && !isCallSoundPlayingRef.current) {
       isCallSoundPlayingRef.current = true;
       callSoundRef.current.currentTime = 0;
@@ -669,10 +750,15 @@ const UnifiedMessagesInner: React.FC = () => {
       console.log('Received call status update via SSE:', data);
       
       // Handle outgoing call status updates (for calls we initiated)
-      if (data.caller_id === currentUser?.user_id && outgoingCall.isActive) {
+      if (data.caller_id === currentUser?.user_id && outgoingCallIsActiveRef.current) {
         if (data.status === 'accepted') {
           console.log('📞 Outgoing call was accepted');
-          voiceCallRef.current?.handleCallAccepted();
+          if (voiceCallRef.current) {
+            voiceCallRef.current.handleCallAccepted();
+          } else {
+            console.log('ℹ️ VoiceCall ref not ready yet, deferring accept handling');
+            pendingOutgoingAcceptRef.current = true;
+          }
         } else if (data.status === 'declined') {
           console.log('📞 Outgoing call was declined');
           voiceCallRef.current?.handleCallDeclined();
@@ -1519,7 +1605,7 @@ const UnifiedMessagesInner: React.FC = () => {
     stopCallSound(); // Stop the ringing sound
     
     // Send decline notification to server
-    fetch('/api/voice-calls', {
+    protectedFetch('/api/voice-calls', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1535,7 +1621,7 @@ const UnifiedMessagesInner: React.FC = () => {
       ...prev,
       incomingCalls: prev.incomingCalls.filter(c => c.call_id !== call.call_id)
     }));
-  }, [stopCallSound]);
+  }, [stopCallSound, protectedFetch]);
 
   if (loading) {
     return (

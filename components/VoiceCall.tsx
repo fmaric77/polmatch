@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import type { IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPhone, 
@@ -6,9 +7,10 @@ import {
   faMicrophone, 
   faMicrophoneSlash,
   faTimes,
-  faVolumeUp
+  faDesktop
 } from '@fortawesome/free-solid-svg-icons';
 import { getAgoraInstance, generateChannelName } from '../lib/agora';
+import { useCSRFToken } from './hooks/useCSRFToken';
 
 interface VoiceCallProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
   onCallEnd,
   callId
 }, ref) => {
+  const { protectedFetch } = useCSRFToken();
   const [callStatus, setCallStatus] = useState<'connecting' | 'calling' | 'connected' | 'ended' | 'failed' | 'incoming'>(
     isIncoming ? 'incoming' : 'calling' // Use 'calling' for outgoing calls, 'incoming' for incoming calls
   );
@@ -48,6 +51,14 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
   const [isStartingCall, setIsStartingCall] = useState(false);
   const [isAcceptingCall, setIsAcceptingCall] = useState(false); // Prevent multiple accepts
   const [activeCallId, setActiveCallId] = useState<string | null>(callId || null); // Track the active call ID
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+  const remoteStageRef = useRef<HTMLDivElement | null>(null);
+  const remoteVideoSlotRef = useRef<HTMLDivElement | null>(null);
+  const [remoteScreenActive, setRemoteScreenActive] = useState(false);
+  const remoteScreenTrackRef = useRef<IRemoteVideoTrack | null>(null);
+  const [stageFit, setStageFit] = useState<'contain' | 'cover'>('contain');
+  const [remoteLevel, setRemoteLevel] = useState(0);
+  const [localLevel, setLocalLevel] = useState(0);
   
   const agoraRef = useRef(getAgoraInstance());
   const callStartTimeRef = useRef<Date | null>(null);
@@ -107,12 +118,11 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
       
       console.log(`📞 Sending call notification to ${otherUser.username}`);
       
-      const response = await fetch('/api/voice-calls', {
+  const response = await protectedFetch('/api/voice-calls', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           recipient_id: otherUser.user_id,
           channel_name: channelName,
@@ -283,12 +293,11 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
         // For outgoing calls in "calling" state, this is a cancellation
         const status = (!isIncoming && callStatus === 'calling') ? 'missed' : 'ended';
         
-        const response = await fetch('/api/voice-calls', {
+  const response = await protectedFetch('/api/voice-calls', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
           body: JSON.stringify({
             call_id: activeCallId || callId || 'unknown',
             status: status,
@@ -332,6 +341,21 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
     }
   }, [isMuted]);
 
+  // Screen share controls
+  const toggleScreenShare = useCallback(async () => {
+    try {
+      if (!isSharingScreen) {
+        const ok = await agoraRef.current.startScreenShare(false);
+        if (ok) setIsSharingScreen(true);
+      } else {
+        await agoraRef.current.stopScreenShare();
+        setIsSharingScreen(false);
+      }
+    } catch (err) {
+      console.error('Error toggling screen share:', err);
+    }
+  }, [isSharingScreen]);
+
   // Format call duration
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -362,12 +386,11 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
       try {
         const callIdToUse = activeCallId || callId;
         console.log('Accepting incoming call:', callIdToUse);
-        const response = await fetch('/api/voice-calls', {
+  const response = await protectedFetch('/api/voice-calls', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
           body: JSON.stringify({ 
             call_id: callIdToUse, 
             status: 'accepted' 
@@ -411,12 +434,11 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
       try {
         const callIdToUse = activeCallId || callId;
         console.log('Declining incoming call:', callIdToUse);
-        const response = await fetch('/api/voice-calls', {
+  const response = await protectedFetch('/api/voice-calls', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
           body: JSON.stringify({ 
             call_id: callIdToUse, 
             status: 'declined' 
@@ -529,6 +551,76 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
     }
   }, [callStatus]);
 
+  // Hook remote screen video into a container when published
+  useEffect(() => {
+    const stage = remoteStageRef.current;
+    const slot = remoteVideoSlotRef.current;
+    if (!stage || !slot) return;
+    const instance = agoraRef.current;
+    instance.setRemoteScreenHandler((_userId, track) => {
+      // Stop previous track if switching
+      try { remoteScreenTrackRef.current?.stop(); } catch {}
+      remoteScreenTrackRef.current = null;
+      slot.innerHTML = '';
+      if (track) {
+        remoteScreenTrackRef.current = track;
+        try {
+          track.play(slot, { fit: stageFit });
+        } catch (e) {
+          console.warn('Failed to render remote screen track:', e);
+        }
+        setRemoteScreenActive(true);
+      } else {
+        setRemoteScreenActive(false);
+      }
+    });
+    return () => {
+      instance.setRemoteScreenHandler(null);
+      try { remoteScreenTrackRef.current?.stop(); } catch {}
+      if (slot) slot.innerHTML = '';
+    };
+  }, [stageFit, callStatus, isOpen]);
+
+  // Wire volume indicators
+  useEffect(() => {
+    const instance = agoraRef.current;
+    instance.setVolumeIndicatorHandler((updates) => {
+      // Agora uses uid strings (we pass user_id). Map to local/remote.
+      updates.forEach(u => {
+        if (u.uid === currentUser.user_id) setLocalLevel(u.level);
+        else setRemoteLevel(prev => (u.level > prev ? u.level : Math.max(0, u.level - 1)));
+      });
+    });
+    return () => instance.setVolumeIndicatorHandler(null);
+  }, [currentUser.user_id]);
+
+  const toggleStageFit = useCallback(() => {
+    const next = stageFit === 'contain' ? 'cover' : 'contain';
+    setStageFit(next);
+    // Re-apply fit without recreating handler
+    const slot = remoteVideoSlotRef.current;
+    const track = remoteScreenTrackRef.current;
+    if (slot && track) {
+      try { track.stop(); } catch {}
+      try { track.play(slot, { fit: next }); } catch {}
+    }
+  }, [stageFit]);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = remoteStageRef.current;
+    if (!el) return;
+    const d = document as Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => Promise<void> };
+    const anyEl = el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
+    const isFs = document.fullscreenElement != null || (d.webkitFullscreenElement != null);
+    if (!isFs) {
+      if (anyEl.requestFullscreen) anyEl.requestFullscreen().catch(() => {});
+      else if (anyEl.webkitRequestFullscreen) anyEl.webkitRequestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (d.webkitExitFullscreen) d.webkitExitFullscreen().catch(() => {});
+    }
+  }, []);
+
   // Add an effect to monitor and restore SSE connections during calls
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
@@ -596,9 +688,144 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
 
   if (!isOpen) return null;
 
-  return (
+  const inCallLayout = (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-md mx-4">
+      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-6xl h-[85vh] mx-4 flex flex-col">
+        {/* Header */}
+        <div className="border-b-2 border-white bg-white text-black px-4 py-3 flex items-center justify-between">
+          <div className="font-mono text-sm uppercase tracking-wider">
+            {otherUser.display_name || otherUser.username}
+          </div>
+          <div className="font-mono text-xs text-gray-700">
+            {formatDuration(callDuration)}
+          </div>
+        </div>
+
+        {/* Stage */}
+        <div className="flex-1 p-4 flex gap-4">
+          {/* Main Stage */}
+          <div ref={remoteStageRef} className="flex-1 border border-white rounded-none bg-gray-900 relative overflow-hidden">
+            {/* Video slot for remote screen */}
+            <div ref={remoteVideoSlotRef} className="absolute inset-0" />
+            {!remoteScreenActive && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-3">
+                  <div className="w-28 h-28 bg-gray-700 border-2 border-white rounded-none mx-auto flex items-center justify-center">
+                    <FontAwesomeIcon icon={faPhone} className="text-3xl text-white" />
+                  </div>
+                  <div className="font-mono text-lg">{otherUser.display_name || otherUser.username}</div>
+                  <div className="font-mono text-xs text-gray-400">{isSharingScreen ? 'Waiting for remote to receive share…' : 'Voice only'}</div>
+                </div>
+              </div>
+            )}
+            {/* Stage overlay controls */}
+            <div className="absolute top-2 right-2 flex gap-2">
+              <button
+                onClick={toggleStageFit}
+                className="px-2 py-1 bg-black/60 text-white border border-white rounded-none text-xs font-mono hover:bg-black/80"
+                title={stageFit === 'contain' ? 'Fill' : 'Fit'}
+              >
+                {stageFit === 'contain' ? 'FIT' : 'FILL'}
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                className="px-2 py-1 bg-black/60 text-white border border-white rounded-none text-xs font-mono hover:bg-black/80"
+                title="Fullscreen"
+              >
+                FULL
+              </button>
+            </div>
+            {isSharingScreen && (
+              <div className="absolute bottom-2 right-2 bg-black/60 text-white border border-white rounded-none px-2 py-1 text-xs font-mono">
+                You are sharing
+              </div>
+            )}
+          </div>
+
+          {/* Participants Rail */}
+          <div className="hidden md:flex w-64 flex-col gap-3">
+            {/* Other user tile */}
+            <div className="border border-white bg-gray-900 rounded-none p-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-700 border border-white rounded-none flex items-center justify-center">
+                  <span className="font-mono text-xs">{(otherUser.display_name || otherUser.username).slice(0,2).toUpperCase()}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="font-mono text-sm truncate">{otherUser.display_name || otherUser.username}</div>
+                  <div className="font-mono text-[10px] text-gray-400 flex items-center gap-2">
+                    <span>{remoteLevel > 3 ? 'Speaking…' : 'Idle'}</span>
+                    <span className="flex-1 h-1 bg-gray-700 border border-white rounded-none">
+                      <span
+                        className="block h-full bg-green-500"
+                        style={{ width: `${Math.min(100, remoteLevel * 4)}%` }}
+                      />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* You tile */}
+            <div className="border border-white bg-gray-900 rounded-none p-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-700 border border-white rounded-none flex items-center justify-center">
+                  <span className="font-mono text-xs">YOU</span>
+                </div>
+                <div className="flex-1">
+                  <div className="font-mono text-sm truncate">{currentUser.display_name || currentUser.username}</div>
+                  <div className="font-mono text-[10px] text-gray-400 flex items-center gap-2">
+                    <span>{isMuted ? 'Muted' : localLevel > 3 ? 'Speaking…' : 'Idle'}</span>
+                    <span className="flex-1 h-1 bg-gray-700 border border-white rounded-none">
+                      <span
+                        className={`block h-full ${isMuted ? 'bg-gray-500' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min(100, (isMuted ? 0 : localLevel) * 4)}%` }}
+                      />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="border-t-2 border-white px-4 py-3 flex items-center justify-center gap-3">
+          <button
+            onClick={toggleMute}
+            className={`px-4 py-3 border-2 rounded-none transition-colors ${
+              isMuted
+                ? 'bg-red-600 hover:bg-red-700 border-red-400'
+                : 'bg-gray-600 hover:bg-gray-700 border-gray-400'
+            }`}
+            title={isMuted ? 'Unmute' : 'Mute'}
+          >
+            <FontAwesomeIcon icon={isMuted ? faMicrophoneSlash : faMicrophone} className="text-white text-lg" />
+          </button>
+          <button
+            onClick={toggleScreenShare}
+            className={`px-4 py-3 border-2 rounded-none transition-colors ${
+              isSharingScreen
+                ? 'bg-blue-600 hover:bg-blue-700 border-blue-400'
+                : 'bg-gray-600 hover:bg-gray-700 border-gray-400'
+            }`}
+            title={isSharingScreen ? 'Stop Sharing' : 'Share Screen'}
+          >
+            <FontAwesomeIcon icon={faDesktop} className="text-white text-lg" />
+          </button>
+          <button
+            onClick={endCall}
+            className="px-4 py-3 bg-red-600 hover:bg-red-700 border-2 border-red-400 rounded-none transition-colors"
+            title="End Call"
+          >
+            <FontAwesomeIcon icon={faPhoneSlash} className="text-white text-lg" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const preCallLayout = (
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+      <div className="bg-black border-2 border-white rounded-none shadow-2xl w-full max-w-md mx-4 relative">
         {/* Header */}
         <div className="border-b-2 border-white bg-white text-black p-4 text-center">
           <h2 className="font-mono text-lg uppercase tracking-wider">
@@ -606,9 +833,7 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
           </h2>
         </div>
 
-        {/* Call Content */}
         <div className="p-6 text-white text-center space-y-6">
-          {/* User Info */}
           <div className="space-y-3">
             <div className="w-20 h-20 bg-gray-700 border-2 border-white rounded-none mx-auto flex items-center justify-center">
               <FontAwesomeIcon icon={faPhone} className="text-2xl text-white" />
@@ -619,19 +844,17 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
               </h3>
               <p className="font-mono text-sm text-gray-400 uppercase">
                 {callStatus === 'connecting' && connectionProgress}
-                {callStatus === 'connected' && formatDuration(callDuration)}
                 {callStatus === 'failed' && 'CALL FAILED'}
                 {callStatus === 'ended' && 'CALL ENDED'}
               </p>
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-900 border border-red-500 p-3 rounded-none">
               <p className="font-mono text-sm mb-2">{error}</p>
               <div className="flex justify-end">
-                <button 
+                <button
                   onClick={() => {
                     setError(null);
                     setCallStatus('connecting');
@@ -645,7 +868,6 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
             </div>
           )}
 
-          {/* Call Status */}
           <div className="font-mono text-sm space-y-2">
             {callStatus === 'incoming' && (
               <div className="text-blue-400">
@@ -659,17 +881,10 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
                 {connectionProgress.toUpperCase()}
               </div>
             )}
-            {callStatus === 'connected' && (
-              <div className="text-green-400">
-                <FontAwesomeIcon icon={faVolumeUp} className="mr-2" />
-                CALL ACTIVE
-              </div>
-            )}
           </div>
 
-          {/* Call Controls */}
+          {/* Controls */}
           <div className="flex justify-center space-x-4">
-            {/* Outgoing call controls (calling state) */}
             {!isIncoming && callStatus === 'calling' && (
               <button
                 onClick={endCall}
@@ -680,7 +895,6 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
               </button>
             )}
 
-            {/* Incoming call controls */}
             {isIncoming && (callStatus === 'incoming' || callStatus === 'connecting') && (
               <>
                 <button
@@ -700,34 +914,6 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
               </>
             )}
 
-            {/* Active call controls */}
-            {callStatus === 'connected' && (
-              <>
-                <button
-                  onClick={toggleMute}
-                  className={`p-4 border-2 rounded-none transition-colors ${
-                    isMuted 
-                      ? 'bg-red-600 hover:bg-red-700 border-red-400' 
-                      : 'bg-gray-600 hover:bg-gray-700 border-gray-400'
-                  }`}
-                  title={isMuted ? 'Unmute' : 'Mute'}
-                >
-                  <FontAwesomeIcon 
-                    icon={isMuted ? faMicrophoneSlash : faMicrophone} 
-                    className="text-white text-xl" 
-                  />
-                </button>
-                <button
-                  onClick={endCall}
-                  className="p-4 bg-red-600 hover:bg-red-700 border-2 border-red-400 rounded-none transition-colors"
-                  title="End Call"
-                >
-                  <FontAwesomeIcon icon={faPhoneSlash} className="text-white text-xl" />
-                </button>
-              </>
-            )}
-
-            {/* Failed/ended call controls */}
             {(callStatus === 'failed' || callStatus === 'ended') && (
               <button
                 onClick={onClose}
@@ -740,20 +926,20 @@ const VoiceCall = forwardRef<VoiceCallRef, VoiceCallProps>(({
           </div>
         </div>
 
-        {/* Close button for non-critical states */}
-        {callStatus !== 'connected' && (
-          <div className="absolute top-4 right-4">
-            <button
-              onClick={onClose}
-              className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        {/* Close button for pre-call states */}
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={onClose}
+            className="text-black hover:text-gray-600 transition-colors font-mono text-xl"
+          >
+            ×
+          </button>
+        </div>
       </div>
     </div>
   );
+
+  return callStatus === 'connected' ? inCallLayout : preCallLayout;
 });
 
 VoiceCall.displayName = 'VoiceCall';

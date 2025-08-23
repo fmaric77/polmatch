@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { csrfFetch } from '../../lib/csrf-client';
 
 interface IncomingCall {
   call_id: string;
@@ -29,7 +30,7 @@ export const useIncomingCalls = (sessionToken: string | null) => {
     setLastCheckTime(now);
     
     try {
-      const response = await fetch('/api/voice-calls');
+  const response = await csrfFetch('/api/voice-calls');
       const data = await response.json();
 
       if (data.success && data.calls) {
@@ -45,7 +46,7 @@ export const useIncomingCalls = (sessionToken: string | null) => {
   // Accept a call
   const acceptCall = useCallback(async (callId: string) => {
     try {
-      const response = await fetch('/api/voice-calls', {
+  const response = await csrfFetch('/api/voice-calls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,7 +71,7 @@ export const useIncomingCalls = (sessionToken: string | null) => {
   // Decline a call
   const declineCall = useCallback(async (callId: string) => {
     try {
-      const response = await fetch('/api/voice-calls', {
+  const response = await csrfFetch('/api/voice-calls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,7 +96,7 @@ export const useIncomingCalls = (sessionToken: string | null) => {
   // End a call
   const endCall = useCallback(async (callId: string) => {
     try {
-      const response = await fetch('/api/voice-calls', {
+  const response = await csrfFetch('/api/voice-calls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
