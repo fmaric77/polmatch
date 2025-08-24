@@ -27,6 +27,7 @@ import PinnedMessagesModal from './modals/PinnedMessagesModal';
 import ContextMenu from './modals/ContextMenu';
 import { useCSRFToken } from './hooks/useCSRFToken';
 import e2ee from '../lib/e2ee';
+import reactions, { ReactionsState } from '../lib/reactions';
 
 // Dynamically import VoiceCall to prevent SSR issues
 const VoiceCall = dynamic(() => import('./VoiceCall'), {
@@ -163,6 +164,8 @@ const UnifiedMessagesInner: React.FC = () => {
 
   // Message input state
   const [newMessage, setNewMessage] = useState('');
+  // Emoji reactions state for the currently open conversation (messageId -> emoji -> users)
+  const [reactionsState, setReactionsState] = useState<ReactionsState>({});
   // Local unread counters
   const [unreadDMCounts, setUnreadDMCounts] = useState<Record<string, number>>({});
   const [unreadGroupCounts, setUnreadGroupCounts] = useState<Record<string, number>>({});
@@ -571,6 +574,20 @@ const UnifiedMessagesInner: React.FC = () => {
         // ignore
       }
       
+      // Intercept reaction control messages for DMs and Groups and apply locally (do not display as chat bubbles)
+      try {
+        if (typeof data.content === 'string' && reactions.isReactionControl(data.content)) {
+          const parsed = reactions.parse(data.content);
+          if (parsed && data.sender_id) {
+            setReactionsState(prev => reactions.apply(prev, parsed.targetId, parsed.emoji, data.sender_id, parsed.op));
+          }
+          // Skip adding as a visible message entirely
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
       // Handle direct messages - check if we're in profile mode
       if (selectedConversation && selectedConversationType === 'direct' && 
           ((data.sender_id === selectedConversation && data.receiver_id === currentUser?.user_id) ||
@@ -662,13 +679,14 @@ const UnifiedMessagesInner: React.FC = () => {
         }
       }
       
-      // Handle group messages
+    // Handle group messages
       if (selectedConversation && selectedConversationType === 'group') {
         const groupData = data as unknown as GroupMessageSSE;
         if (
           groupData.group_id === selectedConversation &&
           (!selectedChannel || groupData.channel_id === selectedChannel)
         ) {
+      // Reaction controls were already intercepted above and returned
           const newMessage: GroupMessage = {
             message_id: groupData.message_id,
             group_id: groupData.group_id,
@@ -1367,10 +1385,11 @@ const UnifiedMessagesInner: React.FC = () => {
     // Prepare content, optionally E2EE-wrap for direct messages (but never wrap key-share messages)
     const raw = overrideContent ?? newMessage;
     let contentToSend = raw;
-    const isShare = e2ee.isShareMessage(raw);
+  const isShare = e2ee.isShareMessage(raw);
     const isDisable = e2ee.isDisableMessage ? e2ee.isDisableMessage(raw) : false;
-    const isInfo = e2ee.isInfoMessage ? e2ee.isInfoMessage(raw) : false;
-    if (!isShare && !isDisable && !isInfo && selectedConversationType === 'direct' && currentUser && selectedConversation) {
+  const isInfo = e2ee.isInfoMessage ? e2ee.isInfoMessage(raw) : false;
+  const isReaction = reactions.isReactionControl(raw);
+  if (!isShare && !isDisable && !isInfo && !isReaction && selectedConversationType === 'direct' && currentUser && selectedConversation) {
       const keyId = e2ee.getKeyId(activeProfileType, currentUser.user_id, selectedConversation);
       contentToSend = e2ee.encryptIfEnabled(keyId, raw);
     }
@@ -1456,6 +1475,19 @@ const UnifiedMessagesInner: React.FC = () => {
       }
     }
   }, [selectedConversationType, selectedCategory, activeProfileType, profileMessages, messages, newMessage, replyTo, selectedConversation, parsePollCommand, handlePollCommand]);
+
+  // Toggle reaction for a message id and emoji
+  const handleToggleReaction = useCallback((messageId: string, emoji: string) => {
+    if (!currentUser) return;
+    const currentUsers = reactionsState[messageId]?.[emoji] || [];
+    const hasReacted = currentUsers.includes(currentUser.user_id);
+    const op = hasReacted ? 'remove' : 'add' as const;
+    // Optimistic local update
+    setReactionsState(prev => reactions.apply(prev, messageId, emoji, currentUser.user_id, op));
+    // Broadcast control message so others update too
+    const content = reactions.build(messageId, emoji, op);
+    void handleSendMessage(content);
+  }, [currentUser, reactionsState, handleSendMessage]);
 
   // Context menu handlers
   const handleConversationContextMenu = (e: React.MouseEvent, conversation: Conversation) => {
@@ -2047,6 +2079,8 @@ const UnifiedMessagesInner: React.FC = () => {
         getUserStatus={userStatus.getUserStatus}
   invitationsCount={groupManagement.invitations?.length ?? 0}
   onInvitationsClick={() => modals.openModal('showInvitationsModal')}
+  reactions={reactionsState}
+  onToggleReaction={handleToggleReaction}
       />
 
       {/* Context Menu */}

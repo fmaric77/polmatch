@@ -31,6 +31,7 @@ import { useCSRFToken } from './hooks/useCSRFToken';
 import { UserStatus } from './hooks/useUserStatus';
 import { useTheme } from './ThemeProvider';
 import e2ee from '../lib/e2ee';
+import reactions, { ReactionsState } from '../lib/reactions';
 
 interface PrivateMessage {
   _id?: string;
@@ -159,6 +160,9 @@ interface ChatAreaProps {
   // Invitations
   invitationsCount: number;
   onInvitationsClick: () => void;
+  // Reactions
+  reactions?: ReactionsState;
+  onToggleReaction?: (messageId: string, emoji: string) => void;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -197,6 +201,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   getUserStatus,
   invitationsCount,
   onInvitationsClick
+  , reactions: reactionsState,
+  onToggleReaction
 }) => {
   const { protectedFetch } = useCSRFToken();
   const { theme } = useTheme();
@@ -252,6 +258,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
   const [showKeyMenu, setShowKeyMenu] = useState<boolean>(false);
   const [keyNotice, setKeyNotice] = useState<string>('');
+  // Reactions picker state
+  const [openReactionsFor, setOpenReactionsFor] = useState<string | null>(null);
+  const quickEmojis: readonly string[] = ['👍','❤️','😂','😮','😢','👎'] as const;
 
   // Mention suggestion state
   interface MentionUser { user_id: string; username: string; display_name?: string; }
@@ -1407,6 +1416,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               return `msg-${message.sender_id}-${message.timestamp}-${index}`;
             })();
 
+            // Skip rendering of reaction control messages
+            if (reactions.isReactionControl((message as PrivateMessage | GroupMessage).content as string)) {
+              return null;
+            }
+
             return (
               <div
                 key={messageKey}
@@ -1455,7 +1469,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   )}
                   
                   <div
-                    className={`p-4 rounded-none border-2 shadow-lg font-mono break-words ${
+                    className={`p-4 rounded-none border-2 shadow-lg font-mono break-words group ${
                       isCurrentUser
                         ? (theme === 'dark' ? 'bg-black border-blue-400 text-white shadow-blue-400/30' : 'bg-blue-100 border-blue-600 text-black shadow-blue-600/30')
                         : (theme === 'dark' ? 'bg-black border-gray-400 text-white shadow-gray-400/30' : 'bg-gray-100 border-gray-600 text-black shadow-gray-600/30')
@@ -1559,6 +1573,71 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                                   users={users}
                                   currentUser={currentUser}
                                 />
+                                {/* Reactions bar */}
+                                {(() => {
+                                  const getId = (): string | null => {
+                                    const pm = message as PrivateMessage;
+                                    const gm = message as GroupMessage;
+                                    if (pm._id) return pm._id;
+                                    if (gm.message_id) return gm.message_id;
+                                    return null;
+                                  };
+                                  const mid = getId();
+                                  if (!mid) return null;
+                                  const reacts = reactionsState?.[mid] || {};
+                                  const entries = Object.entries(reacts);
+                                  const hasAny = entries.length > 0;
+                                  return (
+                                    <div className="mt-2">
+                                      {hasAny && (
+                                        <div className={`inline-flex flex-wrap gap-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                          {entries.map(([emoji, usersArr]) => {
+                                            const count = usersArr.length;
+                                            const mine = currentUser ? usersArr.includes(currentUser.user_id) : false;
+                                            return (
+                                              <button
+                                                key={`${mid}-${emoji}`}
+                                                onClick={() => onToggleReaction?.(mid, emoji)}
+                                                className={`text-xs px-2 py-0.5 border rounded-none shadow ${mine ? (theme === 'dark' ? 'border-blue-400' : 'border-blue-600') : (theme === 'dark' ? 'border-gray-500' : 'border-gray-500')}`}
+                                                title={`${count} reaction${count !== 1 ? 's' : ''}`}
+                                              >
+                                                <span className="mr-1">{emoji}</span>
+                                                <span className="opacity-80">{count}</span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                      <div className={`${openReactionsFor === mid ? 'inline-block' : 'hidden group-hover:inline-block'} ml-1 relative`}>
+                                        <button
+                                          type="button"
+                                          onClick={() => setOpenReactionsFor(prev => prev === mid ? null : mid)}
+                                          className={`text-xs px-2 py-0.5 border rounded-none shadow ${theme === 'dark' ? 'border-white text-white hover:bg-white/10' : 'border-black text-black hover:bg-black/10'}`}
+                                          title="Add reaction"
+                                        >
+                                          🙂
+                                        </button>
+                                        {openReactionsFor === mid && (
+                                          <div className={`absolute z-50 mt-1 p-2 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl`}
+                                            onMouseLeave={() => setOpenReactionsFor(null)}
+                                          >
+                                            <div className="flex gap-1">
+                                              {quickEmojis.map(em => (
+                                                <button
+                                                  key={em}
+                                                  onClick={() => { onToggleReaction?.(mid, em); setOpenReactionsFor(null); }}
+                                                  className={`text-base px-2 py-1 border rounded-none ${theme === 'dark' ? 'border-white hover:bg-white/10' : 'border-black hover:bg-black/10'}`}
+                                                >
+                                                  {em}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>
