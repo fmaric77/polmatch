@@ -784,13 +784,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   if (!selectedConversation) {
     return (
       <div className={`flex-1 flex flex-col ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'} font-mono`}>
-  {/* FBI Navigation Header */}
-  <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
+        {/* FBI Navigation Header */}
+        <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
           <div className="flex items-center space-x-4">
             {/* Mobile Toggle Buttons */}
             {isMobile && (
               <div className="flex items-center space-x-3">
-                
                 {/* Conversations Toggle (only show if conversations are hidden) */}
                 {isConversationsSidebarHidden && (
                   <button
@@ -803,7 +802,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 )}
               </div>
             )}
-            
+
             {/* Desktop Conversations Toggle - Always show if conversations are hidden */}
             {!isMobile && isConversationsSidebarHidden && (
               <button
@@ -814,32 +813,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <FontAwesomeIcon icon={faEnvelope} />
               </button>
             )}
-            
+
             <div className="flex items-center space-x-2">
               <h2 className="text-lg font-mono uppercase tracking-wider">Messages</h2>
             </div>
-          </div>
-          {/* Top-right actions: Invitations and Settings */}
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onInvitationsClick}
-              className={`relative p-2 ${theme === 'dark' ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' : 'bg-white text-yellow-600 border-yellow-600 hover:bg-yellow-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-              title="Invitations"
-            >
-              <FontAwesomeIcon icon={faBell} />
-              {invitationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center border border-white">
-                  {invitationsCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => { if (typeof window !== 'undefined') window.location.href = '/profile'; }}
-              className={`p-2 ${theme === 'dark' ? 'bg-black text-gray-300 border-gray-300 hover:bg-gray-300 hover:text-black' : 'bg-white text-gray-700 border-gray-700 hover:bg-gray-700 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-              title="Settings"
-            >
-              <FontAwesomeIcon icon={faCog} />
-            </button>
           </div>
         </div>
         
@@ -917,13 +894,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-  {/* FBI Chat Header */}
-  <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
-        <div className="flex items-center space-x-4">
+      {/* FBI Chat Header */}
+      <div className={`p-4 border-b-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none flex items-center justify-between shadow-lg`}>
+        {/* Left: avatar + title */}
+        <div className="flex items-center space-x-4 min-w-0 flex-1">
           {/* Mobile Toggle Buttons */}
           {isMobile && (
             <div className="flex items-center space-x-3">
-              {/* Conversations Toggle (only show if conversations are hidden) */}
               {isConversationsSidebarHidden && (
                 <button
                   onClick={() => setIsConversationsSidebarHidden(false)}
@@ -935,8 +912,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               )}
             </div>
           )}
-
-          {/* Desktop Conversations Toggle - Always show if conversations are hidden */}
           {!isMobile && isConversationsSidebarHidden && (
             <button
               onClick={() => setIsConversationsSidebarHidden(false)}
@@ -946,116 +921,76 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <FontAwesomeIcon icon={faEnvelope} />
             </button>
           )}
-
-          {/* Conversation Info */}
+          {/* Conversation avatar or icon */}
           {selectedConversationData?.type === 'direct' && selectedConversationData.user_id ? (
             <div className={`border-2 ${theme === 'dark' ? 'border-white' : 'border-black'} rounded-none p-1 shadow-lg relative`}>
               <ProfileAvatar userId={selectedConversationData.user_id} size={32} />
-              {/* Status Indicator for Direct Chat Header */}
               {getUserStatus && (() => {
                 const userStatus = getUserStatus(selectedConversationData.user_id);
                 return userStatus ? (
                   <div className="absolute -bottom-1 -right-1">
-                    <StatusIndicator 
-                      status={userStatus.status} 
-                      size="small" 
-                      inline 
-                      className="border-2 border-black"
-                    />
+                    <StatusIndicator status={userStatus.status} size="small" inline className="border-2 border-black" />
                   </div>
                 ) : null;
               })()}
             </div>
           ) : (
             <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border-2 rounded-none flex items-center justify-center shadow-lg`}>
-              <FontAwesomeIcon 
-                icon={selectedConversationType === 'group' ? faHashtag : faUsers} 
-                className={`${theme === 'dark' ? 'text-white' : 'text-black'} text-sm`}
-              />
+              <FontAwesomeIcon icon={selectedConversationType === 'group' ? faHashtag : faUsers} className={`${theme === 'dark' ? 'text-white' : 'text-black'} text-sm`} />
             </div>
           )}
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-mono uppercase tracking-wider flex items-center gap-2">
-                {selectedConversationData?.name || 'Unknown Contact'}
-                {selectedConversationType === 'direct' && (
-                  <div className="relative inline-block">
-                    <button
-                      type="button"
-                      onClick={() => setShowKeyMenu(v => !v)}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded-none shadow ${e2eeEnabled ? (theme === 'dark' ? 'border-green-400 text-green-400' : 'border-green-600 text-green-600') : (theme === 'dark' ? 'border-yellow-400 text-yellow-400' : 'border-yellow-600 text-yellow-600')} cursor-pointer`}
-                      title={e2eeEnabled ? 'End-to-end encryption is ON for this DM' : 'Encryption is OFF for this DM'}
-                      aria-haspopup="menu"
-                      aria-expanded={showKeyMenu}
-                    >
-                      <FontAwesomeIcon icon={e2eeEnabled ? faLock : faLockOpen} />
-                    </button>
-                    {showKeyMenu && (
-                      <div
-                        className={`absolute left-0 top-full mt-2 z-50 w-64 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl p-2`}
-                        onMouseLeave={() => setShowKeyMenu(false)}
-                      >
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { e2eeActions.toggle(); setShowKeyMenu(false); }}
-                        >
-                          {e2eeActions.enabled() ? 'Disable encryption' : 'Enable encryption'}
-                        </button>
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { void e2eeActions.share(); setShowKeyMenu(false); }}
-                        >
-                          Share key (one-time)
-                        </button>
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { e2eeActions.export(); setShowKeyMenu(false); }}
-                        >
-                          Export key
-                        </button>
-                        <label
-                          className={`block w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'} cursor-pointer`}
-                          title="Import key JSON"
-                        >
-                          Import key
-                          <input
-                            type="file"
-                            accept="application/json"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files && e.target.files[0];
-                              if (f) e2eeActions.import(f);
-                              setShowKeyMenu(false);
-                            }}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                )}
+          {/* Title + status */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-lg font-mono uppercase tracking-wider truncate" title={selectedConversationData?.name || 'Unknown Contact'}>
+                <span className="inline-block truncate max-w-[16rem] align-bottom">{selectedConversationData?.name || 'Unknown Contact'}</span>
                 {selectedConversationType === 'group' && selectedChannel && groupChannels.length > 0 && (
                   <>
                     <span className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mx-2`}>/</span>
-                    <span className={`${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                    <span className={`${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} inline-block align-bottom truncate max-w-[12rem]`}>
                       #{groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
                     </span>
                   </>
                 )}
               </h2>
-              {/* Status indicator with label for direct conversations */}
-              {selectedConversationType === 'direct' && selectedConversationData?.user_id && getUserStatus && (() => {
-                const userStatus = getUserStatus(selectedConversationData.user_id);
-                return userStatus ? (
-                  <StatusIndicator 
-                    status={userStatus.status} 
-                    size="small" 
-                    showLabel 
-                    customMessage={userStatus.custom_message}
-                  />
-                ) : null;
-              })()}
+              {selectedConversationType === 'direct' && (
+                <div className="relative inline-block shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyMenu(v => !v)}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded-none shadow ${e2eeEnabled ? (theme === 'dark' ? 'border-green-400 text-green-400' : 'border-green-600 text-green-600') : (theme === 'dark' ? 'border-yellow-400 text-yellow-400' : 'border-yellow-600 text-yellow-600')} cursor-pointer`}
+                    title={e2eeEnabled ? 'End-to-end encryption is ON for this DM' : 'Encryption is OFF for this DM'}
+                    aria-haspopup="menu"
+                    aria-expanded={showKeyMenu}
+                  >
+                    <FontAwesomeIcon icon={e2eeEnabled ? faLock : faLockOpen} />
+                  </button>
+                  {showKeyMenu && (
+                    <div className={`absolute left-0 top-full mt-2 z-50 w-64 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl p-2`} onMouseLeave={() => setShowKeyMenu(false)}>
+                      <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { e2eeActions.toggle(); setShowKeyMenu(false); }}>
+                        {e2eeActions.enabled() ? 'Disable encryption' : 'Enable encryption'}
+                      </button>
+                      <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { void e2eeActions.share(); setShowKeyMenu(false); }}>
+                        Share key (one-time)
+                      </button>
+                      <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { e2eeActions.export(); setShowKeyMenu(false); }}>
+                        Export key
+                      </button>
+                      <label className={`block w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'} cursor-pointer`} title="Import key JSON">
+                        Import key
+                        <input type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) e2eeActions.import(f); setShowKeyMenu(false); }} />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            {selectedConversationType === 'direct' && selectedConversationData?.user_id && getUserStatus && (() => {
+              const userStatus = getUserStatus(selectedConversationData.user_id);
+              return userStatus ? (
+                <StatusIndicator status={userStatus.status} size="small" showLabel customMessage={userStatus.custom_message} />
+              ) : null;
+            })()}
             {selectedConversationData?.members_count && (
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
                 {selectedConversationData.members_count} members
@@ -1063,150 +998,106 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             )}
           </div>
         </div>
-
-        {/* Right-side actions: per-conversation and global */}
-  <div className="flex items-center space-x-3 relative">
-          {/* Group Actions */}
-          {selectedConversationType === 'group' && (
+        {/* Right: actions */}
+  <div className="flex items-center space-x-3 relative shrink-0">
+          {/* Group actions (desktop) */}
+          {selectedConversationType === 'group' && !isMobile && (
             <>
-              {/* Desktop/Tablet: show all group action icons */}
-              {!isMobile && (
+              <button
+                onClick={() => setShowPollModal(true)}
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-white border-white hover:bg-white hover:text-black' : 'bg-white text-black border-black hover:bg-black hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                title="Create Poll"
+              >
+                <FontAwesomeIcon icon={faChartBar} />
+              </button>
+              <button
+                onClick={onPinnedMessagesClick}
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' : 'bg-white text-yellow-600 border-yellow-600 hover:bg-yellow-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                title="View Pinned Messages"
+              >
+                <FontAwesomeIcon icon={faThumbtack} />
+              </button>
+              {canManageMembers && (
                 <>
                   <button
-                    onClick={onMembersClick}
-                    className={`p-2 ${theme === 'dark' ? 'bg-black text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                    title="View Members"
+                    onClick={onInviteClick}
+                    className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                    title="Invite User"
                   >
-                    <FontAwesomeIcon icon={faUsers} />
+                    <FontAwesomeIcon icon={faUserPlus} />
                   </button>
                   <button
-                    onClick={() => setShowPollModal(true)}
-                    className={`p-2 ${theme === 'dark' ? 'bg-black text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-black' : 'bg-white text-purple-600 border-purple-600 hover:bg-purple-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                    title="Create Polls"
+                    onClick={onBannedUsersClick}
+                    className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-600 border-red-600 hover:bg-red-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                    title="Banned Users"
                   >
-                    <FontAwesomeIcon icon={faChartBar} />
+                    <FontAwesomeIcon icon={faBan} />
                   </button>
-                  <button
-                    onClick={onPinnedMessagesClick}
-                    className={`p-2 ${theme === 'dark' ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' : 'bg-white text-yellow-600 border-yellow-600 hover:bg-yellow-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                    title="View Pinned Messages"
-                  >
-                    <FontAwesomeIcon icon={faThumbtack} />
-                  </button>
-                  {canManageMembers && (
-                    <>
-                      <button
-                        onClick={onInviteClick}
-                        className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                        title="Invite User"
-                      >
-                        <FontAwesomeIcon icon={faUserPlus} />
-                      </button>
-                      <button
-                        onClick={onBannedUsersClick}
-                        className={`p-2 ${theme === 'dark' ? 'bg-black text-red-400 border-red-400 hover:bg-red-400 hover:text-black' : 'bg-white text-red-600 border-red-600 hover:bg-red-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                        title="Banned Users"
-                      >
-                        <FontAwesomeIcon icon={faBan} />
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Mobile: collapse group actions into hamburger menu */}
-              {isMobile && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Menu"
-                    onClick={() => setIsActionsMenuOpen(v => !v)}
-                    className={`p-2 ${theme === 'dark' ? 'bg-black text-white border-white hover:bg-white hover:text-black' : 'bg-white text-black border-black hover:bg-black hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                    title="Menu"
-                  >
-                    <FontAwesomeIcon icon={faEllipsisVertical} className="w-5 h-5 shrink-0" />
-                  </button>
-
-                  {isActionsMenuOpen && (
-                    <>
-                      {/* Click-away overlay */}
-                      <div className="fixed inset-0 z-40" onClick={() => setIsActionsMenuOpen(false)} />
-                      {/* Dropdown menu */}
-                      <div className={`absolute right-0 top-full mt-2 z-50 w-56 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl`}>
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { onMembersClick(); setIsActionsMenuOpen(false); }}
-                        >
-                          👥 Members
-                        </button>
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { setShowPollModal(true); setIsActionsMenuOpen(false); }}
-                        >
-                          📊 Create Poll
-                        </button>
-                        <button
-                          className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => {
-                            if (onPinnedMessagesClick) {
-                              onPinnedMessagesClick();
-                            }
-                            setIsActionsMenuOpen(false);
-                          }}
-                        >
-                          📌 Pinned Messages
-                        </button>
-                        {/* Invitations with count */}
-                        <button
-                          className={`w-full px-3 py-2 hover:bg-white/10 flex items-center justify-between ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                          onClick={() => { onInvitationsClick(); setIsActionsMenuOpen(false); }}
-                          title="Invitations"
-                        >
-                          <span>🔔 Invitations</span>
-                          {invitationsCount > 0 && (
-                            <span className="ml-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center border border-white">
-                              {invitationsCount}
-                            </span>
-                          )}
-                        </button>
-                        {canManageMembers && (
-                          <>
-                            <button
-                              className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                              onClick={() => { onInviteClick(); setIsActionsMenuOpen(false); }}
-                            >
-                              ➕ Invite User
-                            </button>
-                            <button
-                              className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-                              onClick={() => { onBannedUsersClick(); setIsActionsMenuOpen(false); }}
-                            >
-                              🚫 Banned Users
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
                 </>
               )}
             </>
           )}
-
+          {/* Mobile group kebab */}
+          {selectedConversationType === 'group' && isMobile && (
+            <>
+              <button
+                type="button"
+                aria-label="Menu"
+                onClick={() => setIsActionsMenuOpen(v => !v)}
+                className={`p-2 ${theme === 'dark' ? 'bg-black text-white border-white hover:bg-white hover:text-black' : 'bg-white text-black border-black hover:bg-black hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+                title="Menu"
+              >
+                <FontAwesomeIcon icon={faEllipsisVertical} className="w-5 h-5 shrink-0" />
+              </button>
+              {isActionsMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsActionsMenuOpen(false)} />
+                  <div className={`absolute right-0 top-full mt-2 z-50 w-56 ${theme === 'dark' ? 'bg-black border-white' : 'bg-white border-black'} border rounded-none shadow-2xl`}>
+                    <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { onMembersClick(); setIsActionsMenuOpen(false); }}>
+                      👥 Members
+                    </button>
+                    <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { setShowPollModal(true); setIsActionsMenuOpen(false); }}>
+                      📊 Create Poll
+                    </button>
+                    <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => {
+                      if (onPinnedMessagesClick) onPinnedMessagesClick();
+                      setIsActionsMenuOpen(false);
+                    }}>
+                      📌 Pinned Messages
+                    </button>
+                    <button className={`w-full px-3 py-2 hover:bg-white/10 flex items-center justify-between ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { onInvitationsClick(); setIsActionsMenuOpen(false); }} title="Invitations">
+                      <span>🔔 Invitations</span>
+                      {invitationsCount > 0 && (
+                        <span className="ml-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center border border-white">
+                          {invitationsCount}
+                        </span>
+                      )}
+                    </button>
+                    {canManageMembers && (
+                      <>
+                        <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { onInviteClick(); setIsActionsMenuOpen(false); }}>
+                          ➕ Invite User
+                        </button>
+                        <button className={`w-full text-left px-3 py-2 hover:bg-white/10 ${theme === 'dark' ? 'text-white' : 'text-black'}`} onClick={() => { onBannedUsersClick(); setIsActionsMenuOpen(false); }}>
+                          🚫 Banned Users
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          )}
           {/* Direct Message Actions */}
           {selectedConversationType === 'direct' && selectedConversationData?.user_id && (
-            <>
-              {/* Voice call */}
-              <button
-                onClick={startVoiceCall}
-                className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
-                title="Start Voice Call"
-              >
-                <FontAwesomeIcon icon={faPhone} />
-              </button>
-            </>
+            <button
+              onClick={startVoiceCall}
+              className={`p-2 ${theme === 'dark' ? 'bg-black text-green-400 border-green-400 hover:bg-green-400 hover:text-black' : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'} border rounded-none transition-all shadow-lg font-mono`}
+              title="Start Voice Call"
+            >
+              <FontAwesomeIcon icon={faPhone} />
+            </button>
           )}
-
           {/* Global: Invitations (hidden on mobile in group chats; available via kebab) */}
           {!(selectedConversationType === 'group' && isMobile) && (
             <button
@@ -1268,7 +1159,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               >
                 <div className="flex items-center space-x-2">
                   <FontAwesomeIcon icon={faHashtag} className={`text-xs ${theme === 'dark' ? 'text-white' : 'text-white'}`} />
-                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-white'} font-mono uppercase tracking-wide`}>
+                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-white'} font-mono uppercase tracking-wide truncate max-w-[14rem]`}>
                     {groupChannels.find(ch => ch.channel_id === selectedChannel)?.name || 'general'}
                   </span>
                 </div>
@@ -1347,7 +1238,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   }`}
                 >
                   <FontAwesomeIcon icon={faHashtag} className="text-xs" />
-                  <span className="text-sm">{channel.name}</span>
+                  <span className="text-sm truncate max-w-[12rem]">{channel.name}</span>
                 </button>
               ))}
               {canManageMembers && (
@@ -1440,7 +1331,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <div className={`max-w-md break-words ${!isCurrentUser && !showAvatar ? 'ml-12' : ''}`}>
                   {!isCurrentUser && showAvatar && (
                     <div className={`mb-2 ${theme === 'dark' ? 'bg-black border-gray-500' : 'bg-white border-gray-400'} border rounded-none p-2 shadow-lg`}>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 min-w-0">
                         {(() => {
                           let displayName = null;
                           if (selectedConversationType === 'direct') {
@@ -1455,7 +1346,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                           }
                           
                           return displayName ? (
-                            <span className={`text-sm font-mono uppercase tracking-wide ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                            <span
+                              className={`text-sm font-mono uppercase tracking-wide ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} truncate max-w-full`}
+                              title={displayName}
+                            >
                               {displayName}
                             </span>
                           ) : (
